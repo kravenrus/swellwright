@@ -1,13 +1,10 @@
 import {
   ActionIcon,
-  Alert,
   Anchor,
   Badge,
+  Box,
   Button,
-  Card,
   Checkbox,
-  Code,
-  CopyButton,
   Divider,
   Group,
   Menu,
@@ -16,18 +13,17 @@ import {
   Progress,
   Select,
   SimpleGrid,
-  Skeleton,
   Stack,
-  Table,
   Text,
   TextInput,
   Textarea,
-  ThemeIcon,
+  Tooltip,
+  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconAlertCircle,
-  IconCheck,
-  IconCopy,
+  IconClock,
+  IconDeviceFloppy,
   IconDots,
   IconEye,
   IconKey,
@@ -36,11 +32,15 @@ import {
   IconPencil,
   IconPlus,
   IconRefresh,
+  IconRefreshDot,
+  IconShieldLock,
+  IconTag,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, type SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiCalendarCheckDuotone, PiEmpty, PiKeyDuotone, PiLockKeyDuotone } from 'react-icons/pi';
 
 import {
   CreateSecretRequestSchema,
@@ -52,9 +52,29 @@ import {
   type VaultInitialized,
   type VaultStatus,
 } from '@swellwright/contracts';
-import { PageHeader, StatusBadge } from '@swellwright/ui';
+import {
+  Callout,
+  CopyableCodeBlock,
+  DataTableCard,
+  EmptyPageLayout,
+  ErrorMessageBlock,
+  HeaderAction,
+  HeaderActions,
+  ListTable,
+  type ListTableColumn,
+  LoaderModal,
+  LoadingScreen,
+  MetricCard,
+  ModalFooter,
+  OverlayHeader,
+  PageHeader,
+  SectionCard,
+  SettingsCard,
+  StatusBadge,
+} from '@swellwright/ui';
 
 import {
+  ApiRequestError,
   changeVaultPassphrase,
   createSecret,
   deleteSecret,
@@ -66,12 +86,15 @@ import {
   rotateKek,
   rotateRecoveryKey,
   sealVault,
+  StepUpCancelledError,
   unsealVault,
   updateSecret,
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime } from '../format.js';
+import { useDateTime, useNumber } from '../format.js';
+import { confirmAction, notifyError, notifySuccess, notifyWarning } from '../shell/feedback.js';
+import { useIsMobile } from '../shell/use-is-mobile.js';
 
 const HIDE_AFTER_SECONDS = 30;
 const SOON_MS = 30 * 24 * 3_600_000;
@@ -95,26 +118,37 @@ function useTypeOptions() {
 const asType = (value: string | null): SecretType | null =>
   SECRET_TYPES.find((known) => known === value) ?? null;
 
-function ErrorNote({
-  error,
-  fallback,
-  unauthorized,
-}: {
-  error: unknown;
-  /** What a refusal for lack of permission says, already translated. */
-  fallback: string;
-  /** What a 401 says, already translated: on most calls the session ended, when unsealing it is a wrong passphrase. */
-  unauthorized?: string;
-}) {
-  const { t } = useTranslation('vault');
-  if (!error) {
-    return null;
-  }
+/**
+ * A refusal that belongs next to the passphrase field and stays there: a wrong passphrase or recovery key (401) and
+ * the lock-out after too many of them (429). Every other failure is a toast.
+ */
+function isFieldError(error: unknown): boolean {
   return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(t, error, unauthorized ?? t('signInAgain'), fallback)}
-    </Alert>
+    error instanceof ApiRequestError &&
+    (error.code === 'unauthorized' || error.code === 'rate_limited')
   );
+}
+
+/** What a failed call says, and the toast for the failures that do not belong to a field. */
+function useFailure() {
+  const { t } = useTranslation(['vault', 'common']);
+  return {
+    /** The text for a failed call. `unauthorized` is what a 401 means on the screen (the session, or a wrong passphrase). */
+    message: (error: unknown, forbidden: string, unauthorized?: string): string =>
+      describeError(t, error, unauthorized ?? t('signInAgain'), forbidden),
+    /** The text for the field of a passphrase form, or nothing when the failure is not the field's. */
+    fieldMessage: (error: unknown, forbidden: string, unauthorized: string): string | undefined =>
+      isFieldError(error) ? describeError(t, error, unauthorized, forbidden) : undefined,
+    /** A toast for the failure. A closed step-up dialog is a warning ("nothing was changed"), not an error. */
+    report: (title: string, error: unknown, forbidden: string): void => {
+      const text = describeError(t, error, t('signInAgain'), forbidden);
+      if (error instanceof StepUpCancelledError) {
+        notifyWarning(title, text);
+      } else {
+        notifyError(title, text);
+      }
+    },
+  };
 }
 
 /** Length is what counts (docs/en/design/05-security.md): a bar for how far the passphrase is from comfortable. */
@@ -165,6 +199,7 @@ function NewPassphraseFields({
         autoComplete="new-password"
         data-autofocus={autoFocus ? true : undefined}
         label={passphraseLabel}
+        leftSection={<IconLock size={16} />}
         onChange={(e) => {
           onPassphrase(e.currentTarget.value);
         }}
@@ -176,6 +211,7 @@ function NewPassphraseFields({
         autoComplete="new-password"
         error={repeat.length > 0 && repeat !== passphrase ? t('setup.mismatch') : undefined}
         label={repeatLabel}
+        leftSection={<IconLock size={16} />}
         onChange={(e) => {
           onRepeat(e.currentTarget.value);
         }}
@@ -188,60 +224,67 @@ function NewPassphraseFields({
 
 /**
  * A recovery key, shown once, and the way out: it can be left only after the person says it is stored. Used right
- * after the vault is created and after a rotation that issued a new key.
+ * after the vault is created (`card`: the button sits under the checkbox) and after a rotation that issued a new key
+ * (`modal`: the button is the footer of the dialog).
  */
 function RecoveryKeyPanel({
   recoveryKey,
-  title,
   warning,
   doneLabel,
   onDone,
+  layout,
 }: {
   recoveryKey: string;
-  title: string;
   warning: string;
   doneLabel: string;
   onDone: () => void;
+  layout: 'card' | 'modal';
 }) {
   const { t } = useTranslation(['vault', 'common']);
   const [saved, setSaved] = useState(false);
   return (
-    <Stack gap="md">
-      <Alert color="yellow" icon={<IconKey size={18} />} title={title} variant="light">
-        <Text fz="sm">{warning}</Text>
-      </Alert>
-      <Code block style={{ fontSize: 'var(--mantine-font-size-md)', wordBreak: 'break-all' }}>
-        {recoveryKey}
-      </Code>
-      <CopyButton value={recoveryKey}>
-        {({ copied, copy }) => (
+    <>
+      <Stack gap="md">
+        <Callout color="yellow">{warning}</Callout>
+        <CopyableCodeBlock
+          copiedLabel={t('common:copied')}
+          copyLabel={t('common:copy')}
+          value={recoveryKey}
+          wrap
+        />
+        <Checkbox
+          checked={saved}
+          label={t('recoveryKey.storedLabel')}
+          onChange={(e) => {
+            setSaved(e.currentTarget.checked);
+          }}
+        />
+        {layout === 'card' ? (
           <Button
-            leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-            onClick={copy}
-            variant="default"
+            disabled={!saved}
+            fullWidth
+            leftSection={<IconLockOpen size={16} />}
+            onClick={onDone}
+            variant="soft"
           >
-            {copied ? t('common:copied') : t('recoveryKey.copy')}
+            {doneLabel}
           </Button>
-        )}
-      </CopyButton>
-      <Checkbox
-        checked={saved}
-        label={t('recoveryKey.storedLabel')}
-        onChange={(e) => {
-          setSaved(e.currentTarget.checked);
-        }}
-      />
-      <Group justify="flex-end">
-        <Button disabled={!saved} onClick={onDone}>
-          {doneLabel}
-        </Button>
-      </Group>
-    </Stack>
+        ) : null}
+      </Stack>
+      {layout === 'modal' ? (
+        <ModalFooter>
+          <Button color="teal" disabled={!saved} onClick={onDone} size="md" variant="soft">
+            {doneLabel}
+          </Button>
+        </ModalFooter>
+      ) : null}
+    </>
   );
 }
 
 function SetupVault({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation(['vault', 'common']);
+  const failure = useFailure();
   const step = useStepUp();
   const [passphrase, setPassphrase] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -250,6 +293,9 @@ function SetupVault({ onDone }: { onDone: () => void }) {
     onSuccess: () => {
       setPassphrase('');
       setRepeat('');
+    },
+    onError: (error) => {
+      failure.report(t('setup.submit'), error, t('setup.forbidden'));
     },
   });
   const created: VaultInitialized | undefined = mutation.data;
@@ -263,54 +309,71 @@ function SetupVault({ onDone }: { onDone: () => void }) {
 
   if (created) {
     return (
-      <Card padding="lg">
-        <RecoveryKeyPanel
-          doneLabel={t('recoveryKey.open')}
-          onDone={onDone}
-          recoveryKey={created.recoveryKey}
-          title={t('recoveryKey.title')}
-          warning={t('recoveryKey.warning')}
-        />
-      </Card>
+      <SectionCard.Root maw={520} mx="auto" w="100%">
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={IconKey}
+            iconColor="orange"
+            title={t('recoveryKey.title')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <RecoveryKeyPanel
+            doneLabel={t('recoveryKey.open')}
+            layout="card"
+            onDone={onDone}
+            recoveryKey={created.recoveryKey}
+            warning={t('recoveryKey.warning')}
+          />
+        </SectionCard.Section>
+      </SectionCard.Root>
     );
   }
 
   return (
-    <Card padding="lg">
-      <form onSubmit={submit}>
-        <Stack gap="md">
-          <Text fw={600}>{t('setup.title')}</Text>
-          <Text c="dimmed" fz="sm">
-            {t('setup.intro')}
-          </Text>
-          <NewPassphraseFields
-            autoFocus
-            onPassphrase={setPassphrase}
-            onRepeat={setRepeat}
-            passphrase={passphrase}
-            passphraseLabel={t('setup.passphraseLabel')}
-            repeat={repeat}
-            repeatLabel={t('setup.repeatLabel')}
+    <form onSubmit={submit}>
+      <SectionCard.Root maw={520} mx="auto" w="100%">
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={IconShieldLock}
+            iconColor="orange"
+            subtitle={t('setup.intro')}
+            title={t('setup.title')}
+            titleOrder={5}
           />
-          <ErrorNote error={mutation.error} fallback={t('setup.forbidden')} />
-          <Group justify="flex-end">
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap="md">
+            <NewPassphraseFields
+              autoFocus
+              onPassphrase={setPassphrase}
+              onRepeat={setRepeat}
+              passphrase={passphrase}
+              passphraseLabel={t('setup.passphraseLabel')}
+              repeat={repeat}
+              repeatLabel={t('setup.repeatLabel')}
+            />
             <Button
+              disabled={!valid}
+              fullWidth
               leftSection={<IconLock size={16} />}
               loading={mutation.isPending}
-              disabled={!valid}
               type="submit"
+              variant="soft"
             >
               {t('setup.submit')}
             </Button>
-          </Group>
-        </Stack>
-      </form>
-    </Card>
+          </Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
+    </form>
   );
 }
 
 function Unseal({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation('vault');
+  const failure = useFailure();
   const step = useStepUp();
   const [recovery, setRecovery] = useState(false);
   const [text, setText] = useState('');
@@ -321,10 +384,19 @@ function Unseal({ onDone }: { onDone: () => void }) {
       setText('');
       onDone();
     },
-    onError: () => {
+    onError: (error) => {
       setText('');
+      if (!isFieldError(error)) {
+        failure.report(t('unseal.submit'), error, t('unseal.forbidden'));
+      }
     },
   });
+  // A wrong passphrase or recovery key, and the lock-out after too many, stay next to the field.
+  const fieldError = failure.fieldMessage(
+    mutation.error,
+    t('unseal.forbidden'),
+    recovery ? t('unseal.wrongRecoveryKey') : t('unseal.wrongPassphrase'),
+  );
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     if (text.length > 0) {
@@ -333,19 +405,27 @@ function Unseal({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Stack gap="md">
-      <Alert color="yellow" icon={<IconLock size={18} />} title={t('sealed.title')} variant="light">
-        <Text fz="sm">{t('unseal.notice')}</Text>
-      </Alert>
-      <Card padding="lg">
-        <form onSubmit={submit}>
-          <Stack gap="md">
+    <form onSubmit={submit}>
+      <SectionCard.Root maw={450} mx="auto" w="100%">
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={recovery ? IconKey : IconLock}
+            iconColor={recovery ? 'cyan' : 'blue'}
+            subtitle={t('unseal.notice')}
+            title={t('sealed.title')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap="xs">
             {recovery ? (
               <TextInput
                 autoComplete="off"
                 data-autofocus
                 description={t('unseal.recoveryKeyDescription')}
+                error={fieldError}
                 label={t('unseal.recoveryKeyLabel')}
+                leftSection={<IconKey size={16} />}
                 onChange={(e) => {
                   setText(e.currentTarget.value);
                 }}
@@ -355,43 +435,43 @@ function Unseal({ onDone }: { onDone: () => void }) {
               <PasswordInput
                 autoComplete="off"
                 data-autofocus
+                error={fieldError}
                 label={t('unseal.passphraseLabel')}
+                leftSection={<IconLock size={16} />}
                 onChange={(e) => {
                   setText(e.currentTarget.value);
                 }}
                 value={text}
               />
             )}
-            <ErrorNote
-              error={mutation.error}
-              fallback={t('unseal.forbidden')}
-              unauthorized={recovery ? t('unseal.wrongRecoveryKey') : t('unseal.wrongPassphrase')}
-            />
-            <Group justify="space-between">
+            <Button
+              fullWidth
+              leftSection={<IconLockOpen size={16} />}
+              loading={mutation.isPending}
+              type="submit"
+              variant="soft"
+            >
+              {t('unseal.submit')}
+            </Button>
+            <Group justify="center">
               <Anchor
+                c="dimmed"
                 component="button"
-                fz="sm"
                 onClick={() => {
                   setRecovery(!recovery);
                   setText('');
                   mutation.reset();
                 }}
+                size="xs"
                 type="button"
               >
                 {recovery ? t('unseal.usePassphrase') : t('unseal.useRecoveryKey')}
               </Anchor>
-              <Button
-                leftSection={<IconLockOpen size={16} />}
-                loading={mutation.isPending}
-                type="submit"
-              >
-                {t('unseal.submit')}
-              </Button>
             </Group>
           </Stack>
-        </form>
-      </Card>
-    </Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
+    </form>
   );
 }
 
@@ -404,7 +484,9 @@ function RevealDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
+  const failure = useFailure();
   const step = useStepUp();
+  const isMobile = useIsMobile();
   // The moment the value is hidden again, counted from when it arrived.
   const [deadline, setDeadline] = useState<number | undefined>(undefined);
   const [now, setNow] = useState(() => Date.now());
@@ -414,8 +496,18 @@ function RevealDialog({
       setNow(Date.now());
       setDeadline(Date.now() + HIDE_AFTER_SECONDS * 1000);
     },
+    onError: (error) => {
+      // Nothing to show: say why in a toast and let the dialog go.
+      failure.report(t('menu.reveal'), error, t('reveal.forbidden'));
+      onClose();
+    },
   });
   const { mutate, reset, data } = mutation;
+  // The title stays while the dialog fades out; the value does not (it is cleared the moment the dialog closes).
+  const [shown, setShown] = useState(secret);
+  if (secret !== undefined && secret !== shown) {
+    setShown(secret);
+  }
 
   useEffect(() => {
     if (secret) {
@@ -444,39 +536,45 @@ function RevealDialog({
   const left = deadline === undefined ? HIDE_AFTER_SECONDS : Math.ceil((deadline - now) / 1000);
 
   return (
-    <Modal centered onClose={onClose} opened={secret !== undefined} title={secret?.name ?? ''}>
-      <Stack gap="md">
-        {data ? (
-          <>
-            <Code block style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
-              {data.value}
-            </Code>
-            <Group justify="space-between">
-              <CopyButton value={data.value}>
-                {({ copied, copy }) => (
-                  <Button
-                    leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                    onClick={copy}
-                    variant="default"
-                  >
-                    {copied ? t('common:copied') : t('common:copy')}
-                  </Button>
-                )}
-              </CopyButton>
-              <Text c="dimmed" fz="sm">
-                {t('reveal.hiddenIn', { count: Math.max(left, 0) })}
-              </Text>
-            </Group>
-          </>
-        ) : mutation.error ? (
-          <ErrorNote error={mutation.error} fallback={t('reveal.forbidden')} />
-        ) : (
-          <Skeleton h={60} />
-        )}
-        <Group justify="flex-end">
-          <Button onClick={onClose}>{t('common:close')}</Button>
-        </Group>
-      </Stack>
+    <Modal
+      closeButtonProps={{ 'aria-label': t('common:close') }}
+      fullScreen={isMobile}
+      onClose={onClose}
+      opened={secret !== undefined}
+      title={
+        <OverlayHeader
+          icon={IconEye}
+          iconColor="blue"
+          subtitle={shown ? t(`types.${shown.type}`) : undefined}
+          title={shown?.name ?? ''}
+          truncateTitle
+        />
+      }
+    >
+      {data ? (
+        <>
+          <Stack gap="md">
+            <CopyableCodeBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('common:copy')}
+              value={data.value}
+              wrap
+            />
+            <Text c="dimmed" fz="sm">
+              {t('reveal.hiddenIn', { count: Math.max(left, 0) })}
+            </Text>
+          </Stack>
+          <ModalFooter>
+            <Button color="teal" onClick={onClose} size="md" variant="light">
+              {t('common:close')}
+            </Button>
+          </ModalFooter>
+        </>
+      ) : secret === undefined ? (
+        <Box mih="200px" />
+      ) : (
+        <LoaderModal label={t('common:loading')} mih="200px" />
+      )}
     </Modal>
   );
 }
@@ -492,6 +590,7 @@ function SecretForm({
 }) {
   const { t } = useTranslation(['vault', 'common']);
   const typeOptions = useTypeOptions();
+  const failure = useFailure();
   const step = useStepUp();
   const [name, setName] = useState(secret?.name ?? '');
   const [type, setType] = useState<SecretType>(secret?.type ?? 'generic');
@@ -519,8 +618,12 @@ function SecretForm({
             }),
       ),
     onSuccess: () => {
+      notifySuccess(name.trim(), secret ? t('toast.updated') : t('toast.created'));
       onDone();
       onClose();
+    },
+    onError: (error) => {
+      failure.report(secret ? t('menu.change') : t('form.addTitle'), error, t('form.forbidden'));
     },
   });
   const check = CreateSecretRequestSchema.safeParse({
@@ -542,6 +645,7 @@ function SecretForm({
           autoComplete="off"
           data-autofocus
           label={t('form.name')}
+          leftSection={<IconTag size={16} />}
           onChange={(e) => {
             setName(e.currentTarget.value);
           }}
@@ -570,6 +674,7 @@ function SecretForm({
             setValue(e.currentTarget.value);
           }}
           required={secret === undefined}
+          spellCheck={false}
           styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
           value={value}
         />
@@ -583,86 +688,32 @@ function SecretForm({
         <TextInput
           description={t('form.expiresHint')}
           label={t('form.expiresOn')}
+          leftSection={<IconClock size={16} />}
           onChange={(e) => {
             setExpires(e.currentTarget.value);
           }}
           type="date"
           value={expires}
         />
-        <ErrorNote error={mutation.error} fallback={t('form.forbidden')} />
-        <Group justify="flex-end">
-          <Button onClick={onClose} variant="default">
-            {t('common:cancel')}
-          </Button>
-          <Button loading={mutation.isPending} type="submit">
-            {secret ? t('common:save') : t('form.submitCreate')}
-          </Button>
-        </Group>
       </Stack>
+      <ModalFooter>
+        <Button
+          color="teal"
+          leftSection={<IconDeviceFloppy size={16} />}
+          loading={mutation.isPending}
+          size="md"
+          type="submit"
+          variant="soft"
+        >
+          {secret ? t('common:save') : t('form.submitCreate')}
+        </Button>
+      </ModalFooter>
     </form>
-  );
-}
-
-function DeleteDialog({
-  secret,
-  onClose,
-  onDone,
-}: {
-  secret: SecretView | undefined;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useTranslation(['vault', 'common']);
-  const step = useStepUp();
-  const mutation = useMutation({
-    mutationFn: (id: string) => step.run(() => deleteSecret(id)),
-    onSuccess: () => {
-      onDone();
-      onClose();
-    },
-  });
-  const close = () => {
-    mutation.reset();
-    onClose();
-  };
-  return (
-    <Modal
-      centered
-      onClose={close}
-      opened={secret !== undefined}
-      title={t('delete.title', { name: secret?.name ?? '' })}
-    >
-      <Stack gap="md">
-        <Text fz="sm">{t('delete.warning')}</Text>
-        <ErrorNote error={mutation.error} fallback={t('delete.forbidden')} />
-        <Group justify="flex-end">
-          <Button onClick={close} variant="default">
-            {t('common:cancel')}
-          </Button>
-          <Button
-            color="red"
-            leftSection={<IconTrash size={16} />}
-            loading={mutation.isPending}
-            onClick={() => {
-              if (secret) {
-                mutation.mutate(secret.id);
-              }
-            }}
-          >
-            {t('common:delete')}
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
   );
 }
 
 /** The four operations of the key-rotation card, in the order they are listed. */
 type RotationKind = 'passphrase' | 'recoveryKey' | 'kek' | 'dataKeys';
-
-/** What the page says after a rotation that ends without a new recovery key to show. Data, so it follows the language. */
-type RotationNotice =
-  { readonly kind: 'passphrase' } | { readonly kind: 'dataKeys'; readonly count: number };
 
 /** `needsOpen`: the key is needed in memory, so the vault has to be unsealed. */
 const ROTATIONS: readonly { readonly kind: RotationKind; readonly needsOpen: boolean }[] = [
@@ -691,52 +742,55 @@ function RotationCard({
   };
 
   return (
-    <Card mt="md" padding="md">
-      <Stack gap="md">
-        <Stack gap={2}>
-          <Text fw={600}>{t('rotation.title')}</Text>
-          <Text c="dimmed" fz="sm">
-            {t('rotation.description')}
-          </Text>
-        </Stack>
-        {ROTATIONS.map(({ kind, needsOpen }) => {
-          const at = lastDone[kind];
-          const blocked = needsOpen && !open;
-          return (
-            <Fragment key={kind}>
-              <Divider />
-              <Group align="center" gap="md" justify="space-between" wrap="wrap">
-                <Stack gap={2} style={{ flex: 1, minWidth: 240 }}>
-                  <Text fw={500} fz="sm">
-                    {t(`rotation.${kind}.title`)}
-                  </Text>
-                  <Text c="dimmed" fz="sm">
-                    {t(`rotation.${kind}.description`)}
-                  </Text>
-                  <Text c="dimmed" fz="xs">
-                    {at ? t('rotation.lastDone', { date: formatTime(at) }) : t('rotation.never')}
-                  </Text>
-                  {blocked ? (
-                    <Text c="yellow" fz="xs">
-                      {t('rotation.needsOpen')}
+    <SettingsCard.Container>
+      <SettingsCard.Header
+        description={t('rotation.description')}
+        icon={<IconRefreshDot size={24} />}
+        title={t('rotation.title')}
+      />
+      <SettingsCard.Content>
+        <Stack gap="md">
+          {ROTATIONS.map(({ kind, needsOpen }, index) => {
+            const at = lastDone[kind];
+            const blocked = needsOpen && !open;
+            return (
+              <Fragment key={kind}>
+                {index > 0 ? <Divider style={{ opacity: 0.3 }} /> : null}
+                <Group align="center" gap="md" justify="space-between" wrap="wrap">
+                  <Stack flex={1} gap={2} miw={240}>
+                    <Text fw={500} fz="sm">
+                      {t(`rotation.${kind}.title`)}
                     </Text>
-                  ) : null}
-                </Stack>
-                <Button
-                  disabled={blocked}
-                  onClick={() => {
-                    onStart(kind);
-                  }}
-                  variant="default"
-                >
-                  {t(`rotation.${kind}.action`)}
-                </Button>
-              </Group>
-            </Fragment>
-          );
-        })}
-      </Stack>
-    </Card>
+                    <Text c="dimmed" fz="sm">
+                      {t(`rotation.${kind}.description`)}
+                    </Text>
+                    <Text c="dimmed" fz="xs">
+                      {at ? t('rotation.lastDone', { date: formatTime(at) }) : t('rotation.never')}
+                    </Text>
+                    {blocked ? (
+                      <Text c="yellow" fz="xs">
+                        {t('rotation.needsOpen')}
+                      </Text>
+                    ) : null}
+                  </Stack>
+                  <Button
+                    color="teal"
+                    disabled={blocked}
+                    onClick={() => {
+                      onStart(kind);
+                    }}
+                    size="sm"
+                    variant="soft"
+                  >
+                    {t(`rotation.${kind}.action`)}
+                  </Button>
+                </Group>
+              </Fragment>
+            );
+          })}
+        </Stack>
+      </SettingsCard.Content>
+    </SettingsCard.Container>
   );
 }
 
@@ -751,7 +805,9 @@ function ChangePassphraseDialog({
   onDone: () => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
+  const failure = useFailure();
   const step = useStepUp();
+  const isMobile = useIsMobile();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -764,6 +820,11 @@ function ChangePassphraseDialog({
       setRepeat('');
       onDone();
       onClose();
+    },
+    onError: (error) => {
+      if (!isFieldError(error)) {
+        failure.report(t('rotation.passphrase.action'), error, t('rotation.passphrase.forbidden'));
+      }
     },
   });
   const valid = current.length > 0 && isNewPassphraseValid(next, repeat);
@@ -782,7 +843,15 @@ function ChangePassphraseDialog({
   };
 
   return (
-    <Modal centered onClose={close} opened={opened} title={t('rotation.passphrase.action')}>
+    <Modal
+      closeButtonProps={{ 'aria-label': t('common:close') }}
+      fullScreen={isMobile}
+      onClose={close}
+      opened={opened}
+      title={
+        <OverlayHeader icon={IconKey} iconColor="cyan" title={t('rotation.passphrase.action')} />
+      }
+    >
       <form onSubmit={submit}>
         <Stack gap="md">
           <Text c="dimmed" fz="sm">
@@ -791,7 +860,13 @@ function ChangePassphraseDialog({
           <PasswordInput
             autoComplete="off"
             data-autofocus
+            error={failure.fieldMessage(
+              mutation.error,
+              t('rotation.passphrase.forbidden'),
+              t('rotation.wrongPassphrase'),
+            )}
             label={t('rotation.passphrase.currentLabel')}
+            leftSection={<IconLock size={16} />}
             onChange={(e) => {
               setCurrent(e.currentTarget.value);
             }}
@@ -807,20 +882,20 @@ function ChangePassphraseDialog({
             repeat={repeat}
             repeatLabel={t('rotation.passphrase.repeatLabel')}
           />
-          <ErrorNote
-            error={mutation.error}
-            fallback={t('rotation.passphrase.forbidden')}
-            unauthorized={t('rotation.wrongPassphrase')}
-          />
-          <Group justify="flex-end">
-            <Button onClick={close} variant="default">
-              {t('common:cancel')}
-            </Button>
-            <Button disabled={!valid} loading={mutation.isPending} type="submit">
-              {t('rotation.passphrase.submit')}
-            </Button>
-          </Group>
         </Stack>
+        <ModalFooter>
+          <Button
+            color="teal"
+            disabled={!valid}
+            leftSection={<IconKey size={16} />}
+            loading={mutation.isPending}
+            size="md"
+            type="submit"
+            variant="soft"
+          >
+            {t('rotation.passphrase.submit')}
+          </Button>
+        </ModalFooter>
       </form>
     </Modal>
   );
@@ -843,7 +918,9 @@ function NewRecoveryKeyDialog({
   onDone: () => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
+  const failure = useFailure();
   const step = useStepUp();
+  const isMobile = useIsMobile();
   const [passphrase, setPassphrase] = useState('');
   const mutation = useMutation({
     mutationFn: () =>
@@ -853,6 +930,11 @@ function NewRecoveryKeyDialog({
     onSuccess: () => {
       setPassphrase('');
       onDone();
+    },
+    onError: (error) => {
+      if (!isFieldError(error)) {
+        failure.report(t(`rotation.${kind}.action`), error, t(`rotation.${kind}.forbidden`));
+      }
     },
   });
   const created: VaultInitialized | undefined = mutation.data;
@@ -871,20 +953,27 @@ function NewRecoveryKeyDialog({
 
   return (
     <Modal
-      centered
+      closeButtonProps={{ 'aria-label': t('common:close') }}
       closeOnClickOutside={!locked}
       closeOnEscape={!locked}
+      fullScreen={isMobile}
       onClose={close}
       opened={opened}
-      title={t(`rotation.${kind}.action`)}
+      title={
+        <OverlayHeader
+          icon={IconKey}
+          iconColor="orange"
+          title={created ? t('rotation.newKey.title') : t(`rotation.${kind}.action`)}
+        />
+      }
       withCloseButton={!locked}
     >
       {created ? (
         <RecoveryKeyPanel
           doneLabel={t('common:close')}
+          layout="modal"
           onDone={close}
           recoveryKey={created.recoveryKey}
-          title={t('rotation.newKey.title')}
           warning={t('rotation.newKey.warning')}
         />
       ) : (
@@ -896,27 +985,33 @@ function NewRecoveryKeyDialog({
             <PasswordInput
               autoComplete="off"
               data-autofocus
+              error={failure.fieldMessage(
+                mutation.error,
+                t(`rotation.${kind}.forbidden`),
+                t('rotation.wrongPassphrase'),
+              )}
               label={t('rotation.passphraseLabel')}
+              leftSection={<IconLock size={16} />}
               onChange={(e) => {
                 setPassphrase(e.currentTarget.value);
               }}
               required
               value={passphrase}
             />
-            <ErrorNote
-              error={mutation.error}
-              fallback={t(`rotation.${kind}.forbidden`)}
-              unauthorized={t('rotation.wrongPassphrase')}
-            />
-            <Group justify="flex-end">
-              <Button disabled={mutation.isPending} onClick={close} variant="default">
-                {t('common:cancel')}
-              </Button>
-              <Button disabled={passphrase.length === 0} loading={mutation.isPending} type="submit">
-                {t(`rotation.${kind}.submit`)}
-              </Button>
-            </Group>
           </Stack>
+          <ModalFooter>
+            <Button
+              color="teal"
+              disabled={passphrase.length === 0}
+              leftSection={<IconKey size={16} />}
+              loading={mutation.isPending}
+              size="md"
+              type="submit"
+              variant="soft"
+            >
+              {t(`rotation.${kind}.submit`)}
+            </Button>
+          </ModalFooter>
         </form>
       )}
     </Modal>
@@ -934,12 +1029,17 @@ function RotateDataKeysDialog({
   onDone: (rotated: number) => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
+  const failure = useFailure();
   const step = useStepUp();
+  const isMobile = useIsMobile();
   const mutation = useMutation({
     mutationFn: () => step.run(() => rotateDataKeys()),
     onSuccess: (result) => {
       onDone(result.rotated);
       onClose();
+    },
+    onError: (error) => {
+      failure.report(t('rotation.dataKeys.action'), error, t('rotation.dataKeys.forbidden'));
     },
   });
   const close = () => {
@@ -948,24 +1048,34 @@ function RotateDataKeysDialog({
   };
 
   return (
-    <Modal centered onClose={close} opened={opened} title={t('rotation.dataKeys.action')}>
-      <Stack gap="md">
-        <Text fz="sm">{t('rotation.dataKeys.intro')}</Text>
-        <ErrorNote error={mutation.error} fallback={t('rotation.dataKeys.forbidden')} />
-        <Group justify="flex-end">
-          <Button onClick={close} variant="default">
-            {t('common:cancel')}
-          </Button>
-          <Button
-            loading={mutation.isPending}
-            onClick={() => {
-              mutation.mutate();
-            }}
-          >
-            {t('rotation.dataKeys.submit')}
-          </Button>
-        </Group>
-      </Stack>
+    <Modal
+      closeButtonProps={{ 'aria-label': t('common:close') }}
+      fullScreen={isMobile}
+      onClose={close}
+      opened={opened}
+      title={
+        <OverlayHeader
+          icon={IconRefreshDot}
+          iconColor="cyan"
+          title={t('rotation.dataKeys.action')}
+        />
+      }
+    >
+      <Text fz="sm">{t('rotation.dataKeys.intro')}</Text>
+      <ModalFooter>
+        <Button
+          color="teal"
+          leftSection={<IconRefreshDot size={16} />}
+          loading={mutation.isPending}
+          onClick={() => {
+            mutation.mutate();
+          }}
+          size="md"
+          variant="soft"
+        >
+          {t('rotation.dataKeys.submit')}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 }
@@ -978,11 +1088,69 @@ function expiryState(secret: SecretView): 'none' | 'ok' | 'soon' | 'expired' {
   return left <= 0 ? 'expired' : left < SOON_MS ? 'soon' : 'ok';
 }
 
+/** The row menu of a secret: reveal, change, delete. */
+function SecretMenu({
+  secret,
+  canReveal,
+  canManage,
+  open,
+  onReveal,
+  onEdit,
+  onDelete,
+}: {
+  secret: SecretView;
+  canReveal: boolean;
+  canManage: boolean;
+  /** The vault is unsealed: only then can a value be revealed. */
+  open: boolean;
+  onReveal: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation(['vault', 'common']);
+  if (!canManage && !canReveal) {
+    return null;
+  }
+  const label = t('list.actionsFor', { name: secret.name });
+  return (
+    <Menu position="bottom-end" withinPortal>
+      <Tooltip label={label} withArrow>
+        <Menu.Target>
+          <ActionIcon aria-label={label} color="gray" size="md" variant="subtle">
+            <IconDots size={18} />
+          </ActionIcon>
+        </Menu.Target>
+      </Tooltip>
+      <Menu.Dropdown>
+        {canReveal ? (
+          <Menu.Item disabled={!open} leftSection={<IconEye size={18} />} onClick={onReveal}>
+            {t('menu.reveal')}
+          </Menu.Item>
+        ) : null}
+        {canManage ? (
+          <>
+            <Menu.Item leftSection={<IconPencil size={18} />} onClick={onEdit}>
+              {t('menu.change')}
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item color="red" leftSection={<IconTrash size={18} />} onClick={onDelete}>
+              {t('common:delete')}
+            </Menu.Item>
+          </>
+        ) : null}
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
 /** The vault: set it up, unseal it, keep secrets. Values are write-only except through a recorded reveal. */
 export function VaultPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['vault', 'common']);
   const formatDay = useDay();
   const formatTime = useDateTime('short');
+  const formatNumber = useNumber();
+  const failure = useFailure();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const canManage = permissions.includes('vault:manage');
   const canReveal = permissions.includes('vault:reveal');
@@ -990,9 +1158,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<SecretView | undefined>(undefined);
   const [revealing, setRevealing] = useState<SecretView | undefined>(undefined);
-  const [deleting, setDeleting] = useState<SecretView | undefined>(undefined);
   const [rotating, setRotating] = useState<RotationKind | undefined>(undefined);
-  const [notice, setNotice] = useState<RotationNotice | undefined>(undefined);
 
   const state = useQuery({ queryKey: ['vault', 'status'], queryFn: getVaultStatus, retry: false });
   const secrets = useQuery({ queryKey: ['vault', 'secrets'], queryFn: listSecrets, retry: false });
@@ -1000,7 +1166,31 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
   const seal = useMutation({
     mutationFn: () => step.run(() => sealVault()),
     onSuccess: refresh,
+    onError: (error) => {
+      failure.report(t('header.sealNow'), error, t('seal.forbidden'));
+    },
   });
+  const remove = useMutation({
+    mutationFn: (secret: SecretView) => step.run(() => deleteSecret(secret.id)),
+    onSuccess: (_result, secret) => {
+      notifySuccess(secret.name, t('toast.deleted'));
+      void refresh();
+    },
+    onError: (error) => {
+      failure.report(t('common:delete'), error, t('delete.forbidden'));
+    },
+  });
+  const askDelete = (secret: SecretView) => {
+    confirmAction({
+      title: t('delete.title', { name: secret.name }),
+      message: t('delete.warning'),
+      confirmLabel: t('common:delete'),
+      cancelLabel: t('common:cancel'),
+      onConfirm: () => {
+        remove.mutate(secret);
+      },
+    });
+  };
 
   const status: VaultStatus | undefined = state.data;
   const open = status?.state === 'unsealed';
@@ -1017,42 +1207,39 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
   const header = (
     <PageHeader
       actions={
-        <>
-          <Button
-            leftSection={<IconRefresh size={16} />}
+        <HeaderActions>
+          {canManage && open ? (
+            <HeaderAction
+              color="gray"
+              icon={IconLock}
+              label={t('header.sealNow')}
+              loading={seal.isPending}
+              onClick={() => {
+                seal.mutate();
+              }}
+            />
+          ) : null}
+          <HeaderAction
+            icon={IconRefresh}
+            label={t('common:refresh')}
             loading={state.isRefetching || secrets.isRefetching}
             onClick={() => void refresh()}
-            variant="default"
-          >
-            {t('common:refresh')}
-          </Button>
+          />
           {canManage && open ? (
-            <>
-              <Button
-                leftSection={<IconLock size={16} />}
-                loading={seal.isPending}
-                onClick={() => {
-                  seal.mutate();
-                }}
-                variant="default"
-              >
-                {t('header.sealNow')}
-              </Button>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => {
-                  setAdding(true);
-                }}
-              >
-                {t('header.addSecret')}
-              </Button>
-            </>
+            <HeaderAction
+              color="teal"
+              icon={IconPlus}
+              label={t('header.addSecret')}
+              onClick={() => {
+                setAdding(true);
+              }}
+            />
           ) : null}
-        </>
+        </HeaderActions>
       }
       badges={stateBadge}
       description={t('header.description')}
-      icon={<IconKey size={22} />}
+      icon={<IconKey size={24} />}
       title={t('header.title')}
     />
   );
@@ -1061,7 +1248,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
     return (
       <>
         {header}
-        <Skeleton h={120} />
+        <LoadingScreen height="60vh" />
       </>
     );
   }
@@ -1069,9 +1256,23 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
     return (
       <>
         {header}
-        <Alert color="red" variant="light">
-          {describeError(t, state.error, t('signInAgain'), t('list.statusFailed'))}
-        </Alert>
+        <SectionCard.Root>
+          <SectionCard.Section>
+            <OverlayHeader
+              icon={IconAlertCircle}
+              iconColor="red"
+              title={t('error.statusTitle')}
+              titleOrder={5}
+            />
+          </SectionCard.Section>
+          <SectionCard.Section>
+            <ErrorMessageBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('common:copy')}
+              message={failure.message(state.error, t('list.statusFailed'))}
+            />
+          </SectionCard.Section>
+        </SectionCard.Root>
       </>
     );
   }
@@ -1086,264 +1287,219 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
             }}
           />
         ) : (
-          <Alert color="gray" variant="light">
-            {t('setup.ownerNeeded')}
-          </Alert>
+          <EmptyPageLayout
+            description={t('setup.ownerNeeded')}
+            icon={<IconShieldLock size={32} />}
+            title={t('setup.title')}
+          />
         )}
       </>
     );
   }
 
   const list = secrets.data?.secrets ?? [];
+  const columns: ListTableColumn<SecretView>[] = [
+    {
+      accessor: 'name',
+      title: t('list.name'),
+      render: (secret) => (
+        <Stack gap={0}>
+          <Text fw={500} fz="sm" maw={360} title={secret.name} truncate="end">
+            {secret.name}
+          </Text>
+          {secret.description ? (
+            <Text c="dimmed" fz="xs" maw={360} title={secret.description} truncate="end">
+              {secret.description}
+            </Text>
+          ) : null}
+        </Stack>
+      ),
+    },
+    {
+      accessor: 'type',
+      title: t('list.kind'),
+      render: (secret) => (
+        <Badge color="gray" size="md" variant="light">
+          {t(`types.${secret.type}`)}
+        </Badge>
+      ),
+    },
+    {
+      accessor: 'version',
+      title: t('list.version'),
+      render: (secret) => (
+        <Text c="dimmed" fz="sm">
+          v{secret.version}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'expiresAt',
+      title: t('list.expires'),
+      render: (secret) => {
+        const expiry = expiryState(secret);
+        if (expiry === 'none') {
+          return (
+            <Text c="dimmed" fz="sm">
+              {t('common:never')}
+            </Text>
+          );
+        }
+        const day = secret.expiresAt ? formatDay(secret.expiresAt) : '';
+        return expiry === 'expired' ? (
+          <StatusBadge kind="err">{t('list.expired', { date: day })}</StatusBadge>
+        ) : expiry === 'soon' ? (
+          <StatusBadge kind="warn">{t('list.soon', { date: day })}</StatusBadge>
+        ) : (
+          <StatusBadge kind="ok">{day}</StatusBadge>
+        );
+      },
+    },
+    {
+      accessor: 'valueChangedAt',
+      title: t('list.valueChanged'),
+      render: (secret) => (
+        <Text c="dimmed" fz="sm">
+          {formatTime(secret.valueChangedAt)}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'actions',
+      title: <VisuallyHidden>{t('list.actions')}</VisuallyHidden>,
+      textAlign: 'right',
+      width: 56,
+      pinned: 'right',
+      render: (secret) => (
+        <SecretMenu
+          canManage={canManage}
+          canReveal={canReveal}
+          onDelete={() => {
+            askDelete(secret);
+          }}
+          onEdit={() => {
+            setEditing(secret);
+          }}
+          onReveal={() => {
+            setRevealing(secret);
+          }}
+          open={open}
+          secret={secret}
+        />
+      ),
+    },
+  ];
+
   return (
     <>
       {header}
-      {seal.error ? (
-        <div style={{ marginBottom: 'var(--mantine-spacing-md)' }}>
-          <ErrorNote error={seal.error} fallback={t('seal.forbidden')} />
-        </div>
-      ) : null}
-      {notice ? (
-        <Alert
-          closeButtonLabel={t('common:close')}
-          color="teal"
-          icon={<IconCheck size={16} />}
-          mb="md"
-          onClose={() => {
-            setNotice(undefined);
-          }}
-          role="status"
-          variant="light"
-          withCloseButton
-        >
-          {notice.kind === 'passphrase'
-            ? t('rotation.passphrase.done')
-            : t('rotation.dataKeys.done', { count: notice.count })}
-        </Alert>
-      ) : null}
-      {status.state === 'sealed' ? (
-        canManage ? (
-          <Unseal
-            onDone={() => {
-              void refresh();
-            }}
+      <Stack gap="md">
+        {status.state === 'sealed' ? (
+          canManage ? (
+            <Unseal
+              onDone={() => {
+                void refresh();
+              }}
+            />
+          ) : (
+            <SectionCard.Root maw={450} mx="auto" w="100%">
+              <SectionCard.Section>
+                <OverlayHeader
+                  icon={IconLock}
+                  iconColor="blue"
+                  subtitle={t('sealed.ownerNeeded')}
+                  title={t('sealed.title')}
+                  titleOrder={5}
+                />
+              </SectionCard.Section>
+            </SectionCard.Root>
+          )
+        ) : null}
+
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xs">
+          <MetricCard
+            formatValue={formatNumber}
+            icon={PiKeyDuotone}
+            iconColor="blue"
+            title={t('summary.secrets')}
+            value={status.secretCount}
           />
-        ) : (
-          <Alert
-            color="yellow"
-            icon={<IconLock size={18} />}
-            title={t('sealed.title')}
-            variant="light"
-          >
-            {t('sealed.ownerNeeded')}
-          </Alert>
-        )
-      ) : null}
+          <MetricCard
+            icon={PiLockKeyDuotone}
+            iconColor="cyan"
+            title={t('summary.keyVersion')}
+            value={status.kekVersion ?? '—'}
+          />
+          <MetricCard
+            icon={PiCalendarCheckDuotone}
+            iconColor="gray"
+            title={t('summary.setUp')}
+            value={status.createdAt ? formatDay(status.createdAt) : '—'}
+          />
+        </SimpleGrid>
 
-      <SimpleGrid
-        cols={{ base: 1, sm: 3 }}
-        mb="md"
-        mt={status.state === 'sealed' ? 'md' : 0}
-        spacing="md"
-      >
-        <Card padding="md">
-          <Group gap="md" wrap="nowrap">
-            <ThemeIcon size={40} variant="soft">
-              <IconKey size={20} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text c="dimmed" fw={500} fz="sm">
-                {t('summary.secrets')}
-              </Text>
-              <Text fw={600} fz="lg">
-                {status.secretCount}
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-        <Card padding="md">
-          <Group gap="md" wrap="nowrap">
-            <ThemeIcon size={40} variant="soft">
-              <IconLock size={20} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text c="dimmed" fw={500} fz="sm">
-                {t('summary.keyVersion')}
-              </Text>
-              <Text fw={600} fz="lg">
-                {status.kekVersion ?? '—'}
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-        <Card padding="md">
-          <Group gap="md" wrap="nowrap">
-            <ThemeIcon size={40} variant="soft">
-              <IconLockOpen size={20} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text c="dimmed" fw={500} fz="sm">
-                {t('summary.setUp')}
-              </Text>
-              <Text fw={600} fz="lg">
-                {status.createdAt ? formatDay(status.createdAt) : '—'}
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-      </SimpleGrid>
+        <DataTableCard.Container>
+          <DataTableCard.Title icon={<IconKey size={24} />} title={t('list.title')} />
+          <DataTableCard.Content>
+            {secrets.isError ? (
+              <Box p="md">
+                <ErrorMessageBlock
+                  copiedLabel={t('common:copied')}
+                  copyLabel={t('common:copy')}
+                  message={failure.message(secrets.error, t('list.loadFailed'))}
+                />
+              </Box>
+            ) : (
+              <ListTable
+                aria-label={t('list.title')}
+                borderRadius={0}
+                columns={columns}
+                emptyState={
+                  <Stack align="center" gap="xs">
+                    <PiEmpty size={36} />
+                    <Text c="dimmed" size="sm">
+                      {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
+                    </Text>
+                    {canManage && open ? (
+                      <Button
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => {
+                          setAdding(true);
+                        }}
+                        variant="light"
+                      >
+                        {t('header.addSecret')}
+                      </Button>
+                    ) : null}
+                  </Stack>
+                }
+                fetching={secrets.isPending}
+                loadingLabel={t('common:loading')}
+                records={list}
+                withTableBorder={false}
+              />
+            )}
+          </DataTableCard.Content>
+        </DataTableCard.Container>
 
-      <Card padding={0}>
-        {secrets.isPending ? (
-          <Stack gap="xs" p="md">
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
-        ) : secrets.isError ? (
-          <Alert color="red" m="md" variant="light">
-            {describeError(t, secrets.error, t('signInAgain'), t('list.loadFailed'))}
-          </Alert>
-        ) : list.length === 0 ? (
-          <Text c="dimmed" fz="sm" p="md">
-            {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
-          </Text>
-        ) : (
-          <Table.ScrollContainer minWidth={720}>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th pl="md">{t('list.name')}</Table.Th>
-                  <Table.Th>{t('list.kind')}</Table.Th>
-                  <Table.Th>{t('list.version')}</Table.Th>
-                  <Table.Th>{t('list.expires')}</Table.Th>
-                  <Table.Th>{t('list.valueChanged')}</Table.Th>
-                  <Table.Th pr="md" w={48} />
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {list.map((secret) => {
-                  const expiry = expiryState(secret);
-                  const expiresDay = secret.expiresAt ? formatDay(secret.expiresAt) : '';
-                  return (
-                    <Table.Tr key={secret.id}>
-                      <Table.Td pl="md">
-                        <Text fw={500} fz="sm">
-                          {secret.name}
-                        </Text>
-                        {secret.description ? (
-                          <Text c="dimmed" fz="xs">
-                            {secret.description}
-                          </Text>
-                        ) : null}
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color="gray" variant="light">
-                          {t(`types.${secret.type}`)}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td c="dimmed" fz="sm">
-                        v{secret.version}
-                      </Table.Td>
-                      <Table.Td fz="sm">
-                        {expiry === 'none' ? (
-                          <Text c="dimmed" component="span">
-                            {t('common:never')}
-                          </Text>
-                        ) : (
-                          <Text
-                            {...(expiry === 'expired'
-                              ? { c: 'red' }
-                              : expiry === 'soon'
-                                ? { c: 'yellow' }
-                                : {})}
-                            component="span"
-                          >
-                            {expiry === 'expired'
-                              ? t('list.expired', { date: expiresDay })
-                              : expiry === 'soon'
-                                ? t('list.soon', { date: expiresDay })
-                                : expiresDay}
-                          </Text>
-                        )}
-                      </Table.Td>
-                      <Table.Td c="dimmed" fz="sm">
-                        {formatTime(secret.valueChangedAt)}
-                      </Table.Td>
-                      <Table.Td pr="md">
-                        {canManage || canReveal ? (
-                          <Menu position="bottom-end" shadow="md" withinPortal>
-                            <Menu.Target>
-                              <ActionIcon
-                                aria-label={t('list.actionsFor', { name: secret.name })}
-                                color="gray"
-                                variant="subtle"
-                              >
-                                <IconDots size={18} />
-                              </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              {canReveal ? (
-                                <Menu.Item
-                                  disabled={!open}
-                                  leftSection={<IconEye size={16} />}
-                                  onClick={() => {
-                                    setRevealing(secret);
-                                  }}
-                                >
-                                  {t('menu.reveal')}
-                                </Menu.Item>
-                              ) : null}
-                              {canManage ? (
-                                <>
-                                  <Menu.Item
-                                    leftSection={<IconPencil size={16} />}
-                                    onClick={() => {
-                                      setEditing(secret);
-                                    }}
-                                  >
-                                    {t('menu.change')}
-                                  </Menu.Item>
-                                  <Menu.Item
-                                    color="red"
-                                    leftSection={<IconTrash size={16} />}
-                                    onClick={() => {
-                                      setDeleting(secret);
-                                    }}
-                                  >
-                                    {t('common:delete')}
-                                  </Menu.Item>
-                                </>
-                              ) : null}
-                            </Menu.Dropdown>
-                          </Menu>
-                        ) : null}
-                      </Table.Td>
-                    </Table.Tr>
-                  );
-                })}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
-      </Card>
-
-      {canManage ? (
-        <RotationCard
-          onStart={(kind) => {
-            setNotice(undefined);
-            setRotating(kind);
-          }}
-          status={status}
-        />
-      ) : null}
+        {canManage ? (
+          <RotationCard
+            onStart={(kind) => {
+              setRotating(kind);
+            }}
+            status={status}
+          />
+        ) : null}
+      </Stack>
 
       <Modal
-        centered
+        closeButtonProps={{ 'aria-label': t('common:close') }}
+        fullScreen={isMobile}
         onClose={() => {
           setAdding(false);
         }}
         opened={adding}
-        title={t('form.addTitle')}
+        title={<OverlayHeader icon={IconPlus} iconColor="teal" title={t('form.addTitle')} />}
       >
         {adding ? (
           <SecretForm
@@ -1356,12 +1512,20 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
         ) : null}
       </Modal>
       <Modal
-        centered
+        closeButtonProps={{ 'aria-label': t('common:close') }}
+        fullScreen={isMobile}
         onClose={() => {
           setEditing(undefined);
         }}
         opened={editing !== undefined}
-        title={t('form.editTitle', { name: editing?.name ?? '' })}
+        title={
+          <OverlayHeader
+            icon={IconPencil}
+            iconColor="teal"
+            title={t('form.editTitle', { name: editing?.name ?? '' })}
+            truncateTitle
+          />
+        }
       >
         {editing ? (
           <SecretForm
@@ -1380,13 +1544,6 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
         }}
         secret={revealing}
       />
-      <DeleteDialog
-        onClose={() => {
-          setDeleting(undefined);
-        }}
-        onDone={() => void refresh()}
-        secret={deleting}
-      />
       {canManage ? (
         <>
           <ChangePassphraseDialog
@@ -1394,7 +1551,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
               setRotating(undefined);
             }}
             onDone={() => {
-              setNotice({ kind: 'passphrase' });
+              notifySuccess(t('rotation.passphrase.action'), t('rotation.passphrase.done'));
               void refresh();
             }}
             opened={rotating === 'passphrase'}
@@ -1420,7 +1577,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
               setRotating(undefined);
             }}
             onDone={(count) => {
-              setNotice({ kind: 'dataKeys', count });
+              notifySuccess(t('rotation.dataKeys.action'), t('rotation.dataKeys.done', { count }));
               void refresh();
             }}
             opened={rotating === 'dataKeys'}
