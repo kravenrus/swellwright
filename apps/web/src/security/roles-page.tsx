@@ -45,7 +45,7 @@ const PERMISSION_KEY = {
  * (a `defaultValue` would switch that check off, hence `exists`). An id the console does not know yet, because
  * the server is newer, shows the text the API sent.
  */
-function useCatalogText() {
+export function useCatalogText() {
   const { t, i18n } = useTranslation('roles');
   return {
     roleName: (id: UserRole): string => (i18n.exists(`roles:names.${id}`) ? t(`names.${id}`) : id),

@@ -1,5 +1,10 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { permissionsOf, type SessionInfo, type UserSummary } from '@swellwright/contracts';
+import {
+  type Permission,
+  permissionsOf,
+  type SessionInfo,
+  type UserSummary,
+} from '@swellwright/contracts';
 import type { Database, User } from '@swellwright/db';
 import type { Request } from 'express';
 
@@ -14,6 +19,11 @@ export interface AuthContext {
   readonly expiresAt: Date;
   /** The session counts as freshly verified until then (ADR 0017); null if it never was. */
   readonly elevatedUntil: Date | null;
+  /** A cookie session, or an API token (ADR 0023). A token has no session and no second factor. */
+  readonly via: 'session' | 'token';
+  readonly tokenId: string | null;
+  /** For a token: what it may do now (its permissions as far as the owner's role allows). Null for a session. */
+  readonly grants: readonly Permission[] | null;
 }
 
 export type AuthedRequest = Request & { auth?: AuthContext };
@@ -62,10 +72,14 @@ export function toUserSummary(user: User): UserSummary {
 }
 
 /** The user and what the role allows, as the console needs them after a sign-in and on every reload. */
-export function toSessionInfo(user: User, expiresAt: Date): SessionInfo {
+export function toSessionInfo(
+  user: User,
+  expiresAt: Date,
+  grants?: readonly Permission[] | null,
+): SessionInfo {
   return {
     user: toUserSummary(user),
-    permissions: [...permissionsOf(user.role)],
+    permissions: [...(grants ?? permissionsOf(user.role))],
     expiresAt: expiresAt.toISOString(),
   };
 }

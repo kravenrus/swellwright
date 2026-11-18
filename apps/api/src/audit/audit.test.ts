@@ -346,7 +346,7 @@ describe('who may read the audit log', { skip: !databaseUrl }, () => {
     assert.equal(first.outcome, 'denied');
     assert.equal(first.actor?.id, observerId);
     assert.deepEqual(first.object, { type: 'route', id: 'listAudit' });
-    assert.deepEqual(first.details, { permission: 'audit:read' });
+    assert.deepEqual(first.details, { permission: 'audit:read', via: 'session' });
   });
 
   it('applies a changed role on the next request, without signing in again', async () => {

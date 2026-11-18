@@ -64,10 +64,11 @@ describe('OpenAPI description of the sign-in routes', () => {
       ['/auth/totp', 'post'],
       ['/auth/totp/enrollment', 'post'],
       ['/auth/totp/confirm', 'post'],
-      ['/auth/me', 'get'],
     ] as const) {
       assert.deepEqual(security(path, method), [{ session: [] }], `${method} ${path}`);
     }
+    // Routes that take a session or an API token (ADR 0023).
+    assert.deepEqual(security('/auth/me', 'get'), [{ session: [] }, { bearer: [] }]);
   });
 
   it('describes a bodiless 204 without content', () => {
