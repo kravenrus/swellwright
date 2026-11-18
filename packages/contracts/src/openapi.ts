@@ -2,12 +2,16 @@ import { z } from 'zod';
 
 import {
   AuditActionSchema,
+  AuditCheckpointSchema,
+  AuditCheckpointVerificationSchema,
   AuditDetailsSchema,
   AuditEventSchema,
+  AuditExportSchema,
   AuditOutcomeSchema,
   AuditPageSchema,
   ChainProblemSchema,
   ChainVerificationSchema,
+  VerifyAuditCheckpointRequestSchema,
 } from './audit.js';
 import {
   AcceptInvitationRequestSchema,
@@ -67,7 +71,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.9.0';
+export const OPENAPI_INFO_VERSION = '0.11.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -99,6 +103,10 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   AuditPageSchema,
   ChainProblemSchema,
   ChainVerificationSchema,
+  AuditExportSchema,
+  AuditCheckpointSchema,
+  VerifyAuditCheckpointRequestSchema,
+  AuditCheckpointVerificationSchema,
   AcceptInvitationRequestSchema,
   ChangePasswordRequestSchema,
   ElevationSchema,

@@ -35,6 +35,9 @@ export const AUDIT_ACTIONS = [
   'secret.revealed',
   'authz.denied',
   'audit.chain.verified',
+  'audit.exported',
+  'audit.checkpoint.created',
+  'audit.checkpoint.verified',
   'session.revoked',
 ] as const;
 export const AuditActionSchema = z.enum(AUDIT_ACTIONS).meta({ id: 'AuditAction' });
@@ -144,3 +147,99 @@ export const ChainVerificationSchema = z
   })
   .meta({ id: 'ChainVerification' });
 export type ChainVerification = z.infer<typeof ChainVerificationSchema>;
+
+export const AUDIT_EXPORT_FORMAT = 'swellwright-audit-export';
+export const AUDIT_EXPORT_VERSION = 1;
+export const AUDIT_EXPORT_DEFAULT = 1000;
+export const AUDIT_EXPORT_MAX = 5000;
+
+export const AuditExportQuerySchema = z.object({
+  from: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'The first sequence number to return, 1 by default. Continue with `nextFrom` of the last page.',
+    ),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(AUDIT_EXPORT_MAX)
+    .optional()
+    .describe(`Events per page, ${String(AUDIT_EXPORT_DEFAULT)} by default.`),
+});
+export type AuditExportQuery = z.infer<typeof AuditExportQuerySchema>;
+
+export const AuditExportSchema = z
+  .object({
+    format: z.literal(AUDIT_EXPORT_FORMAT),
+    version: z.literal(AUDIT_EXPORT_VERSION),
+    events: z.array(AuditEventSchema).describe('Oldest first, with every field a hash covers.'),
+    nextFrom: z
+      .number()
+      .int()
+      .positive()
+      .nullable()
+      .describe('The `from` of the next page; null when this page reaches the end of the log.'),
+    head: z
+      .object({ seq: z.number().int().positive(), hash: z.string() })
+      .nullable()
+      .describe('The last event of the whole log when the page was read.'),
+  })
+  .meta({
+    id: 'AuditExport',
+    description:
+      'A page of the log in the form that can be checked offline: the events with their hashes, in order. A file is the lines `{"format":"swellwright-audit-export","version":1}` followed by one event per line.',
+  });
+export type AuditExport = z.infer<typeof AuditExportSchema>;
+
+export const AuditCheckpointSchema = z
+  .object({
+    checkpoint: z
+      .string()
+      .describe(
+        'Opaque text that names the last event and carries a signature only this instance can make. Store it somewhere outside the database.',
+      ),
+    seq: z.number().int().positive(),
+    hash: z.string(),
+    issuedAt: z.iso.datetime(),
+  })
+  .meta({ id: 'AuditCheckpoint' });
+export type AuditCheckpoint = z.infer<typeof AuditCheckpointSchema>;
+
+export const VerifyAuditCheckpointRequestSchema = z
+  .object({ checkpoint: z.string().trim().min(1).max(512) })
+  .meta({ id: 'VerifyAuditCheckpointRequest' });
+export type VerifyAuditCheckpointRequest = z.infer<typeof VerifyAuditCheckpointRequestSchema>;
+
+export const CHECKPOINT_RESULTS = [
+  'ok',
+  'malformed',
+  'not_ours',
+  'event_missing',
+  'hash_differs',
+  'chain_broken',
+] as const;
+export const AuditCheckpointVerificationSchema = z
+  .object({
+    ok: z.boolean(),
+    result: z
+      .enum(CHECKPOINT_RESULTS)
+      .describe(
+        '`ok`: the chain up to the checkpoint is intact and the event is what it was. `malformed`: not a checkpoint. `not_ours`: the signature is wrong (another instance, or made up). `event_missing`: the log is shorter than the checkpoint says (a tail was cut off). `hash_differs`: the event at that number is not the one the checkpoint saw (history was rewritten). `chain_broken`: the chain up to that event does not check out.',
+      ),
+    seq: z.number().int().positive().nullable(),
+    issuedAt: z.iso.datetime().nullable(),
+    eventsSince: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullable()
+      .describe(
+        'How many events were added after the checkpoint; null when it could not be checked.',
+      ),
+  })
+  .meta({ id: 'AuditCheckpointVerification' });
+export type AuditCheckpointVerification = z.infer<typeof AuditCheckpointVerificationSchema>;
