@@ -13,7 +13,7 @@ import { SessionService } from './auth/session.service.js';
 import { SetupController } from './auth/setup.controller.js';
 import { SetupService } from './auth/setup.service.js';
 import { type AppConfig } from './config.js';
-import { CONFIG, DATABASE, PASSWORD_HASHER, SECRET_BOX } from './tokens.js';
+import { CONFIG, DATABASE, PASSWORD_HASHER, SECRET_BOX, VAULT_KDF } from './tokens.js';
 import {
   DatabaseCheck,
   READINESS_CHECKS,
@@ -26,6 +26,9 @@ import { SystemController } from './system.controller.js';
 import { InvitationService } from './users/invitation.service.js';
 import { UsersController } from './users/users.controller.js';
 import { UsersService } from './users/users.service.js';
+import type { KdfParams } from './vault/kdf.js';
+import { VaultController } from './vault/vault.controller.js';
+import { VaultService } from './vault/vault.service.js';
 
 export interface AppOptions {
   /** Replaces the checks built from the configuration (tests). */
@@ -34,6 +37,8 @@ export interface AppOptions {
   readonly passwordParams?: PasswordParams;
   /** A database to use instead of the one built from the configuration (tests with a schema of their own). */
   readonly database?: Database;
+  /** Cheaper Argon2id parameters for the vault passphrase in tests; production uses the configuration. */
+  readonly vaultKdf?: KdfParams;
 }
 
 function checksFrom(config: AppConfig, database: Database | undefined): ReadinessCheck[] {
@@ -68,6 +73,7 @@ export class AppModule implements OnApplicationShutdown {
         RolesController,
         AuditController,
         UsersController,
+        VaultController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -88,6 +94,8 @@ export class AppModule implements OnApplicationShutdown {
         SetupService,
         InvitationService,
         UsersService,
+        { provide: VAULT_KDF, useValue: options.vaultKdf ?? config.vaultKdf },
+        VaultService,
         // Guards run in this order: the origin check, the session, the role's permission, the step-up.
         { provide: APP_GUARD, useClass: OriginGuard },
         { provide: APP_GUARD, useClass: AuthGuard },

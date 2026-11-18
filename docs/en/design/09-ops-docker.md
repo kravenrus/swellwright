@@ -67,7 +67,7 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 Outbound traffic is restricted by the host firewall (allowed: inventory servers, the panel, DNS APIs, GitHub, Telegram), not by Docker alone.
 
 ## 3. Environment variables (main ones)
-`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 of 32 random bytes; seals the TOTP secrets, not a vault key, ADR 0014; required in production), `SW_SETUP_TOKEN` (optional fixed first-run token), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (how long a session stays elevated after the second factor, 5 by default, 1 to 30; ADR 0017), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
+`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 of 32 random bytes; seals the TOTP secrets, not a vault key, ADR 0014; required in production), `SW_SETUP_TOKEN` (optional fixed first-run token), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (how long a session stays elevated after the second factor, 5 by default, 1 to 30; ADR 0017), `SW_VAULT_KDF_MEMORY_MIB` and `SW_VAULT_KDF_PASSES` (the Argon2id cost of a new vault passphrase, 256 MiB and 3 by default; ADR 0018), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
 
 ## 4. Reverse proxy (nginx, modeled on the panel)
 - Domain `sw.<base>`, certificate (for example a wildcard for the base domain), `proxy_pass http://127.0.0.1:3100`.
@@ -94,7 +94,7 @@ Residual risk on a shared host: the kernel and the host are shared, so a host co
 ## 8. Disaster recovery (runbooks)
 | Situation | Actions |
 |---|---|
-| Vault password lost | restore from the recovery kit (Shamir); without a kit the vault is lost: reissue all secrets and reconnect the panel and the servers (the nodes stay alive, access through the emergency key) |
+| Vault password lost | unseal with the recovery key shown at setup (the console offers it under the passphrase field); shares of the key (Shamir) come later; without the key the vault is lost: reissue all secrets and reconnect the panel and the servers (the nodes stay alive, access through the emergency key) |
 | Nobody can sign in (the owner lost the password and the authenticator) | on the Swellwright host, with the environment of the server: `node dist/admin.js reset-credentials <login name>` deletes the credentials of that account, ends its sessions and prints a one-time invitation; open the console with it, choose a password, set up the authenticator again. `node dist/admin.js users` lists the accounts. Recorded in the audit chain as `user.credentials.reset` with `via: cli` (ADR 0016) |
 | Swellwright server lost | bring up a new machine, restore the database from a backup, unseal the vault, recreate the agent tokens, verify access |
 | Database corrupted | restore from the latest backup, resync the panel and the servers, mark the runs as "undetermined state" and reconcile them against snapshots |

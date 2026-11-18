@@ -18,8 +18,8 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 ## 2. Secrets vault
 | Entity | Fields |
 |---|---|
-| `VaultMeta` | KEK version, Argon2id parameters, verification block, state (sealed/unsealed) |
-| `Secret` | id, name, type (`panel-token`, `ssh-key`, `ssh-password`, `ssh-ca`, `dns-oauth`, `provider-token`, `telegram`, `generic`), ciphertext (AES-256-GCM), wrapped DEK, version, metadata (expiry, scope of use), secret owner, reveal policy |
+| `VaultMeta` | KEK version, Argon2id parameters and salt, the KEK wrapped under the passphrase key, the KEK wrapped under the recovery key (one row; the state sealed/unsealed lives in process memory; there is no verification block, the wrap itself proves the passphrase). Built, ADR 0018 |
+| `Secret` (built, ADR 0018; metadata only in the list) | id, name, type (`panel-token`, `ssh-key`, `ssh-password`, `ssh-ca`, `dns-oauth`, `provider-token`, `telegram`, `generic`), ciphertext (AES-256-GCM), wrapped DEK, version, metadata (expiry, scope of use), secret owner, reveal policy |
 | `SecretUse` | which run or step used which secret (without values) |
 | `SecretRotation` | rotation history, next scheduled date |
 

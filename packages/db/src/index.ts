@@ -7,12 +7,15 @@ export type {
   Credential,
   Invitation,
   RecoveryCode,
+  Secret,
   Session,
   User,
+  VaultMeta,
 } from './generated/client.js';
 export {
   AuditOutcome,
   InvitationPurpose,
+  SecretType,
   SessionStage,
   UserRole,
   UserStatus,
