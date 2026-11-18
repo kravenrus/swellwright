@@ -60,6 +60,7 @@ model User {
   recoveryCodes RecoveryCode[]
   sessions      Session[]
   invitation    Invitation?
+  apiTokens     ApiToken[]
 
   @@map("users")
 }
@@ -240,4 +241,29 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+/// An API token (ADR 0023): a bearer credential for the CLI and integrations, issued in the name of a user. Only
+/// the SHA-256 hash of the token is kept; the token itself is shown once at creation.
+model ApiToken {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  name        String    @db.VarChar(64)
+  tokenHash   String    @unique @map("token_hash") @db.VarChar(64)
+  /// The first characters of the token, so a person can recognise it in a list. Not enough to guess it.
+  prefix      String    @db.VarChar(16)
+  /// What the token may do: a subset of the permissions of the owner, never one that needs a step-up.
+  permissions String[]
+  /// CIDR ranges the token may be used from. Empty: from anywhere.
+  ipAllowlist String[]  @map("ip_allowlist")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(3)
+  lastUsedIp  String?   @map("last_used_ip") @db.VarChar(64)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_tokens")
 }

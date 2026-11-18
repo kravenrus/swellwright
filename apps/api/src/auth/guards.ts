@@ -6,17 +6,18 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { hasPermission, type RouteDef } from '@swellwright/contracts';
+import { hasPermission, type Permission, type RouteDef } from '@swellwright/contracts';
 
 import { AuditService } from '../audit/audit.service.js';
 import { type AppConfig } from '../config.js';
 import { ROUTE_METADATA } from '../contract-route.js';
 import { StepUpRequiredException } from '../http.js';
 import { CONFIG } from '../tokens.js';
-import { type AuthedRequest, requestMeta } from './context.js';
+import { type AuthContext, type AuthedRequest, requestMeta } from './context.js';
 import { readCookie, SESSION_COOKIE } from './cookies.js';
 import { WindowLimiter } from './rate-limit.js';
 import { SessionService } from './session.service.js';
+import { TokenService } from './token.service.js';
 
 /** A user who keeps calling what they may not call fills the audit chain, which is never pruned: cap it. */
 const DENIED_EVENTS_PER_USER = 20;
@@ -68,21 +69,46 @@ function hostOf(origin: string): string | undefined {
   }
 }
 
+/** The token in `Authorization: Bearer <token>`, or an unusable string so that the attempt is counted. */
+function bearerOf(header: string | undefined): string | undefined {
+  const match = header === undefined ? null : /^Bearer\s+(\S{1,200})$/iu.exec(header);
+  return match?.[1];
+}
+
+/** Whether the caller may do it: a session by the role, a token by what it carries and the role still allows. */
+function can(auth: AuthContext, permission: Permission): boolean {
+  return auth.via === 'token'
+    ? (auth.grants ?? []).includes(permission)
+    : hasPermission(auth.user.role, permission);
+}
+
 /** Resolves the session cookie and enforces the `auth` level the route declares in the contract. */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(@Inject(SessionService) private readonly sessions: SessionService) {}
+  constructor(
+    @Inject(SessionService) private readonly sessions: SessionService,
+    @Inject(TokenService) private readonly tokens: TokenService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const route = routeOf(context);
     if (!route || route.auth === 'none') {
       return true;
     }
-    if (route.auth === 'token') {
-      // Swellwright API tokens do not exist yet; refuse rather than treat the route as open.
-      throw new UnauthorizedException('Authentication required.');
-    }
     const req = context.switchToHttp().getRequest<AuthedRequest>();
+    if (route.auth === 'token' || route.auth === 'any') {
+      const header = req.header('authorization');
+      // A bearer header means a token and only a token: a bad one is refused, never replaced by the cookie.
+      if (header !== undefined || route.auth === 'token') {
+        const raw = bearerOf(header);
+        const auth = raw ? await this.tokens.authenticate(raw, requestMeta(req)) : null;
+        if (!auth) {
+          throw new UnauthorizedException('Authentication required.');
+        }
+        req.auth = auth;
+        return true;
+      }
+    }
     const token = readCookie(req.header('cookie'), SESSION_COOKIE);
     const auth = token ? await this.sessions.authenticate(token) : null;
     const wanted = route.auth === 'pending' ? 'password_verified' : 'active';
@@ -139,7 +165,7 @@ export class PermissionGuard implements CanActivate {
       // A permission on a route nobody signed in can reach is a mistake in the contract: refuse, do not allow.
       throw new UnauthorizedException('Authentication required.');
     }
-    if (hasPermission(auth.user.role, route.permission)) {
+    if (can(auth, route.permission)) {
       return true;
     }
     if (this.deniedEvents.hit(auth.user.id)) {
@@ -148,7 +174,7 @@ export class PermissionGuard implements CanActivate {
         outcome: 'denied',
         actor: { id: auth.user.id, name: auth.user.username },
         object: { type: 'route', id: route.operationId },
-        details: { permission: route.permission },
+        details: { permission: route.permission, via: auth.via },
         meta: requestMeta(req),
       });
     }
