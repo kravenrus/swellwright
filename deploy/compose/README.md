@@ -25,6 +25,17 @@ What starts: `postgres`, `valkey`, then `migrate` (applies the database migratio
 
 The image can carry facts about its build for the console's "Build info" (`GET /api/v1/version`): the build arguments `SW_BUILD_TIME`, `SW_BUILD_NUMBER`, `SW_GIT_BRANCH` and `SW_GIT_COMMIT`, all optional (`docker build --build-arg SW_GIT_COMMIT="$(git rev-parse HEAD)" .`; with Compose, under `build.args`). Whatever is not given is shown as unknown. The server also asks `api.github.com` once a day for the newest release and the star count; `SW_UPDATE_CHECK=off` in `.env` stops that.
 
+## When `binaries.prisma.sh` is not reachable
+
+The build downloads the Prisma schema engine from `binaries.prisma.sh`. From some networks (a residential connection in Russia, for example) that host does not answer and the build stops with `ECONNRESET` or a timeout. Point the build at a mirror of it:
+
+```sh
+docker compose build --build-arg PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
+docker compose up -d
+```
+
+Any mirror that keeps the layout of `binaries.prisma.sh` works. The mirror is only a source: the downloaded engine is compared with the checksum pinned in `packages/db/engine-checksums.json`, and a different file fails the build.
+
 ## Keep these
 
 - **`SW_AUTH_KEY`** seals the authenticator secrets in the database. Without it nobody can sign in with an authenticator and every user sets it up again. Keep a copy outside the server.

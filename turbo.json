@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": ["PRISMA_ENGINES_MIRROR"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
