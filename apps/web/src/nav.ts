@@ -131,7 +131,7 @@ const NAV: readonly GatedSection[] = [
     label: 'Security',
     icon: IconShieldLock,
     links: [
-      { id: 'vault', label: 'Vault', icon: IconKey, disabled: true, permission: 'vault:read' },
+      { id: 'vault', label: 'Vault', icon: IconKey, permission: 'vault:read' },
       { id: 'users', label: 'Users', icon: IconUsers, permission: 'users:read' },
       { id: 'roles', label: 'Roles', icon: IconUserShield, permission: 'roles:read' },
       { id: 'audit', label: 'Audit', icon: IconBook, permission: 'audit:read' },

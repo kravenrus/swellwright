@@ -148,12 +148,24 @@ describe('step-up authentication on routes', () => {
     }
   });
 
-  it('covers the user management and the own password change today', () => {
+  it('covers user management, the own password change and everything that changes or opens the vault', () => {
     const stepped = routes
       .filter((r) => 'stepUp' in r)
       .map((r) => r.operationId)
       .sort();
-    assert.deepEqual(stepped, ['changePassword', 'createUser', 'resetCredentials', 'updateUser']);
+    assert.deepEqual(stepped, [
+      'changePassword',
+      'createSecret',
+      'createUser',
+      'deleteSecret',
+      'initializeVault',
+      'resetCredentials',
+      'revealSecret',
+      'sealVault',
+      'unsealVault',
+      'updateSecret',
+      'updateUser',
+    ]);
   });
 
   it('marks the operations in the OpenAPI description and names the error code', () => {

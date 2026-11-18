@@ -26,6 +26,18 @@ import {
   UserListSchema,
   UserViewSchema,
 } from './users.js';
+import {
+  CreateSecretRequestSchema,
+  InitializeVaultRequestSchema,
+  RevealedSecretSchema,
+  SecretIdParamsSchema,
+  SecretListSchema,
+  SecretViewSchema,
+  UnsealVaultRequestSchema,
+  UpdateSecretRequestSchema,
+  VaultInitializedSchema,
+  VaultStatusSchema,
+} from './vault.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -329,6 +341,135 @@ export const resetCredentialsRoute = defineRoute({
   },
 });
 
+export const vaultStatusRoute = defineRoute({
+  operationId: 'getVaultStatus',
+  method: 'get',
+  path: '/vault/status',
+  tags: ['vault'],
+  summary: 'Whether the vault exists and is open',
+  description: 'Also the number of secrets. Works while the vault is sealed.',
+  auth: 'session',
+  permission: 'vault:read',
+  responses: { 200: { description: 'The status.', schema: VaultStatusSchema } },
+});
+
+export const initializeVaultRoute = defineRoute({
+  operationId: 'initializeVault',
+  method: 'post',
+  path: '/vault/initialize',
+  tags: ['vault'],
+  summary: 'Set the vault up',
+  description:
+    'Once. Makes the key, wraps it under the passphrase and under a recovery key, and leaves the vault open. The recovery key is in the answer and nowhere else: it is the only way back in when the passphrase is lost. Answers 409 when a vault exists.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: InitializeVaultRequestSchema },
+  responses: {
+    201: { description: 'The vault and its recovery key.', schema: VaultInitializedSchema },
+  },
+});
+
+export const unsealVaultRoute = defineRoute({
+  operationId: 'unsealVault',
+  method: 'post',
+  path: '/vault/unseal',
+  tags: ['vault'],
+  summary: 'Open the vault with the passphrase or the recovery key',
+  description:
+    'A wrong passphrase or key answers 401 and is recorded; ten failures in fifteen minutes answer 429 for everyone.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: UnsealVaultRequestSchema },
+  responses: { 200: { description: 'The vault is open.', schema: VaultStatusSchema } },
+});
+
+export const sealVaultRoute = defineRoute({
+  operationId: 'sealVault',
+  method: 'post',
+  path: '/vault/seal',
+  tags: ['vault'],
+  summary: 'Close the vault',
+  description:
+    'Wipes the key from memory. Nothing that needs a secret works until it is opened again.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  responses: { 200: { description: 'The vault is sealed.', schema: VaultStatusSchema } },
+});
+
+export const listSecretsRoute = defineRoute({
+  operationId: 'listSecrets',
+  method: 'get',
+  path: '/secrets',
+  tags: ['vault'],
+  summary: 'List the secrets, without their values',
+  description: 'Works while the vault is sealed: names, types and dates are not secret.',
+  auth: 'session',
+  permission: 'vault:read',
+  responses: { 200: { description: 'The secrets.', schema: SecretListSchema } },
+});
+
+export const createSecretRoute = defineRoute({
+  operationId: 'createSecret',
+  method: 'post',
+  path: '/secrets',
+  tags: ['vault'],
+  summary: 'Store a secret',
+  description:
+    'The vault must be open (423 `vault_sealed` otherwise). The value is encrypted with a key of its own and is write-only from now on. A taken name answers 409.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: CreateSecretRequestSchema },
+  responses: { 201: { description: 'The secret, without its value.', schema: SecretViewSchema } },
+});
+
+export const updateSecretRoute = defineRoute({
+  operationId: 'updateSecret',
+  method: 'patch',
+  path: '/secrets/{id}',
+  tags: ['vault'],
+  summary: 'Rename a secret, change its details or replace its value',
+  description:
+    'A new `value` needs the vault open and moves the version forward; the old value is not kept. Renaming and the details work while sealed.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { params: SecretIdParamsSchema, body: UpdateSecretRequestSchema },
+  responses: { 200: { description: 'The secret after the change.', schema: SecretViewSchema } },
+});
+
+export const deleteSecretRoute = defineRoute({
+  operationId: 'deleteSecret',
+  method: 'delete',
+  path: '/secrets/{id}',
+  tags: ['vault'],
+  summary: 'Delete a secret',
+  description: 'Works while the vault is sealed. Cannot be undone.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { params: SecretIdParamsSchema },
+  responses: { 204: { description: 'The secret is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const revealSecretRoute = defineRoute({
+  operationId: 'revealSecret',
+  method: 'post',
+  path: '/secrets/{id}/reveal',
+  tags: ['vault'],
+  summary: 'Show the value of a secret',
+  description:
+    'The only way a value leaves the vault. Needs the vault open, the reveal permission and a fresh second factor, and is recorded before the value is sent.',
+  auth: 'session',
+  permission: 'vault:reveal',
+  stepUp: true,
+  request: { params: SecretIdParamsSchema },
+  responses: { 200: { description: 'The value.', schema: RevealedSecretSchema } },
+});
+
 export const rolesRoute = defineRoute({
   operationId: 'getRoles',
   method: 'get',
@@ -392,6 +533,15 @@ export const routes = [
   createUserRoute,
   updateUserRoute,
   resetCredentialsRoute,
+  vaultStatusRoute,
+  initializeVaultRoute,
+  unsealVaultRoute,
+  sealVaultRoute,
+  listSecretsRoute,
+  createSecretRoute,
+  updateSecretRoute,
+  deleteSecretRoute,
+  revealSecretRoute,
   rolesRoute,
   listAuditRoute,
   verifyAuditChainRoute,

@@ -42,6 +42,7 @@ const CODE_BY_STATUS: Readonly<Record<number, ErrorCode>> = {
   403: 'forbidden',
   404: 'not_found',
   409: 'conflict',
+  423: 'vault_sealed',
   429: 'rate_limited',
   503: 'not_ready',
 };
@@ -53,6 +54,13 @@ const CODE_BY_STATUS: Readonly<Record<number, ErrorCode>> = {
 export class StepUpRequiredException extends HttpException {
   constructor() {
     super('Confirm with a code from your authenticator, then try again.', HttpStatus.FORBIDDEN);
+  }
+}
+
+/** 423: the vault exists but its key is not in memory, so nothing that needs a secret can happen (ADR 0018). */
+export class VaultSealedException extends HttpException {
+  constructor() {
+    super('The vault is sealed. Unseal it with the passphrase first.', HttpStatus.LOCKED);
   }
 }
 

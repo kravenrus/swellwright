@@ -25,6 +25,8 @@ export const PASSWORD = 'correct horse battery staple';
 /** Another valid password, for the tests that change one. */
 export const NEW_PASSWORD_FOR_TESTS = 'a different long passphrase';
 export const CHEAP = { memory: 256, passes: 1, parallelism: 1 } as const;
+/** The vault's Argon2id cost for tests: real parameters would take a quarter of a gibibyte per attempt. */
+export const CHEAP_KDF = { memoryKib: 256, passes: 1, parallelism: 1 } as const;
 export const AUTH_KEY = Buffer.alloc(32, 1).toString('base64');
 
 export interface Reply {
@@ -110,6 +112,7 @@ export async function start(env: Record<string, string> = {}): Promise<Instance>
   const app = await createApp(config, {
     readinessChecks: [],
     passwordParams: CHEAP,
+    vaultKdf: CHEAP_KDF,
     database: isolated.database,
   });
   await app.listen(0, '127.0.0.1');
