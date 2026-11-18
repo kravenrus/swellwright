@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.16.0",
+    "version": "0.17.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -158,7 +158,48 @@
             }
           }
         },
+        "description": "The version of the running build and what the build recorded about itself: when and by which CI run it was made and the branch and revision it came from (`SW_BUILD_TIME`, `SW_BUILD_NUMBER`, `SW_GIT_BRANCH`, `SW_GIT_COMMIT`, set as build arguments of the image). What the build did not record is null. `git.commitUrl` is the page of the revision on GitHub, known when the revision is a hash.",
         "security": []
+      }
+    },
+    "/updates": {
+      "get": {
+        "operationId": "getUpdates",
+        "tags": [
+          "system"
+        ],
+        "summary": "The newest release and the project page",
+        "responses": {
+          "200": {
+            "description": "What is known.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "For the version button and the project link of the console. The server asks GitHub for the latest release and the star count at most once a day and answers from its memory; the browser never calls GitHub. The request sends nothing that identifies the installation, the user or the browser. After a failed attempt the old answer is kept and the next attempt comes in an hour. The first call after the start does not wait more than a moment, so it may answer with nulls. `SW_UPDATE_CHECK=off` switches the check off: `enabled` is false and nothing is ever sent. Nothing is recorded in the audit log.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/openapi.json": {
@@ -2985,15 +3026,141 @@
           "commit": {
             "description": "Source revision, when the build embeds it.",
             "type": "string"
+          },
+          "build": {
+            "type": "object",
+            "properties": {
+              "time": {
+                "description": "When the image was built, as the build recorded it (usually ISO 8601).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "number": {
+                "description": "The number of the build in the CI that made it.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "time",
+              "number"
+            ],
+            "additionalProperties": false,
+            "description": "What the build recorded about itself. A field is null when the build did not say."
+          },
+          "git": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "description": "The branch the build was made from.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "commit": {
+                "description": "The source revision (the full or abbreviated hash).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "commitUrl": {
+                "description": "The page of that revision on GitHub; null unless the revision is a hash.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "branch",
+              "commit",
+              "commitUrl"
+            ],
+            "additionalProperties": false,
+            "description": "The source of the build. A field is null when the build did not say."
           }
         },
         "required": [
           "name",
           "version",
-          "apiVersion"
+          "apiVersion",
+          "build",
+          "git"
         ],
         "additionalProperties": false,
         "description": "Build and API version."
+      },
+      "UpdatesResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "False when the administrator switched the check off (`SW_UPDATE_CHECK=off`)."
+          },
+          "latestVersion": {
+            "description": "The newest published release, without a leading \"v\". Null while it is not known yet, when the repository has no release, or when the check is off.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "releaseUrl": {
+            "description": "The page of that release.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many people starred the repository; null while not known."
+          },
+          "repositoryUrl": {
+            "description": "The page of the repository (taken from the settings, no request needed).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the server last learned something from GitHub; null while it has not."
+          }
+        },
+        "required": [
+          "enabled",
+          "latestVersion",
+          "releaseUrl",
+          "stars",
+          "repositoryUrl",
+          "checkedAt"
+        ],
+        "additionalProperties": false,
+        "description": "What the server knows about newer releases and the project page."
       },
       "UserRole": {
         "type": "string",

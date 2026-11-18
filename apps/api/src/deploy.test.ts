@@ -18,7 +18,6 @@ describe('serving the console from the API', () => {
   let dir: string;
   let app: NestExpressApplication;
   let base: string;
-  let port: number;
 
   before(async () => {
     dir = await mkdtemp(join(tmpdir(), 'sw-web-'));
@@ -26,15 +25,13 @@ describe('serving the console from the API', () => {
     await writeFile(join(dir, 'index.html'), '<!doctype html><div id="root"></div>');
     await writeFile(join(dir, 'assets', 'app.1a2b3c.js'), 'console.log(1);');
     await writeFile(join(dir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
-    await writeFile(join(dir, '.secret'), 'not for the web');
     const config = loadConfig(
       { SW_LOG_LEVEL: 'silent', NODE_ENV: 'test', SW_WEB_DIR: dir },
       '0.0.0-test',
     );
     app = await createApp(config, { readinessChecks: [] });
     await app.listen(0, '127.0.0.1');
-    port = (app.getHttpServer().address() as { port: number }).port;
-    base = `http://127.0.0.1:${String(port)}`;
+    base = `http://127.0.0.1:${String((app.getHttpServer().address() as { port: number }).port)}`;
   });
   after(async () => {
     await app.close();
@@ -110,12 +107,172 @@ describe('serving the console from the API', () => {
     assert.deepEqual(await res.json(), { status: 'ok' });
   });
 
-  it('answers an unknown path with 404, not with the page; unknown API paths with the error envelope', async () => {
-    // The console has no paths of its own (no client-side routing), so nothing falls back to index.html.
-    assert.equal((await fetch(`${base}/nope`)).status, 404);
-    const res = await fetch(`${base}/api/v1/nope`);
+  it('answers an unknown API path with the error envelope, never with the page', async () => {
+    const res = await fetch(`${base}/api/v1/nope`, { headers: { accept: 'text/html' } });
     assert.equal(res.status, 404);
     assert.equal(ApiErrorSchema.parse(await res.json()).error.code, 'not_found');
+  });
+});
+
+describe('deep links of the console (real URLs, ADR 0019)', () => {
+  let dir: string;
+  let app: NestExpressApplication;
+  let base: string;
+  const PAGE = '<!doctype html><div id="root"></div>';
+
+  before(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'sw-spa-'));
+    await mkdir(join(dir, 'assets'));
+    await writeFile(join(dir, 'index.html'), PAGE);
+    await writeFile(join(dir, 'assets', 'app.1a2b3c.js'), 'console.log(1);');
+    const config = loadConfig(
+      { SW_LOG_LEVEL: 'silent', NODE_ENV: 'test', SW_WEB_DIR: dir },
+      '0.0.0-test',
+    );
+    app = await createApp(config, { readinessChecks: [] });
+    await app.listen(0, '127.0.0.1');
+    base = `http://127.0.0.1:${String((app.getHttpServer().address() as { port: number }).port)}`;
+  });
+  after(async () => {
+    await app.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const page = (path: string, accept = 'text/html', method = 'GET'): Promise<Response> =>
+    fetch(`${base}${path}`, { method, headers: { accept } });
+
+  it('opens the page at a deep link, with the headers of the root page', async () => {
+    for (const path of ['/dashboard/security/users', '/dashboard', '/nope', '/a/b/c/']) {
+      const res = await page(path);
+      assert.equal(res.status, 200, path);
+      assert.match(res.headers.get('content-type') ?? '', /text\/html/u, path);
+      assert.equal(await res.text(), PAGE, path);
+      assert.equal(res.headers.get('cache-control'), 'no-cache', path);
+      assert.equal(res.headers.get('x-frame-options'), 'DENY', path);
+      assert.equal(res.headers.get('referrer-policy'), 'no-referrer', path);
+      assert.equal(res.headers.get('cross-origin-opener-policy'), 'same-origin', path);
+      assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
+      // Present and forbidding framing; the exact policy is checked on the function (a content filter on the
+      // machine running the tests may add hosts to it on the wire).
+      assert.match(
+        res.headers.get('content-security-policy') ?? '',
+        /frame-ancestors 'none'/u,
+        path,
+      );
+    }
+  });
+
+  it('keeps the query string out of the decision and answers HEAD without a body', async () => {
+    const withQuery = await page('/dashboard/audit?cursor=5&filter=a.b');
+    assert.equal(withQuery.status, 200);
+    assert.equal(await withQuery.text(), PAGE);
+    const head = await page('/dashboard/security/users', 'text/html', 'HEAD');
+    assert.equal(head.status, 200);
+    assert.equal(head.headers.get('cache-control'), 'no-cache');
+    assert.equal(await head.text(), '');
+  });
+
+  it('is the page for a client that sends no preference, and not for one that wants JSON', async () => {
+    // `*/*` is what a plain `curl` or `fetch` sends: HTML is acceptable.
+    assert.equal((await page('/dashboard/security/users', '*/*')).status, 200);
+    const json = await page('/dashboard/security/users', 'application/json');
+    assert.equal(json.status, 404);
+    assert.doesNotMatch(await json.text(), /id="root"/u);
+  });
+
+  it('leaves the API alone: its unknown paths stay the JSON 404', async () => {
+    for (const path of ['/api/v1/nothing', '/api/v1/auth/nothing']) {
+      const res = await page(path);
+      assert.equal(res.status, 404, path);
+      assert.match(res.headers.get('content-type') ?? '', /application\/json/u, path);
+      assert.equal(ApiErrorSchema.parse(await res.json()).error.code, 'not_found');
+    }
+    // Outside the versioned prefix there is nothing of the API either, and no page.
+    for (const path of ['/api', '/api/', '/api/other']) {
+      const res = await page(path);
+      assert.equal(res.status, 404, path);
+      assert.doesNotMatch(await res.text(), /id="root"/u, path);
+    }
+    const health = await page('/api/v1/health', 'text/html');
+    assert.deepEqual(await health.json(), { status: 'ok' });
+  });
+
+  it('does not make a page of a missing file or of the folder of the assets', async () => {
+    for (const path of [
+      '/assets/missing.js',
+      '/assets/',
+      '/assets/missing',
+      '/missing.svg',
+      '/a/b.txt',
+    ]) {
+      const res = await page(path);
+      assert.equal(res.status, 404, path);
+      assert.doesNotMatch(await res.text(), /id="root"/u, path);
+    }
+  });
+
+  it('does not make a page of a path that leaves the folder or is not a path', async () => {
+    const { port } = app.getHttpServer().address() as { port: number };
+    for (const path of [
+      '/%2e%2e/%2e%2e/etc/passwd',
+      '/a/%2e%2e/b',
+      '/%E0%A4%A',
+      '/a%5Cb',
+      '/a%00b',
+    ]) {
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = request({ host: '127.0.0.1', port, path, method: 'GET' }, (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        });
+        req.on('error', reject);
+        req.end();
+      });
+      assert.ok(status === 403 || status === 404 || status === 400, `${path}: ${String(status)}`);
+    }
+  });
+
+  it('answers only GET and HEAD with the page: another method on an unknown path is a 404', async () => {
+    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+      const res = await fetch(`${base}/dashboard/security/users`, {
+        method,
+        headers: { accept: 'text/html' },
+      });
+      assert.equal(res.status, 404, method);
+      assert.doesNotMatch(await res.text(), /id="root"/u, method);
+    }
+  });
+
+  it('still serves a real file as itself', async () => {
+    const res = await page('/assets/app.1a2b3c.js', '*/*');
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), 'console.log(1);');
+    assert.equal(res.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  });
+});
+
+describe('serving the console from the API: more', () => {
+  let dir: string;
+  let app: NestExpressApplication;
+  let port: number;
+  let base: string;
+
+  before(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'sw-web2-'));
+    await writeFile(join(dir, 'index.html'), '<!doctype html><div id="root"></div>');
+    await writeFile(join(dir, '.secret'), 'not for the web');
+    const config = loadConfig(
+      { SW_LOG_LEVEL: 'silent', NODE_ENV: 'test', SW_WEB_DIR: dir },
+      '0.0.0-test',
+    );
+    app = await createApp(config, { readinessChecks: [] });
+    await app.listen(0, '127.0.0.1');
+    port = (app.getHttpServer().address() as { port: number }).port;
+    base = `http://127.0.0.1:${String(port)}`;
+  });
+  after(async () => {
+    await app.close();
+    await rm(dir, { recursive: true, force: true });
   });
 
   it('does not serve dotfiles, and does not leave the directory', async () => {

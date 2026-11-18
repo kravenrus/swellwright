@@ -7,3 +7,5 @@ export const SECRET_BOX = Symbol('SECRET_BOX');
 export const VAULT_KDF = Symbol('VAULT_KDF');
 /** The core's door for plugin requests (ADR 0028); tests replace it. */
 export const PLUGIN_NETWORK = Symbol('PLUGIN_NETWORK');
+/** The clock of the update check, in milliseconds since the epoch; tests move it instead of waiting a day. */
+export const UPDATES_CLOCK = Symbol('UPDATES_CLOCK');

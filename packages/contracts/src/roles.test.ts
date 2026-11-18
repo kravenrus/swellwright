@@ -114,7 +114,9 @@ describe('route permissions', () => {
     for (const id of ROUTES_OPEN_TO_ANY_SESSION) {
       assert.ok(ids.includes(id), id);
     }
-    // Your own account only: who you are, your password, your code, your sessions and your tokens.
+    // Your own account only: who you are, your password, your code, your sessions and your tokens; and the
+    // update information, which is public data about the project and carries nothing of the instance.
+    assert.ok(ROUTES_OPEN_TO_ANY_SESSION.includes('getUpdates'));
     assert.ok(ROUTES_OPEN_TO_ANY_SESSION.length <= 10);
   });
 

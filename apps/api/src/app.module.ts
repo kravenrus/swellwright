@@ -23,6 +23,7 @@ import {
   PASSWORD_HASHER,
   PLUGIN_NETWORK,
   SECRET_BOX,
+  UPDATES_CLOCK,
   VAULT_KDF,
 } from './tokens.js';
 import {
@@ -40,6 +41,7 @@ import { PluginsService } from './plugins/plugins.service.js';
 import { PluginRuntime } from './plugins/runtime.js';
 import { RolesController } from './roles.controller.js';
 import { SystemController } from './system.controller.js';
+import { UpdatesService } from './system/updates.service.js';
 import { InvitationService } from './users/invitation.service.js';
 import { UsersController } from './users/users.controller.js';
 import { UsersService } from './users/users.service.js';
@@ -58,6 +60,8 @@ export interface AppOptions {
   readonly vaultKdf?: KdfParams;
   /** The core's door for plugin requests, replaced in tests so no real network is used. */
   readonly pluginNetwork?: PluginNetwork;
+  /** The clock of the update check (milliseconds since the epoch), so that tests need not wait a day. */
+  readonly clock?: () => number;
 }
 
 function checksFrom(config: AppConfig, database: Database | undefined): ReadinessCheck[] {
@@ -105,6 +109,8 @@ export class AppModule implements OnApplicationShutdown {
           useValue: options.readinessChecks ?? checksFrom(config, database),
         },
         ReadinessService,
+        { provide: UPDATES_CLOCK, useValue: options.clock ?? (() => Date.now()) },
+        UpdatesService,
         {
           provide: PASSWORD_HASHER,
           useValue: new PasswordHasher(options.passwordParams ?? DEFAULT_PASSWORD_PARAMS),

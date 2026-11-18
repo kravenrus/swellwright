@@ -44,7 +44,12 @@ import {
   SessionListSchema,
   SessionsRevokedSchema,
 } from './sessions.js';
-import { HealthResponseSchema, ReadyResponseSchema, VersionResponseSchema } from './system.js';
+import {
+  HealthResponseSchema,
+  ReadyResponseSchema,
+  UpdatesResponseSchema,
+  VersionResponseSchema,
+} from './system.js';
 import {
   CreatedTokenSchema,
   CreateTokenRequestSchema,
@@ -161,8 +166,22 @@ export const versionRoute = defineRoute({
   path: '/version',
   tags: ['system'],
   summary: 'Build and API version',
+  description:
+    'The version of the running build and what the build recorded about itself: when and by which CI run it was made and the branch and revision it came from (`SW_BUILD_TIME`, `SW_BUILD_NUMBER`, `SW_GIT_BRANCH`, `SW_GIT_COMMIT`, set as build arguments of the image). What the build did not record is null. `git.commitUrl` is the page of the revision on GitHub, known when the revision is a hash.',
   auth: 'none',
   responses: { 200: { description: 'Version information.', schema: VersionResponseSchema } },
+});
+
+export const updatesRoute = defineRoute({
+  operationId: 'getUpdates',
+  method: 'get',
+  path: '/updates',
+  tags: ['system'],
+  summary: 'The newest release and the project page',
+  description:
+    'For the version button and the project link of the console. The server asks GitHub for the latest release and the star count at most once a day and answers from its memory; the browser never calls GitHub. The request sends nothing that identifies the installation, the user or the browser. After a failed attempt the old answer is kept and the next attempt comes in an hour. The first call after the start does not wait more than a moment, so it may answer with nulls. `SW_UPDATE_CHECK=off` switches the check off: `enabled` is false and nothing is ever sent. Nothing is recorded in the audit log.',
+  auth: 'any',
+  responses: { 200: { description: 'What is known.', schema: UpdatesResponseSchema } },
 });
 
 export const openApiRoute = defineRoute({
@@ -948,6 +967,7 @@ export const pluginGatewayRoute = defineRoute({
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
+  'getUpdates',
   'changePassword',
   'stepUp',
   'listMySessions',
@@ -963,6 +983,7 @@ export const routes = [
   healthRoute,
   readyRoute,
   versionRoute,
+  updatesRoute,
   openApiRoute,
   getSetupStatusRoute,
   createOwnerRoute,
