@@ -56,7 +56,6 @@ export const vault = {
     title: 'Save the recovery key now',
     warning:
       'It opens the vault if you lose the passphrase, and nothing else can. It is shown once and kept nowhere on this server. Write it down or put it in a password manager, away from this machine.',
-    copy: 'Copy the key',
     storedLabel: 'I have stored the recovery key outside this server',
     open: 'Open the vault',
   },
@@ -92,6 +91,8 @@ export const vault = {
   },
 
   list: {
+    title: 'Secrets',
+    actions: 'Actions',
     name: 'Name',
     kind: 'Kind',
     version: 'Version',
@@ -104,6 +105,18 @@ export const vault = {
     actionsFor: 'Actions for {{name}}',
     loadFailed: 'Your role may not see the secrets.',
     statusFailed: 'Your role may not see the vault.',
+  },
+
+  /** Toasts after a change that has no screen of its own to show it. */
+  toast: {
+    created: 'The secret was stored.',
+    updated: 'The secret was changed.',
+    deleted: 'The secret was deleted.',
+  },
+
+  /** The titles of the error cards that stand in for a part of the page that could not be loaded. */
+  error: {
+    statusTitle: 'The vault could not be loaded',
   },
 
   menu: {
