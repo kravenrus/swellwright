@@ -53,6 +53,9 @@ importers:
       '@swellwright/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@swellwright/plugin-api':
+        specifier: workspace:*
+        version: link:../../packages/plugin-api
       iovalkey:
         specifier: 0.4.0
         version: 0.4.0
@@ -62,6 +65,9 @@ importers:
       rxjs:
         specifier: 7.8.2
         version: 7.8.2
+      semver:
+        specifier: 7.8.6
+        version: 7.8.6
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -69,6 +75,9 @@ importers:
       '@types/express':
         specifier: 5.0.6
         version: 5.0.6
+      '@types/semver':
+        specifier: 7.8.0
+        version: 7.8.0
 
   apps/cli: {}
 
@@ -176,7 +185,11 @@ importers:
 
   packages/node-assets: {}
 
-  packages/plugin-api: {}
+  packages/plugin-api:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/policy: {}
 
@@ -887,6 +900,9 @@ packages:
 
   '@types/react@19.2.18':
     resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/send@1.2.1':
     resolution: {integrity: sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ==}
@@ -3012,6 +3028,8 @@ snapshots:
   '@types/react@19.2.18':
     dependencies:
       csstype: 3.2.3
+
+  '@types/semver@7.8.0': {}
 
   '@types/send@1.2.1':
     dependencies:
