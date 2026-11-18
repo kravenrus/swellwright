@@ -7,11 +7,28 @@ export const plugins = {
   header: {
     title: 'Plugins',
     description: 'Extensions of this instance, what each one asks for and whether it is enabled',
+    docs: 'Plugin documentation',
+  },
+
+  /** The tabs above the list of plugins. */
+  filter: {
+    all: 'All',
+    enabled: 'Enabled',
+    attention: 'Needs attention',
+    inactive: 'Not enabled',
+    unavailable: 'Unavailable',
   },
 
   signInAgain: 'Sign in again to continue.',
   loadFailed: 'Your role may not see the plugins.',
+  loadFailedTitle: 'The plugins could not be loaded',
   manageForbidden: 'Your role may not enable or disable plugins.',
+
+  /** The empty page: plugins are code, and the page says so before it says that there are none. */
+  empty: {
+    warningTitle: 'Warning',
+    warning: 'Plugins run code. Enable only plugins you trust and have reviewed.',
+  },
 
   directories: {
     noneTitle: 'No plugin directory is configured',
@@ -19,14 +36,6 @@ export const plugins = {
     emptyTitle: 'No plugins found',
     empty:
       'The configured directories contain no plugins. Add a plugin folder to one of them and refresh.',
-  },
-
-  columns: {
-    plugin: 'Plugin',
-    version: 'Version',
-    trust: 'Trust',
-    status: 'Status',
-    provides: 'Provides',
   },
 
   trust: {
@@ -56,21 +65,18 @@ export const plugins = {
     declarativeHint: 'Described in data; runs no code of its own.',
   },
 
-  table: {
-    summary_one: '{{count}} plugin',
-    summary_other: '{{count}} plugins',
-  },
-
   actions: {
     review: 'Review',
     enable: 'Enable',
     disable: 'Disable',
+    copyId: 'Copy id',
+    copyDigest: 'Copy digest',
     reviewAria: 'Review the plugin “{{name}}”',
-    enableAria: 'Enable the plugin “{{name}}”',
-    disableAria: 'Disable the plugin “{{name}}”',
+    menuAria: 'Actions for the plugin “{{name}}”',
   },
 
   detail: {
+    title: 'Details',
     fields: {
       id: 'Id',
       version: 'Version',
@@ -103,6 +109,8 @@ export const plugins = {
   /** The settings a plugin declares (a form made from its `config.schema`); field names and server messages are data. */
   settings: {
     title: 'Settings',
+    description:
+      'What this plugin reads when it runs. Saving needs a fresh confirmation with a code.',
     loadFailed: 'Your role may not see the settings of this plugin.',
     forbidden: 'Your role may not change the settings of plugins.',
     readOnly: 'Your role may see these settings but not change them.',
@@ -230,6 +238,8 @@ export const plugins = {
   },
 
   notice: {
+    enabledTitle: 'Plugin enabled',
+    disabledTitle: 'Plugin disabled',
     enabled: 'The plugin “{{name}}” is enabled.',
     disabled: 'The plugin “{{name}}” is disabled.',
   },
