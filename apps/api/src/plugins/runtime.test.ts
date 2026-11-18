@@ -110,7 +110,20 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
         license: 'AGPL-3.0-only',
       }),
     );
-    await writeFile(join(declarative, 'driver.yaml'), 'name: webhook\n');
+    await writeFile(
+      join(declarative, 'driver.yaml'),
+      [
+        'version: 1',
+        'kind: NotificationChannel',
+        'operations:',
+        '  ping:',
+        '    steps:',
+        '      - id: call',
+        '        request:',
+        '          url: https://hooks.example.com/ping',
+        '',
+      ].join('\n'),
+    );
   });
   after(async () => {
     await stop(instance);
@@ -193,12 +206,15 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
     assert.equal(reply.status, 200);
     const plugin = PluginViewSchema.parse(reply.body);
     assert.equal(plugin.runtime.state, 'stopped');
-    assert.deepEqual(plugin.runtime.modules, []);
-    assert.equal(
-      found((await events('plugin.checked')).at(-1), 'the record').details['modules'],
-      0,
-    );
+    assert.deepEqual(plugin.runtime.modules, [{ kind: 'NotificationChannel', methods: ['ping'] }]);
+    const record = found((await events('plugin.checked')).at(-1), 'the record');
+    assert.deepEqual([record.details['modules'], record.details['methods']], [1, 1]);
+    // There is no code for the kind that has none, and an operation the driver does not have is refused.
     await assert.rejects(call('webhook-example', 'echo'), /no code to run/u);
+    await assert.rejects(
+      host().call('webhook-example', 'NotificationChannel', 'echo', null),
+      /no operation "echo"/u,
+    );
   });
 
   it('ends a plugin that takes too long, records it, and runs it again on the next call', async () => {

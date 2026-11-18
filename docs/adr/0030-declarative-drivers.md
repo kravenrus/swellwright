@@ -1,0 +1,23 @@
+# ADR 0030: Declarative drivers
+
+Status: accepted
+
+## Context
+Many plugins are only a REST service in a different coat: authenticate, make a request, read a field of the answer. `13-plugins-and-opensource.md` allows **declarative drivers** (a YAML description) for the kinds that talk to such services, "so that providers can be added without executing third-party code". ADR 0028 made running code safer; a driver makes running it unnecessary.
+
+## Decision
+- **A driver is data, read by the core.** `provides[].driver` names a YAML file (`DnsProvider`, `HostingProvider`, `NotificationChannel` only, ADR 0021). It is parsed with the `yaml` package under strict settings (YAML 1.2 core schema, no aliases, no duplicate keys, at most 128 KiB), then checked by a Zod schema. Nothing in it is executed: there are no loops, no conditions, no functions.
+- **What a driver says.** `version: 1`, the `kind`, and up to 32 **operations**. An operation has declared **params** (string with a length limit or choices, integer, number, boolean; required or with a default), up to 8 **steps**, and a **result** shape. A step is a request (method, `https` URL, headers, a text or JSON body) and an optional `expect` (the accepted statuses, default any 2xx, and a template that says what the service reported when it was not). Steps run in order and later ones may read earlier ones (a login, then the call that needs its token).
+- **Values come from five places and nowhere else:** `params.x` (checked before anything is sent), `config.x` (a setting that is not a secret), `secret.x` (the secret bound to a settings field, in requests only: never in a result and never in the text of an error), `steps.id.status|headers.name|text|json.path[0]` (an earlier step), and the variable of an `each` inside its `map` (a result only). A value that is not there is an error, not an empty string. Filters: `json`, `urlencode`, `base64`, `raw`.
+- **A value put into a URL is encoded** as a path or query part, so `../admin?x=1` stays one piece and cannot add a segment, a query or a fragment; `| raw` opts out for a value that must stay as it is (a bot token in a path). The host of every URL is written out in the driver and is `https`, so no value can choose where a request goes.
+- **Every request goes through the same door as a plugin's code** (ADR 0028): the gateway lets it through only for a `host:port` in the **stored approval**, to public addresses, with the same size limits, no redirects. The interpreter is core code and is trusted; what it can reach is exactly what the administrator approved.
+- **Checked when the plugin is found, so the administrator approves what it will do.** A driver that is unsound, whose kind is not one the manifest gives a driver for, that calls a `host:port` the manifest does not ask for in `permissions.network`, that reads a setting the plugin does not declare (or a secret from one that does not hold a secret), or whose templates read from places that do not exist where they are used, makes the plugin **invalid** with every reason. The digest covers the driver file, so changing it is a change that needs a new approval.
+- **Same surface as code.** `PluginHostService.call(id, kind, operation, params)` runs the operation when the plugin has a driver for that kind; a check validates the driver and reports its operations as the methods of the module. There is no process: the runtime stays `stopped` and says so.
+- **Limits.** Results are JSON of at most 1 MiB; the gateway's limits apply per request; a template is at most 2000 characters and a result or body at most 500 parts and 8 levels deep.
+- **The first official plugin.** `plugins/official/notify-telegram` is a driver: `send` (a text, optionally silent) and `check` (who the bot is), `api.telegram.org:443`, a bot token chosen from the vault and a chat id.
+
+## Consequences
+- A provider with a simple REST API can be a plugin by writing data. It cannot do anything the driver language cannot say, and it cannot reach anything the administrator did not approve.
+- The language is deliberately poor: no retries, no pagination loops, no conditional branches, no OAuth flows that need a browser. A service that needs them gets code (ADR 0028) or a sidecar (ADR 0031).
+- A `yaml` dependency joins `apps/api` (ISC, no dependencies, no install scripts, two months old when added). It is used only on files an administrator placed in a plugin directory.
+- Not part of this step: the declarative drivers of the other extension kinds' typed interfaces (`DnsProvider` and the rest still have no typed contract: a driver's operations are named freely until the first core feature calls one), request retries, pagination, a signing helper for services that sign requests.

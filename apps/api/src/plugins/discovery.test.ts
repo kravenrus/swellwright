@@ -75,7 +75,19 @@ describe('plugin discovery', () => {
       manifest('notify-webhook', {
         provides: [{ kind: 'NotificationChannel', driver: 'driver.yaml' }],
       }),
-      { 'driver.yaml': 'name: x' },
+      {
+        'driver.yaml': [
+          'version: 1',
+          'kind: NotificationChannel',
+          'operations:',
+          '  send:',
+          '    steps:',
+          '      - id: call',
+          '        request:',
+          '          url: https://api.nic.ru/send',
+          '',
+        ].join('\n'),
+      },
     );
     const found = await discoverPlugins([official, local], CORE);
     assert.deepEqual(
@@ -109,6 +121,22 @@ describe('plugin discovery', () => {
     assert.equal(found.state, 'invalid');
     assert.match(found.problems.join(), /has no swellwright\.plugin\.json/u);
     assert.equal(found.manifest, undefined);
+  });
+
+  it('does not report a directory that holds only documentation: it is a plugin that is planned', async () => {
+    await mkdir(join(official.directory, 'dns-cloudflare'));
+    await writeFile(join(official.directory, 'dns-cloudflare', 'README.md'), '# planned');
+    await mkdir(join(official.directory, 'dns-route53'));
+    await writeFile(join(official.directory, 'dns-route53', 'LICENSE'), 'text');
+    await writeFile(join(official.directory, 'dns-route53', 'notes.md'), 'text');
+    await mkdir(join(official.directory, 'half-done'));
+    await writeFile(join(official.directory, 'half-done', 'script.js'), 'export {};');
+    const found = await discoverPlugins([official], CORE);
+    assert.deepEqual(
+      found.map((p) => [p.folder, p.state]),
+      [['half-done', 'invalid']],
+      'a directory with anything but documentation and no manifest is still reported',
+    );
   });
 
   it('reports a manifest that is not JSON or does not fit the schema', async () => {

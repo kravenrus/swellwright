@@ -66,7 +66,9 @@ describe('reading a driver file', () => {
 
   it('refuses YAML that is broken, uses aliases or repeats a key, and says so', async () => {
     assert.match((await read('version: [1')).problems.join(), /not valid YAML/u);
-    const aliased = await read('version: 1\nkind: &k NotificationChannel\nalso: *k\noperations: {}\n');
+    const aliased = await read(
+      'version: 1\nkind: &k NotificationChannel\nalso: *k\noperations: {}\n',
+    );
     assert.match(aliased.problems.join(), /not valid YAML/u);
     const bomb = await read(
       'a: &a [x, x]\nb: &b [*a, *a]\nc: &c [*b, *b]\nd: &d [*c, *c]\noperations: {}\n',
@@ -79,15 +81,23 @@ describe('reading a driver file', () => {
   });
 
   it('gives its values only the types of the core schema, not dates or custom tags', async () => {
-    const tagged = await read('version: !!js/function "x"\nkind: NotificationChannel\noperations: {}\n');
+    const tagged = await read(
+      'version: !!js/function "x"\nkind: NotificationChannel\noperations: {}\n',
+    );
     assert.equal(tagged.driver, undefined);
     const dated = await read(`${GOOD}\n# 2026-11-19 stays text\n`);
     assert.deepEqual(dated.problems, []);
   });
 
   it('reports a missing file, a file that is too large and a driver that does not fit the schema', async () => {
-    assert.match((await readDriver(join(root, 'nowhere.yaml'), 'driver.yaml')).problems.join(), /cannot be read/u);
-    assert.match((await read(`# ${'x'.repeat(130 * 1024)}\n${GOOD}`)).problems.join(), /larger than 128 KiB/u);
+    assert.match(
+      (await readDriver(join(root, 'nowhere.yaml'), 'driver.yaml')).problems.join(),
+      /cannot be read/u,
+    );
+    assert.match(
+      (await read(`# ${'x'.repeat(130 * 1024)}\n${GOOD}`)).problems.join(),
+      /larger than 128 KiB/u,
+    );
     const bad = await read('version: 1\nkind: NodeFlavor\noperations: {}\n');
     assert.match(bad.problems.join(), /driver.yaml: kind/u);
   });
@@ -104,7 +114,12 @@ describe('finding a plugin with a driver', () => {
 
   async function declarative(
     id: string,
-    options: { driver?: string; network?: string[]; config?: unknown; permissions?: Record<string, unknown> } = {},
+    options: {
+      driver?: string;
+      network?: string[];
+      config?: unknown;
+      permissions?: Record<string, unknown>;
+    } = {},
   ): Promise<void> {
     const directory = join(root, id);
     await mkdir(directory, { recursive: true });
@@ -116,7 +131,10 @@ describe('finding a plugin with a driver', () => {
         name: id,
         engines: { swellwright: '>=0.0.0-0 <1' },
         provides: [{ kind: 'NotificationChannel', driver: 'driver.yaml' }],
-        permissions: { network: options.network ?? ['hooks.example.com:443'], ...options.permissions },
+        permissions: {
+          network: options.network ?? ['hooks.example.com:443'],
+          ...options.permissions,
+        },
         config: { schema: 'config.schema.json' },
         license: 'AGPL-3.0-only',
       }),
@@ -148,7 +166,10 @@ describe('finding a plugin with a driver', () => {
     await declarative('wrong-host', { network: ['other.example.com:443'] });
     const plugin = await state('wrong-host');
     assert.equal(plugin.state, 'invalid');
-    assert.match(plugin.problems.join(), /calls hooks.example.com:443, which the manifest does not ask for/u);
+    assert.match(
+      plugin.problems.join(),
+      /calls hooks.example.com:443, which the manifest does not ask for/u,
+    );
     assert.deepEqual(plugin.drivers, {});
   });
 
@@ -187,7 +208,10 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
   let owner: Client;
   let ownerSecret: string;
   const sent: TransportRequest[] = [];
-  let answer: { status: number; body: unknown } = { status: 200, body: { ok: true, result: { message_id: 9 } } };
+  let answer: { status: number; body: unknown } = {
+    status: 200,
+    body: { ok: true, result: { message_id: 9 } },
+  };
 
   const view = async () =>
     found(
@@ -197,7 +221,9 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
       'notify-telegram',
     );
   const call = (method: string, params: unknown = null) =>
-    instance.app.get(PluginHostService).call('notify-telegram', 'NotificationChannel', method, params);
+    instance.app
+      .get(PluginHostService)
+      .call('notify-telegram', 'NotificationChannel', method, params);
   const events = async (action: string) =>
     (await auditEvents(instance)).filter((e) => e.action === action);
 
@@ -221,7 +247,8 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
     ({ secret: ownerSecret } = await createOwner(instance));
     owner = await signInAs(instance, 'owner', ownerSecret);
     assert.equal(
-      (await owner.post('/vault/initialize', { passphrase: 'a long passphrase for the tests' })).status,
+      (await owner.post('/vault/initialize', { passphrase: 'a long passphrase for the tests' }))
+        .status,
       201,
     );
   });
@@ -310,16 +337,22 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
     assert.equal(reply.status, 200, JSON.stringify(reply.body));
     const plugin = PluginViewSchema.parse(reply.body);
     assert.equal(plugin.runtime.state, 'stopped', 'there is no process: the plugin runs no code');
-    assert.deepEqual(plugin.runtime.modules, [{ kind: 'NotificationChannel', methods: ['check', 'send'] }]);
+    assert.deepEqual(plugin.runtime.modules, [
+      { kind: 'NotificationChannel', methods: ['check', 'send'] },
+    ]);
     const record = found((await events('plugin.checked')).at(-1), 'the record');
     assert.equal(record.outcome, 'success');
     assert.deepEqual([record.details['modules'], record.details['methods']], [1, 2]);
   });
 
   it('stops working at once when the vault is sealed, and when it is switched off', async () => {
+    answer = { status: 200, body: { ok: true, result: { username: 'swellwright_bot' } } };
     assert.equal((await owner.post('/vault/seal')).status, 200);
     await assert.rejects(call('check'), /sealed/iu);
-    assert.equal((await owner.post('/vault/unseal', { passphrase: 'a long passphrase for the tests' })).status, 200);
+    assert.equal(
+      (await owner.post('/vault/unseal', { passphrase: 'a long passphrase for the tests' })).status,
+      200,
+    );
     assert.deepEqual(await call('check'), { bot: 'swellwright_bot' });
     assert.equal((await owner.post('/plugins/notify-telegram/disable')).status, 200);
     await assert.rejects(call('check'), /it is disabled/u);

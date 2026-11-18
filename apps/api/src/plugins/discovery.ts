@@ -302,6 +302,18 @@ async function inspect(
   return done('available', [], manifest, digest.digest, settings.schema, declarative.drivers);
 }
 
+/** True for a directory with at least one file and nothing but documentation files (README, LICENSE, `*.md`). */
+async function onlyDocumentation(directory: string): Promise<boolean> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  return (
+    entries.length > 0 &&
+    entries.every(
+      (e) =>
+        e.isFile() && /^(readme|license|licence|notice|changelog)([._-].*)?$|\.md$/iu.test(e.name),
+    )
+  );
+}
+
 /**
  * Looks for plugins in the roots, in order, and says what each one is. Nothing is loaded or run: a plugin that
  * is found is only described. A root that does not exist is skipped. When two plugins have the same id the one
@@ -330,6 +342,15 @@ export async function discoverPlugins(
       .sort();
     for (const folder of folders) {
       const plugin = await inspect(root, folder, coreVersion);
+      // A directory that holds only documentation is a plugin that is planned, not one that is broken.
+      if (
+        plugin.state === 'invalid' &&
+        plugin.manifest === undefined &&
+        plugin.problems[0]?.startsWith(`has no ${MANIFEST_FILE}`) === true &&
+        (await onlyDocumentation(plugin.directory))
+      ) {
+        continue;
+      }
       const id = plugin.manifest?.id;
       const first = id === undefined ? undefined : owner.get(id);
       if (id !== undefined && first !== undefined && plugin.state !== 'invalid') {
