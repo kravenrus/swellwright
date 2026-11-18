@@ -10,7 +10,7 @@
 [![Remnawave](https://img.shields.io/badge/Remnawave-3.4.x-22d3ee?style=flat-square)](https://docs.rw)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6ba539?style=flat-square&logo=openapiinitiative&logoColor=white)](docs/en/api.md)
 [![Стек](https://img.shields.io/badge/NestJS%20%C2%B7%20React%20%C2%B7%20PostgreSQL-%D1%81%D1%82%D0%B5%D0%BA%20%D0%BF%D0%B0%D0%BD%D0%B5%D0%BB%D0%B8-3178c6?style=flat-square&logo=typescript&logoColor=white)](docs/en/architecture.md)
-[![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.example.yml)
+[![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.yml)
 [![DCO](https://img.shields.io/badge/DCO-signed--off-8b5cf6?style=flat-square)](CONTRIBUTING.md)
 [![Stars](https://img.shields.io/github/stars/swellwright/swellwright?style=flat-square&logo=github&color=eab308)](https://github.com/swellwright/swellwright/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/swellwright/swellwright?style=flat-square&color=64748b)](https://github.com/swellwright/swellwright/commits/main)
