@@ -32,6 +32,8 @@ export function describeError(
       }
       case 'forbidden':
         return whenForbidden ?? t('errors:forbidden');
+      case 'vault_sealed':
+        return t('errors:vaultSealed');
       case 'step_up_required':
         return t('errors:stepUpRequired');
       case 'not_ready':

@@ -8,6 +8,7 @@ export const errors = {
   forbidden: 'The server refused this request.',
   stepUpRequired: 'Confirm with a code from your authenticator, then try again.',
   notReady: 'The server cannot sign anyone in yet: it has no database.',
+  vaultSealed: 'The vault is sealed. Unseal it with the passphrase first.',
   validation: 'Some of the values are not valid.',
   server: 'Something went wrong on the server. Try again.',
   generic: 'Something went wrong. Try again.',

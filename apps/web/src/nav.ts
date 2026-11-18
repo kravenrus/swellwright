@@ -146,13 +146,7 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
     label: t('nav:security'),
     icon: IconShieldLock,
     links: [
-      {
-        id: 'vault',
-        label: t('nav:vault'),
-        icon: IconKey,
-        disabled: true,
-        permission: 'vault:read',
-      },
+      { id: 'vault', label: t('nav:vault'), icon: IconKey, permission: 'vault:read' },
       { id: 'users', label: t('nav:users'), icon: IconUsers, permission: 'users:read' },
       { id: 'roles', label: t('nav:roles'), icon: IconUserShield, permission: 'roles:read' },
       { id: 'audit', label: t('nav:audit'), icon: IconBook, permission: 'audit:read' },

@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
 import { AUTH_KEY_BYTES } from './auth/secret-box.js';
+import type { KdfParams } from './vault/kdf.js';
 
 /** An empty variable (`SW_X=`) means "not set", as in most env files. */
 const unsetIfEmpty = (v: unknown): unknown => (v === '' ? undefined : v);
@@ -34,6 +35,9 @@ const EnvSchema = z.object({
   SW_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
   /** How long a session counts as freshly verified after the second factor (ADR 0017). */
   SW_STEP_UP_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
+  /** Argon2id cost of the vault passphrase (ADR 0018). Raising it only affects vaults set up afterwards. */
+  SW_VAULT_KDF_MEMORY_MIB: z.coerce.number().int().min(64).max(4096).default(256),
+  SW_VAULT_KDF_PASSES: z.coerce.number().int().min(1).max(10).default(3),
 });
 
 export interface AppConfig {
@@ -58,6 +62,8 @@ export interface AppConfig {
   readonly lockoutMs: number;
   /** How long a session stays elevated after sign-in or a step-up. */
   readonly stepUpMs: number;
+  /** The cost with which a new vault passphrase is hardened. */
+  readonly vaultKdf: KdfParams;
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -115,5 +121,10 @@ export function loadConfig(
     lockoutAttempts: e.SW_LOCKOUT_ATTEMPTS,
     lockoutMs: e.SW_LOCKOUT_MINUTES * 60_000,
     stepUpMs: e.SW_STEP_UP_MINUTES * 60_000,
+    vaultKdf: {
+      memoryKib: e.SW_VAULT_KDF_MEMORY_MIB * 1024,
+      passes: e.SW_VAULT_KDF_PASSES,
+      parallelism: 1,
+    },
   };
 }

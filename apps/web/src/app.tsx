@@ -24,6 +24,7 @@ import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
 import { RolesPage } from './security/roles-page.js';
 import { UsersPage } from './security/users-page.js';
+import { VaultPage } from './security/vault-page.js';
 
 function AccountMenu({
   session,
@@ -139,6 +140,9 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
       />
       <main className="sw-page">
         {activeId === 'overview' ? <Overview /> : null}
+        {activeId === 'vault' && permissions.includes('vault:read') ? (
+          <VaultPage permissions={permissions} />
+        ) : null}
         {activeId === 'users' && permissions.includes('users:read') ? (
           <UsersPage currentUserId={session.user.id} permissions={permissions} />
         ) : null}

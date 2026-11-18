@@ -29,6 +29,16 @@ import {
   TotpConfirmedSchema,
   type TotpEnrollment,
   TotpEnrollmentSchema,
+  type CreateSecretRequest,
+  type InitializeVaultRequest,
+  type RevealedSecret,
+  RevealedSecretSchema,
+  type SecretList,
+  SecretListSchema,
+  type SecretView,
+  SecretViewSchema,
+  type UnsealVaultRequest,
+  type UpdateSecretRequest,
   type UpdateUserRequest,
   type UserInvitation,
   UserInvitationSchema,
@@ -37,6 +47,10 @@ import {
   UserListSchema,
   type UserView,
   UserViewSchema,
+  type VaultInitialized,
+  VaultInitializedSchema,
+  type VaultStatus,
+  VaultStatusSchema,
   type VersionResponse,
   VersionResponseSchema,
 } from '@swellwright/contracts';
@@ -91,7 +105,7 @@ async function getJson<T>(path: string, schema: { parse: (data: unknown) => T })
  * `schema` is undefined for a response without a body.
  */
 async function send<T>(
-  method: 'GET' | 'POST' | 'PATCH',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body: unknown,
   schema: { parse: (data: unknown) => T } | undefined,
@@ -171,6 +185,33 @@ export const confirmTotpEnrollment = (code: string): Promise<TotpConfirmed> =>
   send('POST', '/auth/totp/confirm', { code }, TotpConfirmedSchema);
 
 export const logout = (): Promise<void> => send('POST', '/auth/logout', undefined, undefined);
+
+export const getVaultStatus = (): Promise<VaultStatus> =>
+  send('GET', '/vault/status', undefined, VaultStatusSchema);
+
+export const initializeVault = (request: InitializeVaultRequest): Promise<VaultInitialized> =>
+  send('POST', '/vault/initialize', request, VaultInitializedSchema);
+
+export const unsealVault = (request: UnsealVaultRequest): Promise<VaultStatus> =>
+  send('POST', '/vault/unseal', request, VaultStatusSchema);
+
+export const sealVault = (): Promise<VaultStatus> =>
+  send('POST', '/vault/seal', undefined, VaultStatusSchema);
+
+export const listSecrets = (): Promise<SecretList> =>
+  send('GET', '/secrets', undefined, SecretListSchema);
+
+export const createSecret = (request: CreateSecretRequest): Promise<SecretView> =>
+  send('POST', '/secrets', request, SecretViewSchema);
+
+export const updateSecret = (id: string, request: UpdateSecretRequest): Promise<SecretView> =>
+  send('PATCH', `/secrets/${id}`, request, SecretViewSchema);
+
+export const deleteSecret = (id: string): Promise<void> =>
+  send('DELETE', `/secrets/${id}`, undefined, undefined);
+
+export const revealSecret = (id: string): Promise<RevealedSecret> =>
+  send('POST', `/secrets/${id}/reveal`, undefined, RevealedSecretSchema);
 
 export const stepUp = (code: string): Promise<Elevation> =>
   send('POST', '/auth/step-up', { code }, ElevationSchema);
