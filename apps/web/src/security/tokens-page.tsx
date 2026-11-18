@@ -1,41 +1,47 @@
 import {
-  Alert,
+  ActionIcon,
+  Badge,
   Button,
-  Card,
+  Center,
   Checkbox,
-  Code,
   CopyButton,
+  Flex,
   Group,
+  Input,
+  Menu,
   Modal,
   NumberInput,
+  ScrollArea,
   Select,
-  Skeleton,
   Stack,
-  Table,
   Text,
   TextInput,
   Textarea,
-  Title,
+  Tooltip,
 } from '@mantine/core';
 import {
-  IconAlertCircle,
-  IconAlertTriangle,
   IconApiApp,
   IconBan,
   IconCheck,
+  IconClearAll,
+  IconClock,
   IconCopy,
+  IconDots,
+  IconEye,
   IconPlus,
   IconRefresh,
+  IconTag,
+  IconWorld,
 } from '@tabler/icons-react';
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type SyntheticEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiEmpty } from 'react-icons/pi';
 
 import {
   type CreatedToken,
   type CreateTokenInput,
   CreateTokenRequestSchema,
-  PERMISSION_INFO,
   type Permission,
   permissionsOf,
   TOKEN_DEFAULT_DAYS,
@@ -46,13 +52,37 @@ import {
   type TokenView,
   type UserRole,
 } from '@swellwright/contracts';
-import { PageHeader, type StatusKind, StatusText } from '@swellwright/ui';
+import {
+  Callout,
+  CopyableCodeBlock,
+  ErrorMessageBlock,
+  HeaderAction,
+  HeaderActions,
+  LoaderModal,
+  ModalFooter,
+  OverlayHeader,
+  PageHeader,
+  SettingsCard,
+  type StatusKind,
+  StatusText,
+} from '@swellwright/ui';
 
 import { createToken, listMyTokens, listTokens, revokeMyToken, revokeToken } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime } from '../format.js';
-import { useCatalogText } from './roles-page.js';
+import { confirmAction, notifySuccess } from '../shell/feedback.js';
+import { useIsMobile } from '../shell/use-is-mobile.js';
+import { notifyFailure } from './notify-failure.js';
+import {
+  groupByResource,
+  kindOf,
+  type PermissionGroup,
+  type PermissionKind,
+  PermissionRows,
+} from './token-permissions.js';
+import './tokens-page.css';
+import { useLastDefined } from './use-last-defined.js';
 
 /** Matches the limit in `CreateTokenRequestSchema`; the whole request is checked against that schema as well. */
 const NAME_MAX = 64;
@@ -63,55 +93,6 @@ const STATE_KIND: Record<TokenState, StatusKind> = {
   revoked: 'wait',
 };
 
-type ResourceOf<P extends Permission> = P extends `${infer R}:${string}` ? R : never;
-/** The part of a permission before the colon: `servers` for `servers:read`. */
-type Resource = ResourceOf<Permission>;
-
-/**
- * The resource of each permission, for the groups of the checklist. Typed against both sides: a permission added
- * to the contracts without a group here fails the build, and so does a resource without a text in `tokens`.
- */
-const RESOURCE_OF = {
-  'servers:read': 'servers',
-  'servers:write': 'servers',
-  'panel:read': 'panel',
-  'panel:write': 'panel',
-  'runs:read': 'runs',
-  'runs:execute': 'runs',
-  'vault:read': 'vault',
-  'vault:manage': 'vault',
-  'vault:reveal': 'vault',
-  'terminal:use': 'terminal',
-  'users:read': 'users',
-  'users:write': 'users',
-  'roles:read': 'roles',
-  'audit:read': 'audit',
-  'audit:verify': 'audit',
-  'audit:export': 'audit',
-  'sessions:read': 'sessions',
-  'sessions:revoke': 'sessions',
-  'tokens:create': 'tokens',
-  'tokens:read': 'tokens',
-  'tokens:revoke': 'tokens',
-  'plugins:read': 'plugins',
-  'plugins:manage': 'plugins',
-} as const satisfies { readonly [P in Permission]: ResourceOf<P> };
-
-interface PermissionGroup {
-  readonly resource: Resource;
-  readonly permissions: readonly Permission[];
-}
-
-/** The permissions in the order they are listed, grouped under their resource. */
-function groupByResource(permissions: readonly Permission[]): PermissionGroup[] {
-  const groups = new Map<Resource, Permission[]>();
-  for (const permission of permissions) {
-    const resource = RESOURCE_OF[permission];
-    groups.set(resource, [...(groups.get(resource) ?? []), permission]);
-  }
-  return [...groups].map(([resource, list]) => ({ resource, permissions: list }));
-}
-
 /** The array behind `ipAllowlist` and one entry of it: the same checks as the server makes. */
 const ADDRESS_LIST = CreateTokenRequestSchema.shape.ipAllowlist.unwrap();
 
@@ -120,235 +101,171 @@ function parseAddresses(text: string): string[] {
   return [...new Set(text.split(/[\s,]+/u).filter((part) => part.length > 0))];
 }
 
-/** `fallback` is what a refusal for lack of permission says, already translated. */
-function ErrorNote({ error, fallback }: { error: unknown; fallback: string }) {
-  const { t } = useTranslation('tokens');
-  if (!error) {
-    return null;
-  }
+/** A fact of a token in the grid of its details: a small caption over the value. */
+function MetaCell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(t, error, t('signInAgain'), fallback)}
-    </Alert>
+    <div className="sw-meta-cell">
+      <Text className="sw-token-col-label">{label}</Text>
+      <div className="sw-meta-value">{children}</div>
+    </div>
   );
 }
 
-function SectionHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description: string;
-  actions?: ReactNode;
-}) {
-  return (
-    <Group align="flex-end" gap="sm" justify="space-between" wrap="wrap">
-      <Stack gap={0}>
-        <Title order={5}>{title}</Title>
-        <Text c="dimmed" fz="sm">
-          {description}
-        </Text>
-      </Stack>
-      {actions ? (
-        <Group gap="sm" justify="flex-end" wrap="wrap">
-          {actions}
-        </Group>
-      ) : null}
-    </Group>
-  );
-}
-
-const FIRST_COLUMN = { pl: 'md' } as const;
-
-/**
- * The tokens as a table. A token has no end action unless it is active and the viewer may revoke it:
- * `onRevoke` is left out when the viewer may not revoke any of these.
- */
-function TokensTable({
-  tokens,
-  kind,
-  onRevoke,
-}: {
-  tokens: readonly TokenView[];
-  kind: 'mine' | 'all';
-  onRevoke: ((token: TokenView) => void) | undefined;
-}) {
-  const { t } = useTranslation('tokens');
+/** What a token is and what it may do, read-only. Opened from the menu of a row. */
+function TokenDetails({ token, onClose }: { token: TokenView; onClose: () => void }) {
+  const { t } = useTranslation(['tokens', 'common']);
   const formatDate = useDateTime('short');
-  const showUser = kind === 'all';
+  const groups = useMemo(() => groupByResource(token.permissions), [token.permissions]);
+
   return (
-    <Table.ScrollContainer minWidth={showUser ? 1120 : 1000}>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            {showUser ? <Table.Th {...FIRST_COLUMN}>{t('columns.user')}</Table.Th> : null}
-            <Table.Th {...(showUser ? {} : FIRST_COLUMN)}>{t('columns.name')}</Table.Th>
-            <Table.Th>{t('columns.permissions')}</Table.Th>
-            <Table.Th>{t('columns.addresses')}</Table.Th>
-            <Table.Th>{t('columns.created')}</Table.Th>
-            <Table.Th>{t('columns.expires')}</Table.Th>
-            <Table.Th>{t('columns.lastUsed')}</Table.Th>
-            <Table.Th>{t('columns.state')}</Table.Th>
-            {onRevoke ? <Table.Th pr="md" /> : null}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {tokens.map((token) => (
-            <Table.Tr key={token.id}>
-              {showUser ? (
-                <Table.Td {...FIRST_COLUMN}>
-                  <Text fw={500} fz="sm">
-                    {token.username}
-                  </Text>
-                </Table.Td>
+    <Stack gap="md">
+      <div className="sw-meta-grid">
+        <MetaCell label={t('columns.created')}>
+          <Text c="gray.2" inherit title={token.createdAt}>
+            {formatDate(token.createdAt)}
+          </Text>
+        </MetaCell>
+        <MetaCell label={t('columns.expires')}>
+          <Text c={token.state === 'expired' ? 'red.5' : 'gray.2'} inherit title={token.expiresAt}>
+            {formatDate(token.expiresAt)}
+          </Text>
+        </MetaCell>
+        <MetaCell label={t('columns.lastUsed')}>
+          {token.lastUsedAt ? (
+            <>
+              <Text c="gray.2" inherit title={token.lastUsedAt}>
+                {formatDate(token.lastUsedAt)}
+              </Text>
+              {token.lastUsedIp ? (
+                <Text c="dimmed" ff="monospace" size="xs">
+                  {token.lastUsedIp}
+                </Text>
               ) : null}
-              <Table.Td {...(showUser ? {} : FIRST_COLUMN)}>
-                <Text fw={500} fz="sm">
-                  {token.name}
-                </Text>
-                <Text c="dimmed" ff="monospace" fz="xs">
-                  {token.prefix}…
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text fz="sm" style={{ whiteSpace: 'nowrap' }} title={token.permissions.join('\n')}>
-                  {t('table.permissionCount', { count: token.permissions.length })}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                {token.ipAllowlist.length > 0 ? (
-                  <Text
-                    ff="monospace"
-                    fz="sm"
-                    maw={200}
-                    title={token.ipAllowlist.join('\n')}
-                    truncate="end"
+            </>
+          ) : (
+            <Text c="dimmed" inherit>
+              {t('table.neverUsed')}
+            </Text>
+          )}
+        </MetaCell>
+        <MetaCell label={t('columns.state')}>
+          <Group gap="xs">
+            <StatusText kind={STATE_KIND[token.state]}>{t(`states.${token.state}`)}</StatusText>
+            {token.revokedAt ? (
+              <Text c="dimmed" size="xs">
+                {t('table.revokedOn', { when: formatDate(token.revokedAt) })}
+              </Text>
+            ) : null}
+          </Group>
+        </MetaCell>
+        <MetaCell label={t('columns.user')}>
+          <Text c="gray.2" inherit>
+            {token.username}
+          </Text>
+        </MetaCell>
+        <MetaCell label={t('columns.id')}>
+          <div className="sw-meta-id">
+            <Text className="sw-meta-id-text" truncate="end">
+              {token.id}
+            </Text>
+            <CopyButton timeout={1600} value={token.id}>
+              {({ copied, copy }) => (
+                <Tooltip label={copied ? t('common:copied') : t('common:copy')}>
+                  <ActionIcon
+                    aria-label={copied ? t('common:copied') : t('common:copy')}
+                    color={copied ? 'teal' : 'gray'}
+                    onClick={copy}
+                    size="xs"
+                    variant="subtle"
                   >
-                    {token.ipAllowlist.join(', ')}
-                  </Text>
-                ) : (
-                  <Text c="dimmed" fz="sm">
-                    {t('table.anywhere')}
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td style={{ whiteSpace: 'nowrap' }} title={token.createdAt}>
-                {formatDate(token.createdAt)}
-              </Table.Td>
-              <Table.Td style={{ whiteSpace: 'nowrap' }} title={token.expiresAt}>
-                {formatDate(token.expiresAt)}
-              </Table.Td>
-              <Table.Td>
-                {token.lastUsedAt ? (
-                  <>
-                    <Text fz="sm" style={{ whiteSpace: 'nowrap' }} title={token.lastUsedAt}>
-                      {formatDate(token.lastUsedAt)}
-                    </Text>
-                    {token.lastUsedIp ? (
-                      <Text c="dimmed" ff="monospace" fz="xs">
-                        {token.lastUsedIp}
-                      </Text>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text c="dimmed" fz="sm">
-                    {t('table.neverUsed')}
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td
-                title={
-                  token.revokedAt
-                    ? t('table.revokedOn', { when: formatDate(token.revokedAt) })
-                    : undefined
-                }
-              >
-                <StatusText kind={STATE_KIND[token.state]}>{t(`states.${token.state}`)}</StatusText>
-              </Table.Td>
-              {onRevoke ? (
-                <Table.Td pr="md" style={{ textAlign: 'right' }}>
-                  {token.state === 'active' ? (
-                    <Button
-                      aria-label={
-                        showUser
-                          ? t('table.revokeAriaOther', {
-                              name: token.name,
-                              username: token.username,
-                            })
-                          : t('table.revokeAria', { name: token.name })
-                      }
-                      leftSection={<IconBan size={14} />}
-                      onClick={() => {
-                        onRevoke(token);
-                      }}
-                      size="xs"
-                      variant="default"
-                    >
-                      {t('table.revoke')}
-                    </Button>
-                  ) : null}
-                </Table.Td>
-              ) : null}
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+                    {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </CopyButton>
+          </div>
+        </MetaCell>
+      </div>
+
+      <Stack gap={6}>
+        <Text className="sw-token-col-label">{t('columns.addresses')}</Text>
+        {token.ipAllowlist.length === 0 ? (
+          <Text c="dimmed" size="sm">
+            {t('table.anywhere')}
+          </Text>
+        ) : (
+          <Group gap="xs">
+            {token.ipAllowlist.map((address) => (
+              <Badge ff="monospace" key={address} radius="sm" tt="none" variant="soft">
+                {address}
+              </Badge>
+            ))}
+          </Group>
+        )}
+      </Stack>
+
+      <Stack gap={6}>
+        <Text className="sw-token-col-label">{t('columns.permissions')}</Text>
+        <PermissionRows groups={groups} initiallyOpen picked={token.permissions} />
+      </Stack>
+
+      <ModalFooter>
+        <ActionIcon.Group ml="auto">
+          <CopyButton timeout={1600} value={token.permissions.join('\n')}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? t('common:copied') : t('view.copyPermissions')}>
+                <ActionIcon
+                  aria-label={copied ? t('common:copied') : t('view.copyPermissions')}
+                  color={copied ? 'teal' : 'gray'}
+                  onClick={copy}
+                  size="input-md"
+                  variant="soft"
+                >
+                  {copied ? <IconCheck size={24} /> : <IconCopy size={24} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+        </ActionIcon.Group>
+        <Button color="teal" onClick={onClose} size="md" variant="light">
+          {t('common:close')}
+        </Button>
+      </ModalFooter>
+    </Stack>
   );
 }
 
-/** Asks before a token is revoked: it cannot be undone. `other` is set when the token is somebody else's. */
-function RevokeDialog({
+function TokenViewDialog({
   token,
-  other,
-  loading,
-  error,
-  fallback,
   onClose,
-  onConfirm,
 }: {
   token: TokenView | undefined;
-  other: boolean;
-  loading: boolean;
-  error: unknown;
-  fallback: string;
   onClose: () => void;
-  onConfirm: (token: TokenView) => void;
 }) {
-  const { t } = useTranslation(['tokens', 'common']);
+  const isMobile = useIsMobile();
+  const shown = useLastDefined(token);
   return (
     <Modal
-      centered
+      fullScreen={isMobile}
       onClose={onClose}
       opened={token !== undefined}
-      title={t('revoke.title', { name: token?.name ?? '' })}
+      size="min(800px, 90vw)"
+      title={
+        <OverlayHeader
+          icon={IconApiApp}
+          iconColor="teal"
+          subtitle={
+            shown ? (
+              <Text ff="monospace" inherit>
+                {shown.prefix}…
+              </Text>
+            ) : undefined
+          }
+          title={shown?.name ?? ''}
+        />
+      }
     >
-      <Stack gap="md">
-        <Text fz="sm">
-          {other
-            ? t('revoke.warningOther', { username: token?.username ?? '' })
-            : t('revoke.warning')}
-        </Text>
-        <ErrorNote error={error} fallback={fallback} />
-        <Group justify="flex-end">
-          <Button onClick={onClose} variant="default">
-            {t('common:cancel')}
-          </Button>
-          <Button
-            color="red"
-            leftSection={<IconBan size={16} />}
-            loading={loading}
-            onClick={() => {
-              if (token) {
-                onConfirm(token);
-              }
-            }}
-          >
-            {t('revoke.submit')}
-          </Button>
-        </Group>
-      </Stack>
+      {shown ? <TokenDetails onClose={onClose} token={shown} /> : null}
     </Modal>
   );
 }
@@ -370,65 +287,23 @@ function CreatedNotice({ created, onClose }: { created: CreatedToken; onClose: (
           when: formatDate(created.view.expiresAt),
         })}
       </Text>
-      <Alert
-        color="yellow"
-        icon={<IconAlertTriangle size={18} />}
-        title={t('created.warningTitle')}
-        variant="light"
-      >
-        <Text fz="sm">{t('created.warning')}</Text>
-      </Alert>
-      <Stack gap="xs">
-        <TextInput
-          label={t('created.valueLabel')}
-          onFocus={(e) => {
-            e.currentTarget.select();
-          }}
-          readOnly
-          styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
-          value={created.token}
-        />
-        <Group>
-          <CopyButton value={created.token}>
-            {({ copied, copy }) => (
-              <Button
-                leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                onClick={copy}
-                variant="default"
-              >
-                {copied ? t('common:copied') : t('created.copy')}
-              </Button>
-            )}
-          </CopyButton>
-        </Group>
-      </Stack>
-      <Stack gap="xs">
-        <Stack gap={0}>
-          <Text fw={500} fz="sm">
-            {t('created.exampleLabel')}
-          </Text>
-          <Text c="dimmed" fz="xs">
-            {t('created.exampleHint')}
-          </Text>
-        </Stack>
-        <Code block style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
-          {example}
-        </Code>
-        <Group>
-          <CopyButton value={example}>
-            {({ copied, copy }) => (
-              <Button
-                leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                onClick={copy}
-                size="xs"
-                variant="default"
-              >
-                {copied ? t('common:copied') : t('created.copyExample')}
-              </Button>
-            )}
-          </CopyButton>
-        </Group>
-      </Stack>
+      <Callout title={t('created.warningTitle')}>{t('created.warning')}</Callout>
+      <CopyableCodeBlock
+        copiedLabel={t('common:copied')}
+        copyLabel={t('created.copy')}
+        inputWrapperProps={{ label: t('created.valueLabel') }}
+        value={created.token}
+      />
+      <CopyableCodeBlock
+        copiedLabel={t('common:copied')}
+        copyLabel={t('created.copyExample')}
+        inputWrapperProps={{
+          label: t('created.exampleLabel'),
+          description: t('created.exampleHint'),
+        }}
+        size="small"
+        value={example}
+      />
       <Checkbox
         checked={saved}
         label={t('created.saved')}
@@ -436,11 +311,11 @@ function CreatedNotice({ created, onClose }: { created: CreatedToken; onClose: (
           setSaved(e.currentTarget.checked);
         }}
       />
-      <Group justify="flex-end">
-        <Button disabled={!saved} onClick={onClose}>
+      <ModalFooter>
+        <Button color="teal" disabled={!saved} onClick={onClose} size="md" variant="light">
           {t('common:close')}
         </Button>
-      </Group>
+      </ModalFooter>
     </Stack>
   );
 }
@@ -456,7 +331,7 @@ function CreateDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation(['tokens', 'common']);
-  const text = useCatalogText();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const step = useStepUp();
   const [name, setName] = useState('');
@@ -498,17 +373,27 @@ function CreateDialog({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tokens'] });
     },
+    onError: (error) => {
+      notifyFailure(t, t('create.title'), error, t('signInAgain'), t('create.forbidden'));
+    },
   });
   const created = mutation.data;
 
+  // The form and the value are cleared once the dialog has faded out, so they do not change while it closes. A
+  // request still on its way when the dialog is closed is dropped at once.
   const close = () => {
+    if (mutation.isPending) {
+      mutation.reset();
+    }
+    onClose();
+  };
+  const reset = () => {
     mutation.reset();
     setName('');
     setDays(TOKEN_DEFAULT_DAYS);
     setAddresses('');
     setPicked([]);
     setTouched(false);
-    onClose();
   };
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -518,15 +403,39 @@ function CreateDialog({
     }
   };
 
+  /** Keeps the permissions in the order of the list, whatever order they were ticked in. */
+  const choose = (next: readonly Permission[]) => {
+    setPicked(available.filter((permission) => next.includes(permission)));
+  };
+  const toggle = (permission: Permission) => {
+    choose(
+      picked.includes(permission)
+        ? picked.filter((p) => p !== permission)
+        : [...picked, permission],
+    );
+  };
+  const toggleKind = (group: PermissionGroup, kind: PermissionKind) => {
+    const keys = group.permissions.filter((permission) => kindOf(permission) === kind);
+    const allOn = keys.every((permission) => picked.includes(permission));
+    choose(allOn ? picked.filter((p) => !keys.includes(p)) : [...picked, ...keys]);
+  };
+
   return (
     <Modal
-      centered
       closeOnClickOutside={created === undefined}
       closeOnEscape={created === undefined}
+      fullScreen={isMobile}
       onClose={close}
+      onExitTransitionEnd={reset}
       opened={opened}
-      size="lg"
-      title={created ? t('created.title') : t('create.title')}
+      size="min(800px, 90vw)"
+      title={
+        <OverlayHeader
+          icon={IconApiApp}
+          iconColor="teal"
+          title={created ? t('created.title') : t('create.title')}
+        />
+      }
       withCloseButton={created === undefined}
     >
       {created ? (
@@ -534,38 +443,52 @@ function CreateDialog({
       ) : (
         <form onSubmit={submit}>
           <Stack gap="md">
-            <TextInput
-              autoComplete="off"
-              data-autofocus
-              description={t('create.nameDescription')}
-              error={touched && !nameOk ? t('create.nameError', { max: NAME_MAX }) : undefined}
-              label={t('create.nameLabel')}
-              onChange={(e) => {
-                setName(e.currentTarget.value);
-              }}
-              required
-              value={name}
-            />
-            <NumberInput
-              allowDecimal={false}
-              allowNegative={false}
-              description={t('create.expiresDescription', { max: TOKEN_MAX_DAYS })}
-              error={
-                touched && !daysOk ? t('create.expiresError', { max: TOKEN_MAX_DAYS }) : undefined
-              }
-              label={t('create.expiresLabel')}
-              max={TOKEN_MAX_DAYS}
-              min={1}
-              onChange={setDays}
-              required
-              value={days}
-            />
+            <Callout title={t('create.onceTitle')}>{t('create.once')}</Callout>
+
+            <Flex
+              align={isMobile ? 'stretch' : 'flex-start'}
+              direction={isMobile ? 'column' : 'row'}
+              gap="xs"
+            >
+              <TextInput
+                autoComplete="off"
+                data-autofocus
+                description={t('create.nameDescription')}
+                error={touched && !nameOk ? t('create.nameError', { max: NAME_MAX }) : undefined}
+                flex={isMobile ? undefined : 1}
+                label={t('create.nameLabel')}
+                leftSection={<IconTag size={16} />}
+                onChange={(e) => {
+                  setName(e.currentTarget.value);
+                }}
+                required
+                value={name}
+              />
+              <NumberInput
+                allowDecimal={false}
+                allowNegative={false}
+                description={t('create.expiresDescription', { max: TOKEN_MAX_DAYS })}
+                error={
+                  touched && !daysOk ? t('create.expiresError', { max: TOKEN_MAX_DAYS }) : undefined
+                }
+                label={t('create.expiresLabel')}
+                leftSection={<IconClock size={16} />}
+                max={TOKEN_MAX_DAYS}
+                min={1}
+                onChange={setDays}
+                required
+                value={days}
+                w={isMobile ? '100%' : 300}
+              />
+            </Flex>
+
             <Textarea
               autoComplete="off"
               autosize
               description={t('create.addressesDescription')}
               error={touched ? addressError : undefined}
               label={t('create.addressesLabel')}
+              leftSection={<IconWorld size={16} />}
               maxRows={6}
               minRows={2}
               onChange={(e) => {
@@ -574,63 +497,242 @@ function CreateDialog({
               styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
               value={addresses}
             />
+
             {available.length === 0 ? (
               <Text c="dimmed" fz="sm">
                 {t('create.permissionsEmpty')}
               </Text>
             ) : (
-              <Checkbox.Group
+              <Input.Wrapper
                 description={t('create.permissionsDescription')}
                 error={touched && picked.length === 0 ? t('create.permissionsError') : undefined}
                 label={t('create.permissionsLabel')}
-                onChange={(values) => {
-                  setPicked(available.filter((permission) => values.includes(permission)));
-                }}
-                value={picked}
               >
-                <Stack gap="sm" mt="xs">
-                  {groups.map((group) => (
-                    <Stack gap={6} key={group.resource}>
-                      <Text fw={600} fz="sm">
-                        {t(`resources.${group.resource}`)}
-                      </Text>
-                      {group.permissions.map((permission) => (
-                        <Checkbox
-                          description={text.permissionDescription(
-                            permission,
-                            PERMISSION_INFO[permission],
-                          )}
-                          key={permission}
-                          label={
-                            <Text component="span" ff="monospace" fz="sm">
-                              {permission}
-                            </Text>
-                          }
-                          value={permission}
-                        />
-                      ))}
-                    </Stack>
-                  ))}
+                <Stack gap="xs" mt="xs">
+                  <Group gap="xs">
+                    <Button
+                      leftSection={<IconEye size={16} />}
+                      onClick={() => {
+                        choose(available.filter((permission) => kindOf(permission) === 'read'));
+                      }}
+                      size="xs"
+                      variant="default"
+                    >
+                      {t('create.presetRead')}
+                    </Button>
+                    <Button
+                      leftSection={<IconWorld size={16} />}
+                      onClick={() => {
+                        choose(available);
+                      }}
+                      size="xs"
+                      variant="default"
+                    >
+                      {t('create.presetAll')}
+                    </Button>
+                  </Group>
+                  <PermissionRows
+                    groups={groups}
+                    onToggle={toggle}
+                    onToggleKind={toggleKind}
+                    picked={picked}
+                  />
                 </Stack>
-              </Checkbox.Group>
+              </Input.Wrapper>
             )}
-            <ErrorNote error={mutation.error} fallback={t('create.forbidden')} />
-            <Group justify="flex-end">
-              <Button onClick={close} variant="default">
-                {t('common:cancel')}
-              </Button>
+
+            <ModalFooter>
+              <ActionIcon.Group ml="auto">
+                <Tooltip label={t('create.clear')}>
+                  <ActionIcon
+                    aria-label={t('create.clear')}
+                    color="gray"
+                    onClick={() => {
+                      setPicked([]);
+                    }}
+                    size="input-md"
+                    variant="soft"
+                  >
+                    <IconClearAll size={24} />
+                  </ActionIcon>
+                </Tooltip>
+              </ActionIcon.Group>
               <Button
-                leftSection={<IconPlus size={16} />}
+                color="teal"
+                leftSection={<IconApiApp size={20} />}
                 loading={mutation.isPending}
+                size="md"
                 type="submit"
+                variant="soft"
               >
                 {t('create.submit')}
               </Button>
-            </Group>
+            </ModalFooter>
           </Stack>
         </form>
       )}
     </Modal>
+  );
+}
+
+/** The row of a token in the list: its state, name, how much it may do, when it ends, and a menu. */
+function TokenRow({
+  token,
+  kind,
+  revoking,
+  onView,
+  onRevoke,
+}: {
+  token: TokenView;
+  kind: 'mine' | 'all';
+  revoking: boolean;
+  onView: (token: TokenView) => void;
+  /** Left out when the viewer may not revoke any of these. */
+  onRevoke: ((token: TokenView) => void) | undefined;
+}) {
+  const { t } = useTranslation('tokens');
+  const formatDate = useDateTime('short');
+  const active = token.state === 'active';
+
+  return (
+    <div className="sw-token-row" role="row">
+      <Group gap="sm" role="cell" style={{ minWidth: 0 }} wrap="nowrap">
+        <span
+          aria-hidden
+          className="sw-token-dot"
+          style={{
+            background: active ? 'var(--mantine-color-teal-5)' : 'var(--mantine-color-dark-3)',
+          }}
+        />
+        <Stack gap={0} style={{ minWidth: 0 }}>
+          <Text fw={500} size="sm" truncate="end">
+            {token.name}
+          </Text>
+          <Text c="dimmed" ff="monospace" size="xs" truncate="end">
+            {kind === 'all' ? `${token.username} · ` : ''}
+            {token.prefix}…
+          </Text>
+        </Stack>
+      </Group>
+
+      <Text c="dimmed" ff="monospace" role="cell" size="xs" truncate="end">
+        {t('table.permissionCount', { count: token.permissions.length })}
+      </Text>
+
+      <Text
+        c={token.state === 'expired' ? 'red.5' : 'dimmed'}
+        className="sw-token-expires"
+        fw={token.state === 'expired' ? 600 : 400}
+        role="cell"
+        size="xs"
+        truncate="end"
+      >
+        {active ? formatDate(token.expiresAt) : t(`states.${token.state}`)}
+      </Text>
+
+      <div role="cell">
+        <Menu position="bottom-end" trigger="click-hover" width={190}>
+          <Menu.Target>
+            <ActionIcon
+              aria-label={t('table.actionsFor', { name: token.name })}
+              color="gray"
+              size="md"
+              variant="subtle"
+            >
+              <IconDots size={18} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<IconEye size={15} />}
+              onClick={() => {
+                onView(token);
+              }}
+            >
+              {t('table.view')}
+            </Menu.Item>
+            {onRevoke && active ? (
+              <>
+                <Menu.Divider />
+                <Menu.Item
+                  color="red"
+                  disabled={revoking}
+                  leftSection={<IconBan size={15} />}
+                  onClick={() => {
+                    onRevoke(token);
+                  }}
+                >
+                  {t('table.revoke')}
+                </Menu.Item>
+              </>
+            ) : null}
+          </Menu.Dropdown>
+        </Menu>
+      </div>
+    </div>
+  );
+}
+
+/** The panel's list of tokens: a header row of captions and the rows in a box that scrolls. */
+function TokenTable({
+  tokens,
+  kind,
+  revokingId,
+  onView,
+  onRevoke,
+}: {
+  tokens: readonly TokenView[];
+  kind: 'mine' | 'all';
+  revokingId: string | undefined;
+  onView: (token: TokenView) => void;
+  onRevoke: ((token: TokenView) => void) | undefined;
+}) {
+  const { t } = useTranslation('tokens');
+  return (
+    <div
+      aria-label={kind === 'mine' ? t('mine.title') : t('all.title')}
+      className="sw-token-table"
+      role="table"
+    >
+      <div className="sw-token-header-row" role="row">
+        <Text className="sw-token-col-label" role="columnheader">
+          {t('columns.name')}
+        </Text>
+        <Text className="sw-token-col-label" role="columnheader">
+          {t('columns.permissions')}
+        </Text>
+        <Text className="sw-token-col-label sw-token-expires" role="columnheader">
+          {t('columns.expires')}
+        </Text>
+        <span />
+      </div>
+      <ScrollArea.Autosize mah={300} mih={300}>
+        <Stack gap={0}>
+          {tokens.map((token) => (
+            <TokenRow
+              key={token.id}
+              kind={kind}
+              onRevoke={onRevoke}
+              onView={onView}
+              revoking={revokingId === token.id}
+              token={token}
+            />
+          ))}
+        </Stack>
+      </ScrollArea.Autosize>
+    </div>
+  );
+}
+
+/** The empty list of a card: the panel's large empty glyph and a line or two of text. */
+function EmptyTokens({ children }: { children: ReactNode }) {
+  return (
+    <Center h="300px">
+      <Stack align="center" gap="xs">
+        <PiEmpty aria-hidden size={48} />
+        {children}
+      </Stack>
+    </Center>
   );
 }
 
@@ -639,70 +741,96 @@ function MyTokens({ role, canCreate }: { role: UserRole; canCreate: boolean }) {
   const { t } = useTranslation(['tokens', 'common']);
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
-  const [confirming, setConfirming] = useState<TokenView | undefined>(undefined);
+  const [viewing, setViewing] = useState<TokenView | undefined>(undefined);
   const list = useQuery({ queryKey: ['tokens', 'mine'], queryFn: listMyTokens, retry: false });
   const revoke = useMutation({
     mutationFn: (token: TokenView) => revokeMyToken(token.id),
-    onSuccess: () => {
-      setConfirming(undefined);
+    onSuccess: (_result, token) => {
+      notifySuccess(t('toast.success'), t('revoke.done', { name: token.name }));
       return queryClient.invalidateQueries({ queryKey: ['tokens'] });
     },
+    onError: (error) => {
+      notifyFailure(t, t('revoke.submit'), error, t('signInAgain'), t('mine.revokeForbidden'));
+    },
   });
-
-  const tokens = list.data?.tokens ?? [];
-  const closeConfirm = () => {
-    revoke.reset();
-    setConfirming(undefined);
+  const askRevoke = (token: TokenView) => {
+    confirmAction({
+      title: t('revoke.title', { name: token.name }),
+      message: t('revoke.warning'),
+      confirmLabel: t('revoke.submit'),
+      cancelLabel: t('common:cancel'),
+      onConfirm: () => {
+        revoke.mutate(token);
+      },
+    });
   };
 
+  const tokens = list.data?.tokens ?? [];
+
   return (
-    <Stack gap="sm">
-      <SectionHeader
-        actions={
-          canCreate ? (
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={() => {
-                setCreating(true);
-              }}
-            >
-              {t('mine.create')}
-            </Button>
-          ) : undefined
-        }
+    <SettingsCard.Container>
+      <SettingsCard.Header
         description={t('mine.description', { max: TOKEN_MAX_ACTIVE })}
+        icon={<IconApiApp size={24} />}
         title={t('mine.title')}
       />
-      <Card padding={0}>
+
+      <SettingsCard.Content>
         {list.isPending ? (
-          <Stack gap="xs" p="md">
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
+          <LoaderModal label={t('common:loading')} mih="300px" />
         ) : list.isError ? (
-          <Alert color="red" m="md" variant="light">
-            {describeError(t, list.error, t('signInAgain'))}
-          </Alert>
+          <ErrorMessageBlock
+            copiedLabel={t('common:copied')}
+            copyLabel={t('common:copy')}
+            message={describeError(t, list.error, t('signInAgain'))}
+          />
         ) : tokens.length === 0 ? (
-          <Stack gap={2} p="md">
-            <Text c="dimmed" fz="sm">
+          <EmptyTokens>
+            <Text c="dimmed" size="sm" ta="center">
               {t('mine.empty')}
             </Text>
             {canCreate ? (
-              <Text c="dimmed" fz="sm">
+              <Text c="dimmed" size="sm" ta="center">
                 {t('mine.emptyHint')}
               </Text>
             ) : null}
-          </Stack>
+          </EmptyTokens>
         ) : (
           <>
-            <TokensTable kind="mine" onRevoke={setConfirming} tokens={tokens} />
-            <Text c="dimmed" fz="xs" p="md">
+            <TokenTable
+              kind="mine"
+              onRevoke={askRevoke}
+              onView={setViewing}
+              revokingId={revoke.isPending ? revoke.variables.id : undefined}
+              tokens={tokens}
+            />
+            <Text c="dimmed" fz="xs">
               {t('mine.valueNote')}
             </Text>
           </>
         )}
-      </Card>
+      </SettingsCard.Content>
+
+      <SettingsCard.Bottom>
+        <Group justify="space-between">
+          <HeaderAction
+            icon={IconRefresh}
+            label={t('common:refresh')}
+            loading={list.isRefetching}
+            onClick={() => void list.refetch()}
+          />
+          {canCreate ? (
+            <HeaderAction
+              color="teal"
+              icon={IconPlus}
+              label={t('mine.create')}
+              onClick={() => {
+                setCreating(true);
+              }}
+            />
+          ) : null}
+        </Group>
+      </SettingsCard.Bottom>
 
       <CreateDialog
         onClose={() => {
@@ -711,18 +839,13 @@ function MyTokens({ role, canCreate }: { role: UserRole; canCreate: boolean }) {
         opened={creating}
         role={role}
       />
-      <RevokeDialog
-        error={revoke.error}
-        fallback={t('mine.revokeForbidden')}
-        loading={revoke.isPending}
-        onClose={closeConfirm}
-        onConfirm={(token) => {
-          revoke.mutate(token);
+      <TokenViewDialog
+        onClose={() => {
+          setViewing(undefined);
         }}
-        other={false}
-        token={confirming}
+        token={viewing}
       />
-    </Stack>
+    </SettingsCard.Container>
   );
 }
 
@@ -732,7 +855,7 @@ function AllTokens({ canRevoke }: { canRevoke: boolean }) {
   const queryClient = useQueryClient();
   const step = useStepUp();
   const [userId, setUserId] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<TokenView | undefined>(undefined);
+  const [viewing, setViewing] = useState<TokenView | undefined>(undefined);
   const list = useQuery({
     queryKey: ['tokens', 'all'],
     queryFn: () => listTokens({}),
@@ -740,11 +863,25 @@ function AllTokens({ canRevoke }: { canRevoke: boolean }) {
   });
   const revoke = useMutation({
     mutationFn: (token: TokenView) => step.run(() => revokeToken(token.id)),
-    onSuccess: () => {
-      setConfirming(undefined);
+    onSuccess: (_result, token) => {
+      notifySuccess(t('toast.success'), t('revoke.done', { name: token.name }));
       return queryClient.invalidateQueries({ queryKey: ['tokens'] });
     },
+    onError: (error) => {
+      notifyFailure(t, t('revoke.submit'), error, t('signInAgain'), t('all.revokeForbidden'));
+    },
   });
+  const askRevoke = (token: TokenView) => {
+    confirmAction({
+      title: t('revoke.title', { name: token.name }),
+      message: t('revoke.warningOther', { username: token.username }),
+      confirmLabel: t('revoke.submit'),
+      cancelLabel: t('common:cancel'),
+      onConfirm: () => {
+        revoke.mutate(token);
+      },
+    });
+  };
 
   const all = list.data?.tokens;
   // The users for the filter come from the tokens themselves: someone without a token has nothing to show.
@@ -761,58 +898,70 @@ function AllTokens({ canRevoke }: { canRevoke: boolean }) {
   const shown = selected
     ? (all ?? []).filter((token) => token.userId === selected.value)
     : (all ?? []);
-  const closeConfirm = () => {
-    revoke.reset();
-    setConfirming(undefined);
-  };
 
   return (
-    <Stack gap="sm">
-      <SectionHeader description={t('all.description')} title={t('all.title')} />
-      <Card padding={0}>
-        <Group gap="sm" p="md">
-          <Select
-            aria-label={t('all.userFilterLabel')}
-            clearable
-            data={users}
-            onChange={setUserId}
-            placeholder={t('all.userFilterPlaceholder')}
-            searchable
-            value={selected?.value ?? null}
-            w={240}
-          />
-        </Group>
+    <SettingsCard.Container>
+      <SettingsCard.Header
+        description={t('all.description')}
+        icon={<IconApiApp size={24} />}
+        title={t('all.title')}
+      />
+
+      <SettingsCard.Content>
+        <Select
+          aria-label={t('all.userFilterLabel')}
+          clearable
+          data={users}
+          onChange={setUserId}
+          placeholder={t('all.userFilterPlaceholder')}
+          searchable
+          value={selected?.value ?? null}
+          w={{ base: '100%', sm: 240 }}
+        />
 
         {list.isPending ? (
-          <Stack gap="xs" p="md" pt={0}>
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
+          <LoaderModal label={t('common:loading')} mih="300px" />
         ) : list.isError ? (
-          <Alert color="red" m="md" mt={0} variant="light">
-            {describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
-          </Alert>
+          <ErrorMessageBlock
+            copiedLabel={t('common:copied')}
+            copyLabel={t('common:copy')}
+            message={describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
+          />
         ) : shown.length === 0 ? (
-          <Text c="dimmed" fz="sm" p="md" pt={0}>
-            {selected ? t('all.emptyFiltered') : t('all.empty')}
-          </Text>
+          <EmptyTokens>
+            <Text c="dimmed" size="sm" ta="center">
+              {selected ? t('all.emptyFiltered') : t('all.empty')}
+            </Text>
+          </EmptyTokens>
         ) : (
-          <TokensTable kind="all" onRevoke={canRevoke ? setConfirming : undefined} tokens={shown} />
+          <TokenTable
+            kind="all"
+            onRevoke={canRevoke ? askRevoke : undefined}
+            onView={setViewing}
+            revokingId={revoke.isPending ? revoke.variables.id : undefined}
+            tokens={shown}
+          />
         )}
-      </Card>
+      </SettingsCard.Content>
 
-      <RevokeDialog
-        error={revoke.error}
-        fallback={t('all.revokeForbidden')}
-        loading={revoke.isPending}
-        onClose={closeConfirm}
-        onConfirm={(token) => {
-          revoke.mutate(token);
+      <SettingsCard.Bottom>
+        <Group justify="space-between">
+          <HeaderAction
+            icon={IconRefresh}
+            label={t('common:refresh')}
+            loading={list.isRefetching}
+            onClick={() => void list.refetch()}
+          />
+        </Group>
+      </SettingsCard.Bottom>
+
+      <TokenViewDialog
+        onClose={() => {
+          setViewing(undefined);
         }}
-        other
-        token={confirming}
+        token={viewing}
       />
-    </Stack>
+    </SettingsCard.Container>
   );
 }
 
@@ -835,21 +984,21 @@ export function TokensPage({
     <>
       <PageHeader
         actions={
-          <Button
-            leftSection={<IconRefresh size={16} />}
-            loading={fetching}
-            onClick={() => void queryClient.invalidateQueries({ queryKey: ['tokens'] })}
-            variant="default"
-          >
-            {t('common:refresh')}
-          </Button>
+          <HeaderActions>
+            <HeaderAction
+              icon={IconRefresh}
+              label={t('common:refresh')}
+              loading={fetching}
+              onClick={() => void queryClient.invalidateQueries({ queryKey: ['tokens'] })}
+            />
+          </HeaderActions>
         }
         description={t('header.description')}
-        icon={<IconApiApp size={22} />}
+        icon={<IconApiApp size={24} />}
         title={t('header.title')}
       />
 
-      <Stack gap="xl">
+      <Stack gap="md">
         <MyTokens canCreate={permissions.includes('tokens:create')} role={role} />
         {permissions.includes('tokens:read') ? (
           <AllTokens canRevoke={permissions.includes('tokens:revoke')} />
