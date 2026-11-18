@@ -7,12 +7,15 @@ export {
   PluginManifestSchema,
   PluginPermissionsSchema,
   ProvidedExtensionSchema,
+  SIDECAR_IMAGE_PATTERN,
+  SidecarSchema,
   isNetworkTarget,
   isSafeRelativePath,
   referencedFiles,
   type ExtensionKind,
   type PluginManifest,
   type PluginPermissions,
+  type Sidecar,
 } from './manifest.js';
 export {
   permissionDiff,

@@ -29,8 +29,11 @@ import { ApiErrorSchema } from './errors.js';
 import {
   EnablePluginRequestSchema,
   PluginConfigViewSchema,
+  PluginGatewayReplySchema,
+  PluginGatewayRequestSchema,
   PluginIdParamsSchema,
   PluginListSchema,
+  PluginSidecarFragmentSchema,
   PluginViewSchema,
   UpdatePluginConfigRequestSchema,
 } from './plugins.js';
@@ -912,6 +915,36 @@ export const updatePluginConfigRoute = defineRoute({
   responses: { 200: { description: 'The settings as stored.', schema: PluginConfigViewSchema } },
 });
 
+export const getPluginSidecarRoute = defineRoute({
+  operationId: 'getPluginSidecar',
+  method: 'get',
+  path: '/plugins/{id}/sidecar',
+  tags: ['plugins'],
+  summary: 'The compose fragment that runs the container of a plugin',
+  description:
+    'For a plugin whose code runs as a sidecar container: a Docker Compose file that adds the container to the stack on an internal network with no way out, read-only, without privileges, with the memory and cpu the manifest names and the image pinned by digest. It holds the token with which the sidecar proves itself to the core, derived from the plugin and its digest: keep it like a secret. Swellwright never starts a container itself.',
+  auth: 'session',
+  permission: 'plugins:manage',
+  stepUp: true,
+  request: { params: PluginIdParamsSchema },
+  responses: { 200: { description: 'The fragment.', schema: PluginSidecarFragmentSchema } },
+});
+
+export const pluginGatewayRoute = defineRoute({
+  operationId: 'pluginGateway',
+  method: 'post',
+  path: '/plugins/{id}/gateway',
+  tags: ['plugin-gateway'],
+  summary: 'What a sidecar asks of the core',
+  description:
+    "Called by a plugin's container, not by people: it proves itself with `Authorization: Bearer <token>`, the token of the compose fragment. The core does what the plugin was approved for and nothing else: requests to the approved hosts, the secret bound to a setting, the plugin's own storage. The answer is always 200 with `ok`; a refusal says why. A wrong token, a plugin that is not enabled or whose files changed answer 401.",
+  auth: 'none',
+  request: { params: PluginIdParamsSchema, body: PluginGatewayRequestSchema },
+  responses: {
+    200: { description: 'The result or the refusal.', schema: PluginGatewayReplySchema },
+  },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -984,6 +1017,8 @@ export const routes = [
   checkPluginRoute,
   getPluginConfigRoute,
   updatePluginConfigRoute,
+  getPluginSidecarRoute,
+  pluginGatewayRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

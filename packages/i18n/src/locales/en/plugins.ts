@@ -15,7 +15,7 @@ export const plugins = {
 
   directories: {
     noneTitle: 'No plugin directory is configured',
-    none: 'Plugins are read from directories on the server. Set <code>SW_PLUGINS_OFFICIAL_DIR</code> for the plugins that ship with Swellwright and <code>SW_PLUGINS_LOCAL_DIR</code> for your own, then restart the API.',
+    none: 'Plugins are read from directories on the server. Set <code>SW_PLUGINS_OFFICIAL_DIR</code> for the plugins that ship with Swellwright, <code>SW_PLUGINS_LOCAL_DIR</code> for your own and <code>SW_PLUGINS_COMMUNITY_DIR</code> for plugins by others, then restart the API.',
     emptyTitle: 'No plugins found',
     empty:
       'The configured directories contain no plugins. Add a plugin folder to one of them and refresh.',
@@ -32,10 +32,13 @@ export const plugins = {
   trust: {
     official: 'Official',
     local: 'Local',
+    community: 'Community',
   },
   trustHint: {
     official: 'Comes with Swellwright.',
     local: 'Comes from a directory of this server.',
+    community:
+      'A plugin by others: it can only run as a container or as data, never as code inside Swellwright.',
   },
 
   statuses: {
@@ -132,7 +135,33 @@ export const plugins = {
 
   local: {
     title: 'Code from this server',
-    body: 'This plugin comes from a directory of this server, not from the Swellwright project. It runs in a process of its own that can read only its own files and reach only the hosts you approve. That limits mistakes and most misuse; it is not a sandbox against code written to attack the server. Enable only what you trust.',
+    body: 'This plugin comes from a directory of this server, not from the Swellwright project. Its code runs in a process of its own that can read only its own files and reach only the hosts you approve, or in a container you start yourself when it has one. That limits mistakes and most misuse; it is not a sandbox against code written to attack the server. Enable only what you trust.',
+  },
+
+  /** A plugin whose code runs in a container the administrator starts: what the container is and how it is run. */
+  container: {
+    title: 'Container',
+    image: 'Image',
+    port: 'Port',
+    memory: 'Memory limit',
+    memoryValue: '{{memory}} MiB',
+    cpus: 'CPU limit',
+    note: 'The code of this plugin runs in a container of its own that you start yourself; Swellwright never starts containers. The container has no network of its own: it reaches the world only through Swellwright, and only the hosts you approve.',
+    fragmentButton: 'Compose fragment',
+    forbidden: 'Your role may not get the compose fragment of plugins.',
+  },
+
+  /** The Docker Compose file that adds the container to the stack. It holds the token the container proves itself with. */
+  fragment: {
+    title: 'Compose fragment',
+    warning:
+      'This file holds the token the container proves itself with. Keep it like a secret. It changes when the plugin’s files change.',
+    service: 'Service',
+    file: 'Compose file {{name}}',
+    applyTitle: 'How to apply',
+    applySave: 'Save the file next to your compose file.',
+    applyRun: 'Run <code>{{command}}</code>.',
+    applyCheck: 'Then press Check in the Runtime section of this plugin.',
   },
 
   runtime: {
@@ -145,6 +174,7 @@ export const plugins = {
     started: 'Started',
     calls: 'Calls',
     idle: 'No process is running now.',
+    sidecarIdle: 'Not checked yet. Press Check to ask the container.',
     noCode: 'It has no code to run: nothing starts.',
     failedTitle: 'It failed to run',
     failedUnknown: 'No reason was recorded.',
@@ -154,9 +184,12 @@ export const plugins = {
     noMethods: 'none',
     restricted:
       'A plugin runs in a restricted process of its own. It can read only its own files, has no network of its own (it reaches only the hosts you approved, through Swellwright), cannot start programs or workers, sees nothing of the environment of Swellwright, has a memory limit, and is ended when a call takes too long.',
+    restrictedContainer:
+      'The plugin runs in its own container, outside Swellwright. Check asks the container what it offers.',
     check: {
       button: 'Check',
       note: 'Loads the plugin in its restricted process and lists what it offers. Nothing else happens.',
+      noteSidecar: 'Asks the container what it offers. Nothing else happens.',
       noteData:
         'Reads the driver and lists the operations it offers. Nothing is sent to the service.',
       forbidden: 'Your role may not check plugins.',

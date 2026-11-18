@@ -51,6 +51,7 @@ import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
 import { PluginSettings } from './plugin-settings.js';
+import { SidecarSection } from './plugin-sidecar.js';
 
 /** Shown where a plugin has no value (a plugin that is gone has no version). */
 const DASH = '—';
@@ -66,6 +67,13 @@ const STATUS_BADGE = {
   unavailable: { color: 'red', variant: 'light' },
   missing: { color: 'red', variant: 'light' },
 } as const satisfies Record<PluginStatus, { color: string; variant: 'light' | 'outline' }>;
+
+/** Colour of the trust badge: the project's own, this server's, and plugins by others. */
+const TRUST_COLOR = {
+  official: 'cyan',
+  local: 'yellow',
+  community: 'violet',
+} as const satisfies Record<PluginTrust, string>;
 
 /** Colour and style of the badge for the state of a plugin's process. Never colour alone: the word is always there too. */
 const RUNTIME_BADGE = {
@@ -166,7 +174,7 @@ function TrustBadge({ trust }: { trust: PluginTrust | null }) {
   }
   return (
     <Badge
-      color={trust === 'official' ? 'cyan' : 'yellow'}
+      color={TRUST_COLOR[trust]}
       maw="none"
       styles={{ root: { width: 'max-content' }, label: { overflow: 'visible' } }}
       title={t(`trustHint.${trust}`)}
@@ -559,6 +567,8 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
   const { runtime } = plugin;
   const { color, variant } = RUNTIME_BADGE[runtime.state];
   const enabled = plugin.status === 'enabled';
+  // The code runs in a container the administrator starts, not in a process of Swellwright's.
+  const inContainer = plugin.sidecar !== null;
   // Only data (declarative): there is no code, so no process ever starts and there is nothing to check.
   const noCode =
     enabled &&
@@ -625,7 +635,7 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
         <>
           {runtime.state === 'stopped' ? (
             <Text c="dimmed" fz="sm">
-              {t('runtime.idle')}
+              {inContainer ? t('runtime.sidecarIdle') : t('runtime.idle')}
             </Text>
           ) : null}
           {runtime.state === 'running' ? (
@@ -654,7 +664,7 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
           ) : null}
           {runtime.modules.length > 0 ? <ModuleList modules={runtime.modules} /> : null}
           <Text c="dimmed" fz="xs">
-            {t('runtime.restricted')}
+            {inContainer ? t('runtime.restrictedContainer') : t('runtime.restricted')}
           </Text>
           {canManage && enabled ? (
             <Stack gap={6}>
@@ -673,7 +683,7 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
                 </Button>
               </Group>
               <Text c="dimmed" fz="xs">
-                {t('runtime.check.note')}
+                {inContainer ? t('runtime.check.noteSidecar') : t('runtime.check.note')}
               </Text>
             </Stack>
           ) : null}
@@ -696,6 +706,7 @@ function ReviewBody({
   canReadVault,
   onClose,
   onDone,
+  onNestedChange,
 }: {
   plugin: PluginView;
   live: PluginView | undefined;
@@ -703,6 +714,7 @@ function ReviewBody({
   canReadVault: boolean;
   onClose: () => void;
   onDone: (notice: Notice) => void;
+  onNestedChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation(['plugins', 'common']);
   const queryClient = useQueryClient();
@@ -785,6 +797,10 @@ function ReviewBody({
         <PluginSettings canManage={canManage} canReadVault={canReadVault} plugin={plugin} />
       ) : null}
 
+      {plugin.sidecar !== null ? (
+        <SidecarSection canManage={canManage} onDialogChange={onNestedChange} plugin={plugin} />
+      ) : null}
+
       {plugin.status === 'enabled' || plugin.runtime.state !== 'stopped' ? (
         <RuntimeSection canManage={canManage} plugin={plugin} />
       ) : null}
@@ -847,9 +863,12 @@ function ReviewDialog({
   onClose: () => void;
   onDone: (notice: Notice) => void;
 }) {
+  // A dialog opened over this one (the compose fragment) takes the Escape key for itself.
+  const [nestedOpen, setNestedOpen] = useState(false);
   return (
     <Modal
       centered
+      closeOnEscape={!nestedOpen}
       onClose={onClose}
       opened={plugin !== undefined}
       size="lg"
@@ -863,6 +882,7 @@ function ReviewDialog({
           live={live}
           onClose={onClose}
           onDone={onDone}
+          onNestedChange={setNestedOpen}
           plugin={plugin}
         />
       ) : null}
@@ -1101,7 +1121,9 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
   const plugins = list.data?.plugins ?? [];
   const liveReviewing = reviewing ? plugins.find((item) => item.id === reviewing.id) : undefined;
   const configured = list.data
-    ? list.data.directories.official || list.data.directories.local
+    ? list.data.directories.official ||
+      list.data.directories.local ||
+      list.data.directories.community
     : true;
 
   return (

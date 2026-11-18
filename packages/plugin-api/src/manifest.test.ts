@@ -95,6 +95,67 @@ describe('the plugin manifest', () => {
     assert.ok(problems(withChange({ provides: [{ kind: 'Toaster', entry: 'a.js' }] })).length > 0);
   });
 
+  describe('a sidecar', () => {
+    const DIGEST = 'a'.repeat(64);
+    const sidecar = { image: `ghcr.io/example/plugin:1.2@sha256:${DIGEST}`, port: 8080 };
+    const provides = [{ kind: 'NotificationChannel', sidecar: true }];
+
+    it('is a container the manifest describes, with the image pinned by digest', () => {
+      assert.deepEqual(problems(withChange({ provides, sidecar })), []);
+      const parsed = PluginManifestSchema.parse(withChange({ provides, sidecar }));
+      assert.deepEqual(parsed.sidecar, { ...sidecar, memoryMiB: 256, cpus: 0.5 });
+      for (const image of [
+        'ghcr.io/example/plugin:1.2',
+        'ghcr.io/example/plugin@sha256:abc',
+        `ghcr.io/example/plugin@sha1:${DIGEST}`,
+        `UPPER/case@sha256:${DIGEST}`,
+        `@sha256:${DIGEST}`,
+        `ghcr.io/example/plugin @sha256:${DIGEST}`,
+      ]) {
+        assert.ok(
+          problems(withChange({ provides, sidecar: { ...sidecar, image } })).length > 0,
+          image,
+        );
+      }
+    });
+
+    it('needs the description when a sidecar is provided, and only then', () => {
+      assert.ok(problems(withChange({ provides })).length > 0, 'provided but not described');
+      assert.ok(problems(withChange({ sidecar })).length > 0, 'described but not provided');
+    });
+
+    it('is one way of providing an extension, not combined with code or a driver for the same entry', () => {
+      assert.ok(
+        problems(
+          withChange({
+            provides: [{ kind: 'DnsProvider', sidecar: true, entry: 'a.js' }],
+            sidecar,
+          }),
+        ).length > 0,
+      );
+      assert.ok(
+        problems(withChange({ provides: [{ kind: 'DnsProvider', sidecar: false }], sidecar }))
+          .length > 0,
+      );
+    });
+
+    it('keeps its limits: a port a container may bind, memory and cpu in a sane range', () => {
+      for (const change of [
+        { port: 80 },
+        { port: 70000 },
+        { memoryMiB: 8 },
+        { memoryMiB: 100000 },
+        { cpus: 0 },
+        { cpus: 64 },
+        { extra: true },
+      ]) {
+        assert.ok(
+          problems(withChange({ provides, sidecar: { ...sidecar, ...change } })).length > 0,
+        );
+      }
+    });
+  });
+
   it('keeps every file inside the plugin', () => {
     for (const bad of [
       '../x.js',

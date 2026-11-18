@@ -1,0 +1,16 @@
+{
+  "id": "example-sidecar",
+  "version": "0.1.0",
+  "name": "Example sidecar",
+  "description": "A reference container that speaks the sidecar protocol.",
+  "engines": { "swellwright": ">=0.0.0-0 <2" },
+  "provides": [{ "kind": "DnsProvider", "sidecar": true }],
+  "permissions": { "network": [], "secrets": [] },
+  "sidecar": {
+    "image": "ghcr.io/example/example-sidecar:0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "port": 8080,
+    "memoryMiB": 128,
+    "cpus": 0.25
+  },
+  "license": "AGPL-3.0-only"
+}

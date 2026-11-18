@@ -7,11 +7,19 @@ import {
   Logger,
   NotFoundException,
   type OnApplicationShutdown,
+  UnauthorizedException,
 } from '@nestjs/common';
-import type { PluginView } from '@swellwright/contracts';
+import type {
+  PluginGatewayReply,
+  PluginGatewayRequest,
+  PluginSidecarFragment,
+  PluginView,
+} from '@swellwright/contracts';
 import { type Driver, runOperation } from '@swellwright/plugin-api';
 
 import { AuditService } from '../../audit/audit.service.js';
+import { WindowLimiter } from '../../auth/rate-limit.js';
+import { RateLimitedException } from '../../http.js';
 import { type RequestMeta } from '../../auth/context.js';
 import { type AppConfig } from '../../config.js';
 import { CONFIG, PLUGIN_NETWORK } from '../../tokens.js';
@@ -20,6 +28,15 @@ import { type DiscoveredPlugin } from '../discovery.js';
 import { PluginBroker, PluginBrokerError, type BrokerContext } from '../broker.js';
 import { PluginsService } from '../plugins.service.js';
 import { PluginRuntime } from '../runtime.js';
+import {
+  callSidecar,
+  composeFragment,
+  describeSidecar,
+  SidecarError,
+  sidecarToken,
+  sidecarUrl,
+  tokenMatches,
+} from './sidecar.js';
 import { NetworkRefused, PluginNetwork } from './network.js';
 import { type CoreServices, PluginCallError, PluginProcess } from './process.js';
 
@@ -52,13 +69,17 @@ export class PluginHostService implements OnApplicationShutdown {
   private readonly failures = new Map<string, number[]>();
   private readonly notes = new Map<string, number[]>();
   private readonly idle = new Map<string, NodeJS.Timeout>();
+  /** Wrong tokens at the gateway, per address: it is open to the network, so it is slowed down for guessing. */
+  private readonly gatewayGuesses = new WindowLimiter(20, 5 * 60_000);
+  private readonly gatewayBusy = new Map<string, number>();
 
   constructor(
     @Inject(PluginsService) private readonly plugins: PluginsService,
     @Inject(PluginRuntime) private readonly runtime: PluginRuntime,
     @Inject(PluginBroker) private readonly broker: PluginBroker,
     @Inject(AuditService) private readonly audit: AuditService,
-    @Inject(CONFIG) private readonly config: Pick<AppConfig, 'pluginLimits'>,
+    @Inject(CONFIG)
+    private readonly config: Pick<AppConfig, 'pluginLimits' | 'pluginSidecar' | 'authKey'>,
     @Inject(PLUGIN_NETWORK) private readonly gateway: PluginNetwork,
   ) {
     runtime.onStop((id) => {
@@ -235,6 +256,9 @@ export class PluginHostService implements OnApplicationShutdown {
         'not_running',
       );
     }
+    if (this.isSidecar(runnable, kind)) {
+      return this.callOnSidecar(id, runnable, kind, method, params);
+    }
     const driver = runnable.plugin.drivers[kind];
     if (driver !== undefined) {
       return this.callDriver(id, runnable, driver, method, params);
@@ -317,6 +341,224 @@ export class PluginHostService implements OnApplicationShutdown {
     }
   }
 
+  // ----------------------------------------------------------------- sidecars (ADR 0031)
+
+  private isSidecar(runnable: Runnable, kind: string): boolean {
+    return (
+      runnable.plugin.manifest?.provides.some((p) => p.kind === kind && p.sidecar === true) === true
+    );
+  }
+
+  private sidecarOf(runnable: Runnable): { base: string; token: string } | undefined {
+    const { manifest, digest } = runnable.plugin;
+    if (manifest?.sidecar === undefined || digest === undefined) {
+      return undefined;
+    }
+    return {
+      base: sidecarUrl(this.config.pluginSidecar.urlTemplate, manifest.id, manifest.sidecar.port),
+      token: sidecarToken(this.config.authKey, manifest.id, digest),
+    };
+  }
+
+  /** A check of a plugin that has a sidecar: ask it what it offers. A container that is not up is an answer. */
+  private async describeOwnSidecar(runnable: Runnable): Promise<{
+    state: 'running' | 'stopped';
+    startedAt: Date | null;
+    modules: { kind: string; methods: string[] }[];
+  }> {
+    const target = this.sidecarOf(runnable);
+    if (target === undefined) {
+      return { state: 'stopped', startedAt: null, modules: [] };
+    }
+    try {
+      const described = await describeSidecar(target.base, target.token, 5000);
+      return {
+        state: 'running',
+        startedAt: new Date(),
+        modules: described.modules.map((m) => ({ kind: m.kind, methods: [...m.methods].sort() })),
+      };
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'The sidecar did not answer.', {
+        cause: error,
+      });
+    }
+  }
+
+  private async callOnSidecar(
+    id: string,
+    runnable: Runnable,
+    kind: string,
+    method: string,
+    params: unknown,
+  ): Promise<unknown> {
+    const target = this.sidecarOf(runnable);
+    if (target === undefined) {
+      throw new PluginCallError('The plugin has no sidecar.', 'not_running');
+    }
+    if (this.failing(id)) {
+      throw new PluginCallError(
+        'The sidecar keeps failing and is left alone for a minute.',
+        'failed',
+      );
+    }
+    let config: Record<string, string | number | boolean | null>;
+    try {
+      config = await this.broker.settings({
+        id,
+        schema: runnable.plugin.configSchema,
+        secretKinds: runnable.secretKinds,
+      });
+    } catch (error) {
+      throw new PluginCallError(
+        error instanceof Error ? error.message : 'The plugin is not configured.',
+        'not_configured',
+      );
+    }
+    try {
+      const answer = await callSidecar(
+        target.base,
+        target.token,
+        { kind, method, params, config },
+        this.config.pluginLimits.callTimeoutMs,
+      );
+      if (!answer.ok) {
+        throw new PluginCallError(answer.message, 'failed');
+      }
+      return answer.value;
+    } catch (error) {
+      if (error instanceof PluginCallError) {
+        throw error;
+      }
+      if (error instanceof SidecarError) {
+        this.recordFailure(id);
+        this.runtime.report(id, {
+          state: 'failed',
+          startedAt: null,
+          calls: 0,
+          lastError: error.message,
+          modules: [],
+        });
+        throw new PluginCallError(
+          error.message,
+          error.reason === 'timeout' ? 'timeout' : 'crashed',
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The compose fragment that runs a plugin's container. It holds the token of the plugin as it is now, so it is
+   * recorded when it is handed out; the core starts nothing.
+   */
+  async fragment(actor: Actor, id: string, meta: RequestMeta): Promise<PluginSidecarFragment> {
+    const plugin = await this.plugins.find(id);
+    const sidecar = plugin?.manifest?.sidecar;
+    if (plugin?.manifest === undefined || sidecar === undefined) {
+      throw new NotFoundException('This plugin has no sidecar.');
+    }
+    if (plugin.state !== 'available' || plugin.digest === undefined) {
+      throw new ConflictException(
+        `This plugin cannot be run: ${plugin.problems[0] ?? 'it is not usable'}.`,
+      );
+    }
+    const compose = composeFragment({
+      id,
+      version: plugin.manifest.version,
+      digest: plugin.digest,
+      sidecar,
+      token: sidecarToken(this.config.authKey, id, plugin.digest),
+      coreUrl: this.config.pluginSidecar.coreUrl,
+      network: this.config.pluginSidecar.network,
+      coreService: this.config.pluginSidecar.coreService,
+    });
+    await this.audit.record({
+      action: 'plugin.sidecar.exported',
+      outcome: 'success',
+      actor,
+      object: { type: 'plugin', id },
+      details: { service: `plugin-${id}`, digest: plugin.digest },
+      meta,
+    });
+    return { service: `plugin-${id}`, compose, coreUrl: this.config.pluginSidecar.coreUrl };
+  }
+
+  /**
+   * What a sidecar asks of the core, over HTTP. It is open to the network, so it proves nothing by being asked:
+   * the token must be the one of this plugin as it was approved, the plugin enabled, its files unchanged. Anything
+   * else is a 401 that says nothing about why. What it may do is what a plugin process may: the approved hosts,
+   * the secret bound to a setting, its own storage.
+   */
+  async sidecarGateway(
+    id: string,
+    authorization: string | undefined,
+    request: PluginGatewayRequest,
+    address: string | undefined,
+  ): Promise<PluginGatewayReply> {
+    const from = address ?? 'unknown';
+    if (this.gatewayGuesses.blocked(from)) {
+      throw new RateLimitedException(
+        300,
+        'Too many wrong tokens from this address. Try again later.',
+      );
+    }
+    const runnable = await this.plugins.runnable(id);
+    const target = runnable.kind === 'ok' ? this.sidecarOf(runnable) : undefined;
+    if (
+      runnable.kind !== 'ok' ||
+      target === undefined ||
+      !tokenMatches(target.token, authorization)
+    ) {
+      this.gatewayGuesses.hit(from);
+      if (this.mayNote(`gateway:${from}`)) {
+        void this.audit.note({
+          action: 'plugin.gateway.denied',
+          outcome: 'denied',
+          actor: null,
+          object: { type: 'plugin', id: id.slice(0, 48) },
+          details: { ip: from.slice(0, 64) },
+          meta: { ip: address, requestId: undefined },
+        });
+      }
+      throw new UnauthorizedException();
+    }
+    const active = this.gatewayBusy.get(id) ?? 0;
+    if (active >= 8) {
+      return { ok: false, message: 'Too many requests at once.' };
+    }
+    this.gatewayBusy.set(id, active + 1);
+    try {
+      const services = this.servicesFor(id, runnable);
+      let value: unknown = null;
+      if (request.op === 'fetch') {
+        const { method, headers, body } = request.init ?? {};
+        value = await services.fetch(request.url, {
+          ...(method === undefined ? {} : { method }),
+          ...(headers === undefined ? {} : { headers }),
+          ...(body === undefined ? {} : { body }),
+        });
+      } else if (request.op === 'secret') {
+        value = await services.secret(request.field);
+      } else if (request.action === 'get') {
+        value = await services.storage.get(request.key);
+      } else if (request.action === 'set') {
+        await services.storage.set(request.key, request.value);
+      } else if (request.action === 'delete') {
+        await services.storage.delete(request.key);
+      } else {
+        value = await services.storage.keys();
+      }
+      return { ok: true, value };
+    } catch (error) {
+      return {
+        ok: false,
+        message: (error instanceof Error ? error.message : 'The request failed.').slice(0, 300),
+      };
+    } finally {
+      this.gatewayBusy.set(id, (this.gatewayBusy.get(id) ?? 1) - 1);
+    }
+  }
+
   /** What the drivers of a plugin offer, in the shape the runtime shows for a module. */
   private driverModules(runnable: Runnable): { kind: string; methods: string[] }[] {
     return Object.entries(runnable.plugin.drivers).map(([kind, driver]) => ({
@@ -339,11 +581,16 @@ export class PluginHostService implements OnApplicationShutdown {
     try {
       const running = await this.ensure(id, runnable, { ignoreFailures: true });
       const own = running?.snapshot();
-      const modules = [...(own?.modules ?? []), ...this.driverModules(runnable)];
+      const sidecar = await this.describeOwnSidecar(runnable);
+      const modules = [
+        ...(own?.modules ?? []),
+        ...this.driverModules(runnable),
+        ...sidecar.modules,
+      ];
       // A plugin that is only data has no process, but what it offers is shown all the same.
       this.runtime.report(id, {
-        state: own?.state ?? 'stopped',
-        startedAt: own?.startedAt ?? null,
+        state: own?.state ?? sidecar.state,
+        startedAt: own?.startedAt ?? sidecar.startedAt,
         calls: own?.calls ?? 0,
         lastError: own?.lastError ?? null,
         modules,
@@ -357,6 +604,14 @@ export class PluginHostService implements OnApplicationShutdown {
       details = {
         reason: (error instanceof Error ? error.message : 'The plugin did not load.').slice(0, 200),
       };
+      // What the page shows must be what was found now, not what the last good check said.
+      this.runtime.report(id, {
+        state: 'failed',
+        startedAt: null,
+        calls: 0,
+        lastError: String(details['reason']),
+        modules: [],
+      });
       this.logger.warn(`check of ${id} failed: ${String(details['reason'])}`);
     }
     await this.audit.record({

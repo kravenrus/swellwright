@@ -60,8 +60,11 @@ export async function createApp(
     AppModule.register(config, options),
     {
       logger: config.silent ? false : ['log', 'warn', 'error'],
+      // The JSON parser is registered below with a limit a plugin's request through the gateway fits in.
+      bodyParser: false,
     },
   );
+  app.useBodyParser('json', { limit: '3mb' });
   app.disable('x-powered-by');
   // Behind a reverse proxy the address of the connection is the proxy's. Only the proxies named in the
   // configuration may say who the client is, or anyone could write any address into the audit chain.

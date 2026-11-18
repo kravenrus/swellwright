@@ -165,10 +165,20 @@ export function viewOf(
     signed: manifest?.signature !== undefined,
     hasSettings: manifest?.ui !== undefined,
     hasConfig: manifest?.config !== undefined,
+    sidecar:
+      manifest?.sidecar === undefined
+        ? null
+        : {
+            image: manifest.sidecar.image,
+            port: manifest.sidecar.port,
+            memoryMiB: manifest.sidecar.memoryMiB,
+            cpus: manifest.sidecar.cpus,
+          },
     approval: record
       ? {
           version: record.version,
-          trust: record.trust === 'official' ? 'official' : 'local',
+          trust:
+            record.trust === 'official' || record.trust === 'community' ? record.trust : 'local',
           digest: record.digest,
           permissions:
             approved ?? canonicalPermissions({ network: [], secrets: [], panel: [], ssh: false }),
@@ -216,6 +226,11 @@ export class PluginsService implements OnApplicationBootstrap {
         `could not check the enabled plugins at start: ${error instanceof Error ? error.message : 'unknown error'}`,
       );
     }
+  }
+
+  /** A plugin as discovery sees it now, by id. */
+  async find(id: string): Promise<DiscoveredPlugin | undefined> {
+    return indexById(await this.discover()).get(id);
   }
 
   private discover(): Promise<DiscoveredPlugin[]> {
@@ -323,6 +338,7 @@ export class PluginsService implements OnApplicationBootstrap {
       directories: {
         official: roots.some((r) => r.trust === 'official'),
         local: roots.some((r) => r.trust === 'local'),
+        community: roots.some((r) => r.trust === 'community'),
       },
     };
   }
