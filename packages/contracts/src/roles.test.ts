@@ -156,6 +156,7 @@ describe('step-up authentication on routes', () => {
       .sort();
     assert.deepEqual(stepped, [
       'changePassword',
+      'changeVaultPassphrase',
       'createSecret',
       'createUser',
       'deleteSecret',
@@ -164,6 +165,9 @@ describe('step-up authentication on routes', () => {
       'revealSecret',
       'revokeSession',
       'revokeUserSessions',
+      'rotateDataKeys',
+      'rotateKek',
+      'rotateRecoveryKey',
       'sealVault',
       'unsealVault',
       'updateSecret',

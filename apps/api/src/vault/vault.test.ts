@@ -66,6 +66,10 @@ describe('setting the vault up', { skip: !databaseUrl }, () => {
       secretCount: 0,
       kekVersion: null,
       createdAt: null,
+      passphraseChangedAt: null,
+      recoveryKeyRotatedAt: null,
+      kekRotatedAt: null,
+      dataKeysRotatedAt: null,
     });
   });
 

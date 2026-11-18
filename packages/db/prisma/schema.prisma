@@ -187,6 +187,11 @@ model VaultMeta {
   passphraseWrappedKek Bytes   @map("passphrase_wrapped_kek")
   recoveryWrappedKek  Bytes    @map("recovery_wrapped_kek")
   kekVersion          Int      @default(1) @map("kek_version")
+  /// When each part of the vault was last rotated (ADR 0024). Null: never since the vault was set up.
+  passphraseChangedAt  DateTime? @map("passphrase_changed_at") @db.Timestamptz(3)
+  recoveryKeyRotatedAt DateTime? @map("recovery_key_rotated_at") @db.Timestamptz(3)
+  kekRotatedAt         DateTime? @map("kek_rotated_at") @db.Timestamptz(3)
+  dataKeysRotatedAt    DateTime? @map("data_keys_rotated_at") @db.Timestamptz(3)
   /// The owner who set the vault up. No foreign key, like the audit chain.
   createdById         String?  @map("created_by_id") @db.Uuid
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
