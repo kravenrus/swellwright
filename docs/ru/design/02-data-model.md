@@ -57,7 +57,7 @@ Prisma-схема строится по этому описанию. Чувст�
 | Сущность | Поля |
 |---|---|
 | `WorkflowDefinition` | код, версия, схема параметров (Zod → JSON Schema), оценка времени |
-| `WorkflowRun` | id, определение, параметры (без секретов), инициатор, состояние (`planned`, `awaiting_approval`, `running`, `paused`, `succeeded`, `failed`, `cancelled`, `rolled_back`, `rollback_partial`), время, ссылка на родителя |
+| `WorkflowRun` | id, определение, параметры (без секретов), инициатор, состояние (`planned`, `awaiting_approval`, `queued`, `running`, `paused`, `awaiting_input`, `succeeded`, `failed`, `cancelled`, `rollback_requested`, `rolling_back`, `rolled_back`, `rollback_partial`), время, ссылка на родителя |
 | `RunStage` / `RunStep` | порядок, ключ, состояние, начало и конец, попытки, ошибка |
 | `RunEvent` | запуск, этап, статус, полезная нагрузка (JSONB), время |
 | `RunLogChunk` | запуск, шаг, смещение, текст (очищен, секреты скрыты) |
