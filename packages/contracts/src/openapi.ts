@@ -13,6 +13,7 @@ import {
   AcceptInvitationRequestSchema,
   AuthNextStepSchema,
   ChangePasswordRequestSchema,
+  ElevationSchema,
   LoginRequestSchema,
   PendingSessionSchema,
   SessionInfoSchema,
@@ -50,7 +51,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.4.0';
+export const OPENAPI_INFO_VERSION = '0.5.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -84,6 +85,7 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   ChainVerificationSchema,
   AcceptInvitationRequestSchema,
   ChangePasswordRequestSchema,
+  ElevationSchema,
   UserStatusSchema,
   UserStateSchema,
   UserViewSchema,
@@ -183,6 +185,11 @@ function operation(route: RouteDef): Json {
   if (route.permission) {
     // Not part of OpenAPI: tells a reader and a generated client which role may call the operation.
     op['x-sw-permission'] = route.permission;
+  }
+  if (route.stepUp) {
+    // Not part of OpenAPI: the session must have been elevated with POST /auth/step-up, or the answer is 403
+    // with the error code `step_up_required`.
+    op['x-sw-step-up'] = true;
   }
   return op;
 }

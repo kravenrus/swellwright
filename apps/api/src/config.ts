@@ -32,6 +32,8 @@ const EnvSchema = z.object({
   SW_SESSION_MAX_HOURS: z.coerce.number().int().min(1).max(168).default(12),
   SW_LOCKOUT_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
   SW_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  /** How long a session counts as freshly verified after the second factor (ADR 0017). */
+  SW_STEP_UP_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
 });
 
 export interface AppConfig {
@@ -54,6 +56,8 @@ export interface AppConfig {
   readonly sessionMaxMs: number;
   readonly lockoutAttempts: number;
   readonly lockoutMs: number;
+  /** How long a session stays elevated after sign-in or a step-up. */
+  readonly stepUpMs: number;
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -110,5 +114,6 @@ export function loadConfig(
     sessionMaxMs: e.SW_SESSION_MAX_HOURS * 3_600_000,
     lockoutAttempts: e.SW_LOCKOUT_ATTEMPTS,
     lockoutMs: e.SW_LOCKOUT_MINUTES * 60_000,
+    stepUpMs: e.SW_STEP_UP_MINUTES * 60_000,
   };
 }

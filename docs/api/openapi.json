@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -499,6 +499,53 @@
         ]
       }
     },
+    "/auth/step-up": {
+      "post": {
+        "operationId": "stepUp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Prove the second factor again to elevate the session",
+        "responses": {
+          "200": {
+            "description": "The session is elevated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Elevation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Takes a code from the authenticator or a recovery code. For a short time afterwards the session may call the routes marked `x-sw-step-up`; they answer 403 `step_up_required` before that. A wrong code counts towards the lockout like a wrong code at sign-in. Signing in elevates the session already.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/auth/invitations/accept": {
       "post": {
         "operationId": "acceptInvitation",
@@ -564,7 +611,7 @@
             }
           }
         },
-        "description": "Needs the current password. Ends your other sessions and keeps this one. A wrong current password counts towards the lockout.",
+        "description": "Needs the current password and an elevated session. Ends your other sessions and keeps this one. A wrong current password counts towards the lockout.",
         "requestBody": {
           "required": true,
           "content": {
@@ -579,7 +626,8 @@
           {
             "session": []
           }
-        ]
+        ],
+        "x-sw-step-up": true
       }
     },
     "/users": {
@@ -688,7 +736,8 @@
             "session": []
           }
         ],
-        "x-sw-permission": "users:write"
+        "x-sw-permission": "users:write",
+        "x-sw-step-up": true
       }
     },
     "/users/{id}": {
@@ -749,7 +798,8 @@
             "session": []
           }
         ],
-        "x-sw-permission": "users:write"
+        "x-sw-permission": "users:write",
+        "x-sw-step-up": true
       }
     },
     "/users/{id}/reset-credentials": {
@@ -800,7 +850,8 @@
             "session": []
           }
         ],
-        "x-sw-permission": "users:write"
+        "x-sw-permission": "users:write",
+        "x-sw-step-up": true
       }
     },
     "/roles": {
@@ -989,6 +1040,7 @@
           "validation_failed",
           "unauthorized",
           "forbidden",
+          "step_up_required",
           "not_found",
           "conflict",
           "rate_limited",
@@ -1443,6 +1495,8 @@
           "auth.recovery_code.used",
           "auth.account.locked",
           "auth.logout",
+          "auth.step_up.succeeded",
+          "auth.step_up.failed",
           "auth.invitation.accepted",
           "auth.password.changed",
           "user.created",
@@ -1747,6 +1801,21 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ],
+        "additionalProperties": false
+      },
+      "Elevation": {
+        "type": "object",
+        "properties": {
+          "elevatedUntil": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+            "description": "Until when this session counts as freshly verified (step-up authentication)."
+          }
+        },
+        "required": [
+          "elevatedUntil"
         ],
         "additionalProperties": false
       },

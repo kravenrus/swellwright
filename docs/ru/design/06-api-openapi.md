@@ -8,7 +8,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 - Ошибки по RFC 9457 (`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`, `code`, `errors[]`. Кодов ограниченный перечень (см. п. 6).
 - Пагинация курсорная (`limit`, `cursor`), фильтры и сортировка единообразно (`filter[...]`, `sort`), `ETag` и `If-Match` для оптимистичных обновлений.
 - Долгие операции: `202 Accepted` + ресурс запуска `runs/{id}`; повторный `POST` с тем же `Idempotency-Key` возвращает тот же запуск.
-- Расширения OpenAPI: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (требуется согласование), `x-sw-scopes`, `x-sw-locks` (какие ресурсы блокируются), `x-sw-permission` (разрешение, которое должна иметь роль вошедшего вызывающего; реализовано, ADR 0015).
+- Расширения OpenAPI: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (требуется согласование), `x-sw-scopes`, `x-sw-locks` (какие ресурсы блокируются), `x-sw-permission` (разрешение, которое должна иметь роль вошедшего вызывающего; реализовано, ADR 0015), `x-sw-step-up` (сессия должна быть повышена, иначе 403 `step_up_required`; реализовано, ADR 0017).
 - Версионирование: мажорная версия в пути; несовместимые изменения только с новой мажорной; политика устаревания (`Deprecation`, `Sunset`).
 
 ## 2. Аутентификация
@@ -23,7 +23,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | Группа | Эндпоинты (суть) |
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (только первый запуск, нужен токен установки) |
-| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me`; реализовано с ADR 0016: `POST /auth/invitations/accept` (выбрать пароль по токену приглашения), `POST /auth/password` (сменить свой) |
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up` (реализовано, ADR 0017: код аутентификатора или код восстановления повышает сессию на несколько минут), `GET /auth/me`; реализовано с ADR 0016: `POST /auth/invitations/accept` (выбрать пароль по токену приглашения), `POST /auth/password` (сменить свой) |
 | users, roles | CRUD пользователей и ролей Swellwright. Реализовано (ADR 0015, 0016): `GET /roles` (встроенные роли с наборами разрешений и каталог разрешений одним документом); `GET /users`, `POST /users` (приглашение: без пароля, одноразовое приглашение), `PATCH /users/{id}` (роль, статус, имя, e-mail), `POST /users/{id}/reset-credentials`; удаления пока нет |
 | tokens | `POST/GET/DELETE /tokens` (токены Swellwright), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (значения только на запись), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |

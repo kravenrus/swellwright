@@ -9,7 +9,7 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 |---|---|---|
 | `User` | id, name, email (optional), role, status, language, theme, last login | P |
 | `Credential` | password (Argon2id), TOTP secret (S; sealed with the instance authentication key, not the vault, so sign-in works while the vault is sealed, ADR 0014), WebAuthn keys (public), recovery codes (hashes; own table `RecoveryCode`) | S |
-| `Session` | id, user, token hash, stage (`password_verified`, `active`), IP, UA, created, last seen, idle and absolute expiry, elevated until | N |
+| `Session` | id, user, token hash, stage (`password_verified`, `active`), IP, UA, created, last seen, idle and absolute expiry, elevated until (built, ADR 0017) | N |
 | `Invitation` | user (one open invitation per user), token hash (the token is shown once), purpose (`invite`, `reset`), expiry (72 hours), who issued it (null for the server command; no foreign key). Deleted when used (ADR 0016) | S (hash) |
 | `Role` / `RolePermission` | name, permission set (`servers:write`, `runs:execute:deploy`, `terminal:use`, `vault:reveal` …). The five built-in roles are fixed sets in `packages/contracts` (ADR 0015); the tables come with custom roles | N |
 | `ApiToken` (Swellwright) | name, hash, scopes, expiry, last use, IP restrictions | S (hash) |

@@ -7,6 +7,7 @@ import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 
 import { changePassword } from '../api.js';
 import { describeError } from './messages.js';
+import { useStepUp } from './step-up.js';
 
 /** Changing your own password: the current one and a new one. Your other sessions end. */
 export function ChangePasswordDialog({
@@ -25,8 +26,10 @@ export function ChangePasswordDialog({
   const mismatch = repeat.length > 0 && repeat !== next;
   const valid = current.length > 0 && check.success && repeat === next;
 
+  const step = useStepUp();
   const mutation = useMutation({
-    mutationFn: () => changePassword({ currentPassword: current, newPassword: next }),
+    mutationFn: () =>
+      step.run(() => changePassword({ currentPassword: current, newPassword: next })),
     onSuccess: () => {
       setCurrent('');
       setNext('');

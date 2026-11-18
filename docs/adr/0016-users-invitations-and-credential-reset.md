@@ -15,7 +15,7 @@ Until now an instance had exactly one user, the owner created at first run (ADR 
 
 ### Reset
 - **Resetting a user's credentials** (owner, or the server command below) deletes their password hash, authenticator secret, recovery codes and lockout state, ends all their sessions, and issues a new invitation. The old credentials stop working **at once**, not when the invitation is accepted: a reset is what you do when a credential may be in the wrong hands, and a window in which the old password still works would defeat it. Until the invitation is accepted the user cannot sign in.
-- **Changing your own password** needs the current password and a new one under the policy. It ends your other sessions and keeps this one. A wrong current password counts towards the lockout like a wrong sign-in. There is no second factor on this call yet; step-up authentication will add it.
+- **Changing your own password** needs the current password and a new one under the policy. It ends your other sessions and keeps this one. A wrong current password counts towards the lockout like a wrong sign-in. The call also needs an elevated session (step-up authentication, ADR 0017), as do creating and changing users and resetting credentials.
 
 ### The server command
 - `node dist/admin.js reset-credentials <login name>` (script `admin` in `apps/api`) does the reset from the host, with `SW_DATABASE_URL` and `SW_AUTH_KEY` in the environment as for the server. It prints the invitation token once to standard output. `node dist/admin.js users` lists the accounts. This is the way back for an owner who lost everything.
@@ -26,10 +26,10 @@ Until now an instance had exactly one user, the owner created at first run (ADR 
 - **Nobody changes their own role or status, or resets their own credentials, through the API.** Another owner does it, or the server command when there is no other. A mistaken click cannot lock the person at the keyboard out, and a hijacked session cannot reset the credentials of the account it sits in.
 - Disabling a user ends their sessions at once. Changing a role applies on the next request (ADR 0015).
 - User changes are recorded in the same transaction as the change: `user.created`, `user.updated` (what changed, old and new role and status), `user.credentials.reset`, `auth.invitation.accepted`, `auth.password.changed`.
-- Users are not deleted yet. Disabling keeps their login name from being reused and their history readable; deletion is irreversible and waits for step-up authentication.
+- Users are not deleted yet. Disabling keeps their login name from being reused and their history readable; deletion is irreversible and is left for a later slice.
 
 ## Consequences
 - A new instance needs only the owner's own invitation flow; adding people no longer needs database access.
 - An invitation is a bearer secret for up to 72 hours. Whoever intercepts it before the invitee can set the password and enroll their own authenticator; the owner sees `invited` instead of `active` until it is used, and a reset replaces it. The authenticator step means an intercepted token still yields only an account in the invited role.
 - No e-mail, no self-service "forgot password": recovery always goes through an owner or the server. That is deliberate while there is no mail channel to trust.
-- Custom roles, user deletion, a session list and step-up authentication remain for later slices.
+- Custom roles, user deletion and a session list remain for later slices.

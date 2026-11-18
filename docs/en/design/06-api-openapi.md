@@ -10,7 +10,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 - Errors follow RFC 9457 (`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`, `code`, `errors[]`. The set of codes is limited (see section 6).
 - Cursor pagination (`limit`, `cursor`), uniform filters and sorting (`filter[...]`, `sort`), `ETag` and `If-Match` for optimistic updates.
 - Long operations: `202 Accepted` plus a run resource `runs/{id}`; a repeated `POST` with the same `Idempotency-Key` returns the same run.
-- OpenAPI extensions: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (approval required), `x-sw-scopes`, `x-sw-locks` (which resources are locked), `x-sw-permission` (the permission a signed-in caller's role must hold; built, ADR 0015).
+- OpenAPI extensions: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (approval required), `x-sw-scopes`, `x-sw-locks` (which resources are locked), `x-sw-permission` (the permission a signed-in caller's role must hold; built, ADR 0015), `x-sw-step-up` (the session must be elevated, otherwise 403 `step_up_required`; built, ADR 0017).
 - Versioning: the major version is in the path; breaking changes only with a new major version; deprecation policy (`Deprecation`, `Sunset`).
 
 ## 2. Authentication
@@ -25,7 +25,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 | Group | Endpoints (in brief) |
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (first run only, needs the setup token) |
-| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me`; built with ADR 0016: `POST /auth/invitations/accept` (choose a password with an invitation token), `POST /auth/password` (change your own) |
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up` (built, ADR 0017: an authenticator or recovery code elevates the session for a few minutes), `GET /auth/me`; built with ADR 0016: `POST /auth/invitations/accept` (choose a password with an invitation token), `POST /auth/password` (change your own) |
 | users, roles | CRUD for Swellwright users and roles. Built (ADR 0015, 0016): `GET /roles` (the built-in roles with their permission sets, and the permission catalogue, in one document); `GET /users`, `POST /users` (invite: no password, a one-time invitation), `PATCH /users/{id}` (role, status, display name, e-mail), `POST /users/{id}/reset-credentials`; no delete yet |
 | tokens | `POST/GET/DELETE /tokens` (Swellwright tokens), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (values are write-only), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |

@@ -6,7 +6,7 @@ import { AuditController } from './audit/audit.controller.js';
 import { AuditService } from './audit/audit.service.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
-import { AuthGuard, OriginGuard, PermissionGuard } from './auth/guards.js';
+import { AuthGuard, OriginGuard, PermissionGuard, StepUpGuard } from './auth/guards.js';
 import { DEFAULT_PASSWORD_PARAMS, PasswordHasher, type PasswordParams } from './auth/password.js';
 import { SecretBox } from './auth/secret-box.js';
 import { SessionService } from './auth/session.service.js';
@@ -88,10 +88,11 @@ export class AppModule implements OnApplicationShutdown {
         SetupService,
         InvitationService,
         UsersService,
-        // Guards run in this order: the origin check, then the session, then the role's permission.
+        // Guards run in this order: the origin check, the session, the role's permission, the step-up.
         { provide: APP_GUARD, useClass: OriginGuard },
         { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_GUARD, useClass: PermissionGuard },
+        { provide: APP_GUARD, useClass: StepUpGuard },
       ],
     };
   }

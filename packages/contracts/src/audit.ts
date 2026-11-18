@@ -14,6 +14,8 @@ export const AUDIT_ACTIONS = [
   'auth.recovery_code.used',
   'auth.account.locked',
   'auth.logout',
+  'auth.step_up.succeeded',
+  'auth.step_up.failed',
   'auth.invitation.accepted',
   'auth.password.changed',
   'user.created',

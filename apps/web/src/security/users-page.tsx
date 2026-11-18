@@ -45,6 +45,7 @@ import { PageHeader, StatusText, type StatusKind } from '@swellwright/ui';
 import { createUser, listUsers, resetCredentials, updateUser } from '../api.js';
 import { invitationLink } from '../auth/invitation.js';
 import { describeError } from '../auth/messages.js';
+import { useStepUp } from '../auth/step-up.js';
 
 const PAGE_SIZE = 100;
 
@@ -139,6 +140,7 @@ function InviteDialog({
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
 
+  const step = useStepUp();
   const request = {
     username,
     role,
@@ -146,7 +148,10 @@ function InviteDialog({
     ...(email.trim() ? { email: email.trim() } : {}),
   };
   const check = CreateUserRequestSchema.safeParse(request);
-  const mutation = useMutation({ mutationFn: () => createUser(request), onSuccess: onDone });
+  const mutation = useMutation({
+    mutationFn: () => step.run(() => createUser(request)),
+    onSuccess: onDone,
+  });
 
   const close = () => {
     mutation.reset();
@@ -293,14 +298,17 @@ function EditForm({
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [email, setEmail] = useState(user.email ?? '');
 
+  const step = useStepUp();
   const mutation = useMutation({
     mutationFn: () =>
-      updateUser(user.id, {
-        role,
-        status,
-        displayName: displayName.trim() || null,
-        email: email.trim() || null,
-      }),
+      step.run(() =>
+        updateUser(user.id, {
+          role,
+          status,
+          displayName: displayName.trim() || null,
+          email: email.trim() || null,
+        }),
+      ),
     onSuccess: () => {
       onDone();
       onClose();
@@ -377,8 +385,9 @@ function ResetDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const step = useStepUp();
   const mutation = useMutation({
-    mutationFn: (id: string) => resetCredentials(id),
+    mutationFn: (id: string) => step.run(() => resetCredentials(id)),
     onSuccess: onDone,
   });
   const close = () => {

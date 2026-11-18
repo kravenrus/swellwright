@@ -22,6 +22,8 @@ import { loadConfig } from './config.js';
 export const databaseUrl = process.env['SW_TEST_DATABASE_URL'];
 export const SETUP_TOKEN = 'test-setup-token-0123456789';
 export const PASSWORD = 'correct horse battery staple';
+/** Another valid password, for the tests that change one. */
+export const NEW_PASSWORD_FOR_TESTS = 'a different long passphrase';
 export const CHEAP = { memory: 256, passes: 1, parallelism: 1 } as const;
 export const AUTH_KEY = Buffer.alloc(32, 1).toString('base64');
 
