@@ -32,8 +32,16 @@ SOFTWARE.
 
 ## Fonts (bundled in the web build)
 
-Montserrat and Fira Mono, the fonts of the Remnawave panel theme, are bundled into the web build from the `@fontsource/montserrat` and `@fontsource/fira-mono` packages. Both are distributed under the SIL Open Font License 1.1; the license texts ship inside those packages, and a release adds them next to the build output.
+Montserrat and Fira Mono, the fonts of the Remnawave panel theme, and Unbounded, the font of its brand title, are bundled into the web build from the `@fontsource/montserrat`, `@fontsource/fira-mono` and `@fontsource/unbounded` packages. All are distributed under the SIL Open Font License 1.1; the license texts ship inside those packages, and a release adds them next to the build output.
+
+The flag emoji font `Twemoji Country Flags` ships in the `country-flag-emoji-polyfill` package (MIT, TalkJS) and is bundled into the web build so that Windows can draw the flags in the language menu. Its glyphs come from Twemoji and are used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): the art is copyright Twitter, Inc. and other contributors (<https://github.com/twitter/twemoji>), it is redistributed in the font file without changes beyond the font packaging.
+
+## Icon sets of `react-icons` (MIT)
+
+The navigation and the header controls use a few glyphs from the Phosphor (`react-icons/pi`, MIT, Phosphor Icons) and Heroicons v1 (`react-icons/hi`, MIT, Refactoring UI Inc.) sets, as the Remnawave panel does, through the `react-icons` package (MIT). Only the imported icons are bundled.
 
 ## Remnawave panel frontend (AGPL-3.0-only)
 
-The design tokens described in `docs/en/design/wireframes/README.md` (palette, primary color, fonts, radii, component variants, layout) were read from the open-source Remnawave frontend, version 3.4.11, under `src/shared/constants/theme`. Only values are described; no source code of the panel has been copied into this repository yet (see ADR 0011 for the plan to reuse it with notices).
+The design tokens described in `docs/en/design/wireframes/README.md` (palette, primary color, fonts, radii, component variants, layout) were read from the open-source Remnawave frontend, version 3.4.11, under `src/shared/constants/theme`.
+
+Code adapted from that frontend (Copyright (C) 2025 Remnawave, AGPL-3.0-only, the license of this project too, as ADR 0011 describes) lives in `packages/ui` and `apps/web/src/shell`. Every adapted file says in its header which file of the panel it comes from and what was changed. The panel's name, logo and links are not copied.
