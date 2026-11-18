@@ -157,6 +157,7 @@ describe('step-up authentication on routes', () => {
     assert.deepEqual(stepped, [
       'changePassword',
       'changeVaultPassphrase',
+      'checkPlugin',
       'createSecret',
       'createToken',
       'createUser',

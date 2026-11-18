@@ -22,6 +22,8 @@ import { type AppConfig } from '../config.js';
 import { CONFIG, DATABASE } from '../tokens.js';
 import { type Actor } from '../users/users.service.js';
 import { type DiscoveredPlugin, discoverPlugins } from './discovery.js';
+import type { RuntimeSnapshot } from './host/process.js';
+import { PluginRuntime } from './runtime.js';
 
 /** An arbitrary constant: one transaction at a time may enable, disable or switch off a plugin. */
 const PLUGINS_LOCK_KEY = 7_761_238;
@@ -113,9 +115,20 @@ function changeOf(
   };
 }
 
+function runtimeOf(snapshot: RuntimeSnapshot): PluginView['runtime'] {
+  return {
+    state: snapshot.state,
+    startedAt: snapshot.startedAt?.toISOString() ?? null,
+    calls: snapshot.calls,
+    lastError: snapshot.lastError,
+    modules: snapshot.modules.map((m) => ({ kind: m.kind, methods: [...m.methods] })),
+  };
+}
+
 export function viewOf(
   plugin: DiscoveredPlugin | undefined,
   record: PluginApproval | undefined,
+  runtime: RuntimeSnapshot,
 ): PluginView {
   const manifest = plugin?.manifest;
   const status = statusOf(plugin, record);
@@ -151,6 +164,7 @@ export function viewOf(
           approvedBy: record.approvedBy,
         }
       : null,
+    runtime: runtimeOf(status === 'enabled' ? runtime : { ...runtime, state: 'stopped' }),
     change:
       status === 'changed' && permissions !== null && approved !== null
         ? changeOf(approved, permissions)
@@ -171,6 +185,7 @@ export class PluginsService implements OnApplicationBootstrap {
     @Inject(DATABASE) private readonly database: Database | undefined,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(CONFIG) private readonly config: Pick<AppConfig, 'pluginRoots' | 'version'>,
+    @Inject(PluginRuntime) private readonly runtime: PluginRuntime,
   ) {}
 
   private get db(): Database['client'] {
@@ -230,6 +245,32 @@ export class PluginsService implements OnApplicationBootstrap {
         tx,
       );
     });
+    this.runtime.requestStop(pluginId);
+  }
+
+  /**
+   * The plugin as it may run now: enabled, approved, and with files that are what was approved. A plugin that
+   * was enabled and is not any more is switched off here, so the host never runs what nobody approved.
+   */
+  async runnable(id: string): Promise<
+    | { readonly kind: 'ok'; readonly plugin: DiscoveredPlugin; readonly network: readonly string[] }
+    | { readonly kind: 'unknown' }
+    | { readonly kind: 'not_enabled'; readonly why: string }
+  > {
+    const plugin = indexById(await this.discover()).get(id);
+    const record = await this.db.pluginApproval.findUnique({ where: { pluginId: id } });
+    if (record === null) {
+      return plugin === undefined ? { kind: 'unknown' } : { kind: 'not_enabled', why: 'it was never enabled' };
+    }
+    if (!record.enabled) {
+      return { kind: 'not_enabled', why: 'it is disabled' };
+    }
+    const reason = whyNotRunning(record, plugin);
+    if (reason !== undefined || plugin === undefined) {
+      await this.switchOff(id, reason ?? 'missing');
+      return { kind: 'not_enabled', why: `its files are not what was approved (${reason ?? 'missing'}); it was switched off` };
+    }
+    return { kind: 'ok', plugin, network: parseApproved(record.permissions).network };
   }
 
   async list(): Promise<PluginList> {
@@ -240,12 +281,16 @@ export class PluginsService implements OnApplicationBootstrap {
     );
     const byId = indexById(found);
     const plugins = found.map((plugin) =>
-      viewOf(plugin, plugin.manifest ? records.get(plugin.manifest.id) : undefined),
+      viewOf(
+        plugin,
+        plugin.manifest ? records.get(plugin.manifest.id) : undefined,
+        this.runtime.snapshotOf(plugin.manifest?.id ?? ''),
+      ),
     );
     const shown = new Set(found.flatMap((p) => (p.manifest ? [p.manifest.id] : [])));
     for (const record of records.values()) {
       if (!shown.has(record.pluginId) && !byId.has(record.pluginId)) {
-        plugins.push(viewOf(undefined, record));
+        plugins.push(viewOf(undefined, record, this.runtime.snapshotOf(record.pluginId)));
       }
     }
     const roots = this.config.pluginRoots;
@@ -258,7 +303,7 @@ export class PluginsService implements OnApplicationBootstrap {
     };
   }
 
-  private async viewById(id: string): Promise<PluginView> {
+  async viewById(id: string): Promise<PluginView> {
     const { plugins } = await this.list();
     const view =
       plugins.find((p) => p.id === id && p.discovery !== 'invalid') ??
@@ -355,6 +400,7 @@ export class PluginsService implements OnApplicationBootstrap {
         tx,
       );
     });
+    this.runtime.requestStop(id);
     return this.viewById(id);
   }
 }

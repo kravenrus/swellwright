@@ -66,6 +66,21 @@ export const PluginProvidedSchema = z
   })
   .meta({ id: 'PluginProvided' });
 
+/** Whether a plugin has a process, and what it is doing (ADR 0028). Only an enabled plugin ever has one. */
+export const PLUGIN_RUNTIME_STATES = ['stopped', 'running', 'failed'] as const;
+export const PluginRuntimeSchema = z
+  .object({
+    state: z.enum(PLUGIN_RUNTIME_STATES),
+    startedAt: z.iso.datetime().nullable(),
+    calls: z.number().int().describe('Calls made since the process started.'),
+    lastError: z.string().nullable().describe('Why it failed; null while it has not.'),
+    modules: z
+      .array(z.object({ kind: z.string(), methods: z.array(z.string()) }))
+      .describe('What the process loaded: each extension kind and the methods it offers.'),
+  })
+  .meta({ id: 'PluginRuntime' });
+export type PluginRuntime = z.infer<typeof PluginRuntimeSchema>;
+
 export const PluginApprovalSchema = z
   .object({
     version: z.string(),
@@ -101,6 +116,7 @@ export const PluginViewSchema = z
       .describe('The manifest carries a signature. It is not verified yet, so it proves nothing.'),
     hasSettings: z.boolean().describe('It brings a settings page of its own.'),
     approval: PluginApprovalSchema.nullable(),
+    runtime: PluginRuntimeSchema,
     change: PluginPermissionChangeSchema.nullable().describe(
       'For a changed plugin: what its permissions differ by from the approved ones.',
     ),

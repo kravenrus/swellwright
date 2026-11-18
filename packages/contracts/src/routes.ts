@@ -866,6 +866,21 @@ export const disablePluginRoute = defineRoute({
   responses: { 200: { description: 'The plugin, now disabled.', schema: PluginViewSchema } },
 });
 
+export const checkPluginRoute = defineRoute({
+  operationId: 'checkPlugin',
+  method: 'post',
+  path: '/plugins/{id}/check',
+  tags: ['plugins'],
+  summary: 'Load an enabled plugin in its restricted process',
+  description:
+    'Starts the plugin in a process of its own (no network, no child processes, only its own directory readable, a heap limit) and loads its modules; the answer says what loaded and which methods each module offers, or why it did not. The files are verified against the approval first: a plugin that is not what was approved is switched off instead. The process stays up until it is idle for a while, switched off, or changed.',
+  auth: 'session',
+  permission: 'plugins:manage',
+  stepUp: true,
+  request: { params: PluginIdParamsSchema },
+  responses: { 200: { description: 'The plugin and its runtime.', schema: PluginViewSchema } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -935,6 +950,7 @@ export const routes = [
   listPluginsRoute,
   enablePluginRoute,
   disablePluginRoute,
+  checkPluginRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

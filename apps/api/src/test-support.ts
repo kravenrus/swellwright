@@ -14,6 +14,7 @@ import { toAuditEvent } from './audit/audit.service.js';
 import { PasswordHasher } from './auth/password.js';
 import { SecretBox } from './auth/secret-box.js';
 import { base32Decode, base32Encode, generateTotpSecret, timeStep, totpCode } from './auth/totp.js';
+import { type AppOptions } from './app.module.js';
 import { createApp } from './bootstrap.js';
 import { loadConfig } from './config.js';
 
@@ -96,7 +97,10 @@ export interface Instance {
   client: () => Client;
 }
 
-export async function start(env: Record<string, string> = {}): Promise<Instance> {
+export async function start(
+  env: Record<string, string> = {},
+  extra: Partial<AppOptions> = {},
+): Promise<Instance> {
   const isolated = await createIsolatedDatabase(databaseUrl ?? '');
   const config = loadConfig(
     {
@@ -114,6 +118,7 @@ export async function start(env: Record<string, string> = {}): Promise<Instance>
     passwordParams: CHEAP,
     vaultKdf: CHEAP_KDF,
     database: isolated.database,
+    ...extra,
   });
   await app.listen(0, '127.0.0.1');
   const { port } = app.getHttpServer().address() as { port: number };

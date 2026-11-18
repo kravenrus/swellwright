@@ -17,7 +17,14 @@ import { SessionsController } from './auth/sessions.controller.js';
 import { SetupController } from './auth/setup.controller.js';
 import { SetupService } from './auth/setup.service.js';
 import { type AppConfig } from './config.js';
-import { CONFIG, DATABASE, PASSWORD_HASHER, SECRET_BOX, VAULT_KDF } from './tokens.js';
+import {
+  CONFIG,
+  DATABASE,
+  PASSWORD_HASHER,
+  PLUGIN_NETWORK,
+  SECRET_BOX,
+  VAULT_KDF,
+} from './tokens.js';
 import {
   DatabaseCheck,
   READINESS_CHECKS,
@@ -25,8 +32,11 @@ import {
   ReadinessService,
   ValkeyCheck,
 } from './readiness.js';
+import { PluginNetwork } from './plugins/host/network.js';
+import { PluginHostService } from './plugins/host/plugin-host.service.js';
 import { PluginsController } from './plugins/plugins.controller.js';
 import { PluginsService } from './plugins/plugins.service.js';
+import { PluginRuntime } from './plugins/runtime.js';
 import { RolesController } from './roles.controller.js';
 import { SystemController } from './system.controller.js';
 import { InvitationService } from './users/invitation.service.js';
@@ -45,6 +55,8 @@ export interface AppOptions {
   readonly database?: Database;
   /** Cheaper Argon2id parameters for the vault passphrase in tests; production uses the configuration. */
   readonly vaultKdf?: KdfParams;
+  /** The core's door for plugin requests, replaced in tests so no real network is used. */
+  readonly pluginNetwork?: PluginNetwork;
 }
 
 function checksFrom(config: AppConfig, database: Database | undefined): ReadinessCheck[] {
@@ -105,7 +117,10 @@ export class AppModule implements OnApplicationShutdown {
         SetupService,
         InvitationService,
         UsersService,
+        PluginRuntime,
         PluginsService,
+        PluginHostService,
+        { provide: PLUGIN_NETWORK, useValue: options.pluginNetwork ?? new PluginNetwork() },
         { provide: VAULT_KDF, useValue: options.vaultKdf ?? config.vaultKdf },
         VaultService,
         // Guards run in this order: the origin check, the session, the role's permission, the step-up.
