@@ -1,0 +1,44 @@
+# dependencies and build output
+node_modules/
+.pnpm-store/
+dist/
+build/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# environment and secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+secrets/
+instance-data/
+
+# local data and backups
+data/
+pgdata/
+valkeydata/
+backups/
+*.dump
+*.sqlite
+*.sqlite3
+
+# logs and temp
+*.log
+logs/
+tmp/
+.cache/
+
+# editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db

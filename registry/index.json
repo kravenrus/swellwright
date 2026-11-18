@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "description": "Community plugin registry. Entries are added through pull requests; Swellwright never downloads plugins without an explicit operator action.",
+  "plugins": []
+}

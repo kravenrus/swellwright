@@ -1,0 +1,16 @@
+# gitleaks configuration: default rules plus an allowlist for documentation examples.
+title = "swellwright gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "documentation placeholders"
+regexes = [
+  'example\.com',
+  '(192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}',
+]
+paths = [
+  'LICENSE',
+  'DCO',
+]

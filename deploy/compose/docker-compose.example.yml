@@ -1,0 +1,53 @@
+# DRAFT: the images do not exist yet. This sketches the intended deployment (see docs/en/architecture.md).
+name: swellwright
+services:
+  swellwright:
+    image: swellwright:${SW_VERSION}
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://sw:${POSTGRES_PASSWORD}@postgres:5432/swellwright
+      REDIS_URL: redis://valkey:6379
+      SW_PUBLIC_URL: https://sw.example.com
+    ports: ["127.0.0.1:3100:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    networks: [internal, egress]
+  swellwright-worker:
+    image: swellwright:${SW_VERSION}
+    command: ["node", "dist/worker.js"]
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    env_file: .env
+    networks: [internal, egress]
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: swellwright
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U sw -d swellwright"], interval: 10s, retries: 5 }
+    networks: [internal]
+  valkey:
+    image: valkey/valkey:8
+    command: ["valkey-server", "--appendonly", "yes", "--save", ""]
+    volumes: [valkeydata:/data]
+    healthcheck: { test: ["CMD", "valkey-cli", "ping"], interval: 10s, retries: 5 }
+    networks: [internal]
+networks:
+  internal: { internal: true }
+  egress: {}
+volumes: { pgdata: {}, valkeydata: {} }
+# Pin images by digest and restrict egress with the host firewall before any real use.
