@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "botToken": {
+      "type": "string",
+      "title": "Bot token",
+      "description": "The token of your bot (from @BotFather), kept in the vault as a secret of the kind telegram.",
+      "x-sw-secret": "telegram"
+    },
+    "chatId": {
+      "type": "string",
+      "title": "Chat id",
+      "description": "The chat, group or channel the messages go to: a number such as 123456789 or a name such as @mychannel.",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  },
+  "required": ["botToken", "chatId"],
+  "additionalProperties": false
+}

@@ -1,0 +1,41 @@
+# Telegram Bot API as a declarative driver (ADR 0030): Swellwright makes these requests itself, through its
+# gateway, to api.telegram.org only. The plugin runs no code.
+version: 1
+kind: NotificationChannel
+operations:
+  send:
+    description: Send a text message to the chat.
+    params:
+      text:
+        type: string
+        required: true
+        maxLength: 4096
+      silent:
+        type: boolean
+        default: false
+    steps:
+      - id: send
+        request:
+          method: POST
+          # The token belongs in the path as it is, so it is not encoded (raw).
+          url: https://api.telegram.org/bot{{ secret.botToken | raw }}/sendMessage
+          body:
+            chat_id: "{{ config.chatId }}"
+            text: "{{ params.text }}"
+            disable_notification: "{{ params.silent }}"
+        expect:
+          status: [200]
+          error: "{{ steps.send.json.description }}"
+    result:
+      messageId: "{{ steps.send.json.result.message_id }}"
+  check:
+    description: Ask Telegram who the bot is, to check the token.
+    steps:
+      - id: me
+        request:
+          url: https://api.telegram.org/bot{{ secret.botToken | raw }}/getMe
+        expect:
+          status: [200]
+          error: "{{ steps.me.json.description }}"
+    result:
+      bot: "{{ steps.me.json.result.username }}"

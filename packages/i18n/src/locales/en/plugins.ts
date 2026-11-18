@@ -150,12 +150,15 @@ export const plugins = {
     failedUnknown: 'No reason was recorded.',
     modulesTitle: 'Loaded modules',
     methodsTitle: 'Methods it offers',
+    operationsTitle: 'Operations it offers',
     noMethods: 'none',
     restricted:
       'A plugin runs in a restricted process of its own. It can read only its own files, has no network of its own (it reaches only the hosts you approved, through Swellwright), cannot start programs or workers, sees nothing of the environment of Swellwright, has a memory limit, and is ended when a call takes too long.',
     check: {
       button: 'Check',
       note: 'Loads the plugin in its restricted process and lists what it offers. Nothing else happens.',
+      noteData:
+        'Reads the driver and lists the operations it offers. Nothing is sent to the service.',
       forbidden: 'Your role may not check plugins.',
     },
   },

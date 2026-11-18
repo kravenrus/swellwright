@@ -499,7 +499,13 @@ function StatusBlocks({ plugin }: { plugin: PluginView }) {
 }
 
 /** What the plugin's process loaded: each extension kind and the methods it offers (names are data). */
-function ModuleList({ modules }: { modules: PluginRuntime['modules'] }) {
+function ModuleList({
+  modules,
+  declarative = false,
+}: {
+  modules: PluginRuntime['modules'];
+  declarative?: boolean;
+}) {
   const { t } = useTranslation('plugins');
   return (
     <Stack gap="xs">
@@ -512,7 +518,7 @@ function ModuleList({ modules }: { modules: PluginRuntime['modules'] }) {
             {module.kind}
           </Text>
           <Text c="dimmed" fz="xs">
-            {t('runtime.methodsTitle')}
+            {declarative ? t('runtime.operationsTitle') : t('runtime.methodsTitle')}
           </Text>
           {module.methods.length === 0 ? (
             <Text c="dimmed" fz="xs">
@@ -590,7 +596,31 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
       </Group>
 
       {noCode ? (
-        <Text fz="sm">{t('runtime.noCode')}</Text>
+        <Stack gap="xs">
+          <Text fz="sm">{t('runtime.noCode')}</Text>
+          {runtime.modules.length > 0 ? <ModuleList declarative modules={runtime.modules} /> : null}
+          {canManage ? (
+            <Stack gap={6}>
+              <ErrorNote error={check.error} fallback={t('runtime.check.forbidden')} />
+              <Group>
+                <Button
+                  leftSection={<IconPlayerPlay size={16} />}
+                  loading={check.isPending}
+                  onClick={() => {
+                    check.mutate();
+                  }}
+                  size="xs"
+                  variant="default"
+                >
+                  {t('runtime.check.button')}
+                </Button>
+              </Group>
+              <Text c="dimmed" fz="xs">
+                {t('runtime.check.noteData')}
+              </Text>
+            </Stack>
+          ) : null}
+        </Stack>
       ) : (
         <>
           {runtime.state === 'stopped' ? (

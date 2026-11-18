@@ -9,6 +9,7 @@ import {
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import type { PluginView } from '@swellwright/contracts';
+import { type Driver, runOperation } from '@swellwright/plugin-api';
 
 import { AuditService } from '../../audit/audit.service.js';
 import { type RequestMeta } from '../../auth/context.js';
@@ -16,7 +17,7 @@ import { type AppConfig } from '../../config.js';
 import { CONFIG, PLUGIN_NETWORK } from '../../tokens.js';
 import { type Actor } from '../../users/users.service.js';
 import { type DiscoveredPlugin } from '../discovery.js';
-import { PluginBroker, type BrokerContext } from '../broker.js';
+import { PluginBroker, PluginBrokerError, type BrokerContext } from '../broker.js';
 import { PluginsService } from '../plugins.service.js';
 import { PluginRuntime } from '../runtime.js';
 import { NetworkRefused, PluginNetwork } from './network.js';
@@ -234,6 +235,10 @@ export class PluginHostService implements OnApplicationShutdown {
         'not_running',
       );
     }
+    const driver = runnable.plugin.drivers[kind];
+    if (driver !== undefined) {
+      return this.callDriver(id, runnable, driver, method, params);
+    }
     const running = await this.ensure(id, runnable, { ignoreFailures: false });
     if (running === undefined) {
       throw new PluginCallError('The plugin has no code to run.', 'not_running');
@@ -263,6 +268,63 @@ export class PluginHostService implements OnApplicationShutdown {
     }
   }
 
+  /**
+   * An operation of a declarative driver (ADR 0030): the core makes the requests itself, through the same services
+   * and under the same approval as a plugin's code would have. The whole operation has the deadline of a call.
+   */
+  private async callDriver(
+    id: string,
+    runnable: Runnable,
+    driver: Driver,
+    operation: string,
+    params: unknown,
+  ): Promise<unknown> {
+    const deadline = this.config.pluginLimits.callTimeoutMs;
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        runOperation(driver, operation, params, this.servicesFor(id, runnable)),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new PluginCallError(
+                `a call took longer than ${String(deadline / 1000)} seconds`,
+                'timeout',
+              ),
+            );
+          }, deadline);
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof PluginCallError) {
+        throw error;
+      }
+      const message = (error instanceof Error ? error.message : 'The operation failed.').slice(
+        0,
+        300,
+      );
+      if (
+        error instanceof PluginBrokerError &&
+        message.startsWith('The plugin is not configured')
+      ) {
+        throw new PluginCallError(message, 'not_configured');
+      }
+      throw new PluginCallError(message, error instanceof NetworkRefused ? 'refused' : 'failed');
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  /** What the drivers of a plugin offer, in the shape the runtime shows for a module. */
+  private driverModules(runnable: Runnable): { kind: string; methods: string[] }[] {
+    return Object.entries(runnable.plugin.drivers).map(([kind, driver]) => ({
+      kind,
+      methods: Object.keys(driver.operations).sort(),
+    }));
+  }
+
   /** Loads the plugin in its restricted process and records the result; the answer is the plugin as it is then. */
   async check(actor: Actor, id: string, meta: RequestMeta): Promise<PluginView> {
     const runnable = await this.plugins.runnable(id);
@@ -276,7 +338,16 @@ export class PluginHostService implements OnApplicationShutdown {
     let details: Record<string, string | number>;
     try {
       const running = await this.ensure(id, runnable, { ignoreFailures: true });
-      const modules = running?.snapshot().modules ?? [];
+      const own = running?.snapshot();
+      const modules = [...(own?.modules ?? []), ...this.driverModules(runnable)];
+      // A plugin that is only data has no process, but what it offers is shown all the same.
+      this.runtime.report(id, {
+        state: own?.state ?? 'stopped',
+        startedAt: own?.startedAt ?? null,
+        calls: own?.calls ?? 0,
+        lastError: own?.lastError ?? null,
+        modules,
+      });
       details = {
         modules: modules.length,
         methods: modules.reduce((sum, m) => sum + m.methods.length, 0),
