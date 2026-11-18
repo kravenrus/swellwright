@@ -24,6 +24,7 @@ import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
 import { RolesPage } from './security/roles-page.js';
 import { SessionsPage } from './security/sessions-page.js';
+import { TokensPage } from './security/tokens-page.js';
 import { UsersPage } from './security/users-page.js';
 import { VaultPage } from './security/vault-page.js';
 
@@ -152,6 +153,9 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
         ) : null}
         {activeId === 'sessions' ? (
           <SessionsPage currentUserId={session.user.id} permissions={permissions} />
+        ) : null}
+        {activeId === 'tokens' ? (
+          <TokensPage permissions={permissions} role={session.user.role} />
         ) : null}
         {activeId === 'audit' && permissions.includes('audit:read') ? (
           <AuditPage permissions={permissions} />

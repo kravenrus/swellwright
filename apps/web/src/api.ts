@@ -34,6 +34,9 @@ import {
   TotpConfirmedSchema,
   type TotpEnrollment,
   TotpEnrollmentSchema,
+  type CreatedToken,
+  CreatedTokenSchema,
+  type CreateTokenInput,
   type CreateSecretRequest,
   type InitializeVaultRequest,
   type RevealedSecret,
@@ -42,6 +45,9 @@ import {
   SecretListSchema,
   type SecretView,
   SecretViewSchema,
+  type TokenList,
+  type TokenListQuery,
+  TokenListSchema,
   type UnsealVaultRequest,
   type UpdateSecretRequest,
   type UpdateUserRequest,
@@ -265,6 +271,26 @@ export const revokeSession = (id: string): Promise<void> =>
 /** Ends every session of a user (`sessions:revoke`, needs a fresh confirmation with a code). */
 export const revokeUserSessions = (id: string): Promise<SessionsRevoked> =>
   send('POST', `/users/${id}/sessions/revoke`, undefined, SessionsRevokedSchema);
+
+/** Your own API tokens: active, expired and revoked ones, never their values. */
+export const listMyTokens = (): Promise<TokenList> =>
+  send('GET', '/auth/tokens', undefined, TokenListSchema);
+
+/** Revokes one of your own tokens. Revoking one that is already revoked is not an error. */
+export const revokeMyToken = (id: string): Promise<void> =>
+  send('DELETE', `/auth/tokens/${id}`, undefined, undefined);
+
+/** Creates a token in your name (`tokens:create`, needs a fresh confirmation with a code). The value comes back once. */
+export const createToken = (request: CreateTokenInput): Promise<CreatedToken> =>
+  send('POST', '/tokens', request, CreatedTokenSchema);
+
+/** The API tokens of every user, or of one (`tokens:read`). */
+export const listTokens = (query: TokenListQuery): Promise<TokenList> =>
+  send('GET', `/tokens${queryString(query)}`, undefined, TokenListSchema);
+
+/** Revokes a token of any user (`tokens:revoke`, needs a fresh confirmation with a code). */
+export const revokeToken = (id: string): Promise<void> =>
+  send('DELETE', `/tokens/${id}`, undefined, undefined);
 
 /** `?a=1&b=2` from the values that are set, or nothing. */
 function queryString(query: Record<string, string | number | undefined>): string {
