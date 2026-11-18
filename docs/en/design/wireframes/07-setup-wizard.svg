@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">First-run setup wizard wireframe</title><desc id="d">The first-run wizard at /setup, step 2 of 5: create and unseal the vault.</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="0" y="0" width="1280" height="64" fill="#0a101c"/>
+<line x1="0" y1="64" x2="1280" y2="64" stroke="#27385a"/>
+<polygon points="34,20 45.3,26.5 45.3,39.5 34,46 22.7,39.5 22.7,26.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
+<path d="M25 30 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
+<path d="M25 36.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
+<text x="58" y="38" font-size="16" fill="#e6edf7" font-weight="700">Swellwright  ·  First run setup</text>
+<circle cx="150" cy="116" r="11" fill="#34d399"/>
+<path d="M145.3 116 L148.7 119.8 L155.3 111.9" fill="none" stroke="#0b1220" stroke-width="1.8"/>
+<text x="170" y="121" font-size="14" fill="#9fb0c8" font-weight="500">1  Owner</text>
+<line x1="228.5" y1="116" x2="350" y2="116" stroke="#34d399" stroke-width="2"/>
+<circle cx="370" cy="116" r="11" fill="#60a5fa"/>
+<path d="M367.2 111.3 L375 116 L367.2 120.7 Z" fill="#0b1220"/>
+<text x="390" y="121" font-size="14" fill="#e6edf7" font-weight="700">2  Vault</text>
+<line x1="448.5" y1="116" x2="570" y2="116" stroke="#27385a" stroke-width="2"/>
+<circle cx="590" cy="116" r="10" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
+<text x="610" y="121" font-size="14" fill="#9fb0c8" font-weight="500">3  Panel</text>
+<line x1="668.5" y1="116" x2="790" y2="116" stroke="#27385a" stroke-width="2"/>
+<circle cx="810" cy="116" r="10" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
+<text x="830" y="121" font-size="14" fill="#9fb0c8" font-weight="500">4  Fleet</text>
+<line x1="888.5" y1="116" x2="1010" y2="116" stroke="#27385a" stroke-width="2"/>
+<circle cx="1030" cy="116" r="10" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
+<text x="1050" y="121" font-size="14" fill="#9fb0c8" font-weight="500">5  Notifications</text>
+<circle cx="120" cy="116" r="11" fill="#fbbf24"/>
+<text x="120" y="120.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
+<rect x="150" y="160" width="720" height="600" rx="10" fill="#111b2e" stroke="#27385a"/>
+<text x="176" y="198" font-size="20" fill="#e6edf7" font-weight="700">Create and unseal the vault</text>
+<text x="176" y="222" font-size="12.5" fill="#9fb0c8">The vault encrypts every secret Swellwright stores. It stays on this server.</text>
+<text x="176" y="258" font-size="12" fill="#9fb0c8" font-weight="600">Passphrase</text>
+<rect x="176" y="266" width="668" height="38" rx="7" fill="#0b1424" stroke="#27385a"/>
+<text x="188" y="290" font-size="15" fill="#e6edf7">•••••••••••••••••••••</text>
+<rect x="176" y="316" width="668" height="8" rx="4" fill="#16223a"/>
+<rect x="176" y="316" width="470" height="8" rx="4" fill="#34d399"/>
+<text x="176" y="344" font-size="11.5" fill="#9fb0c8">Strong: about 78 bits (length counts more than symbols)</text>
+<text x="176" y="374" font-size="12" fill="#9fb0c8" font-weight="600">Confirm passphrase</text>
+<rect x="176" y="382" width="668" height="38" rx="7" fill="#0b1424" stroke="#27385a"/>
+<text x="188" y="406" font-size="15" fill="#e6edf7">•••••••••••••••••••••</text>
+<text x="176" y="450" font-size="12" fill="#9fb0c8" font-weight="600">Second factor (optional)</text>
+<rect x="176" y="458" width="668" height="44" rx="8" fill="none" stroke="#27385a" stroke-width="1.4" stroke-dasharray="6 5"/>
+<text x="510" y="485" font-size="12.5" fill="#6b7d99" text-anchor="middle">Drop a key file here or choose a file</text>
+<circle cx="150" cy="258" r="11" fill="#fbbf24"/>
+<text x="150" y="262.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
+<text x="176" y="530" font-size="12" fill="#9fb0c8" font-weight="600">Recovery kit</text>
+<rect x="176" y="540" width="328" height="66" rx="9" fill="#16223a" stroke="#22d3ee" stroke-width="1.6"/>
+<circle cx="198" cy="573" r="8" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
+<circle cx="198" cy="573" r="4" fill="#22d3ee"/>
+<text x="218" y="566" font-size="13.5" fill="#e6edf7" font-weight="700">Shamir 3 of 5</text>
+<text x="218" y="588" font-size="11.5" fill="#9fb0c8">five shares, any three recover the vault</text>
+<rect x="516" y="540" width="328" height="66" rx="9" fill="#16223a" stroke="#27385a"/>
+<circle cx="538" cy="573" r="8" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
+<text x="558" y="566" font-size="13.5" fill="#e6edf7" font-weight="700">Printed recovery key</text>
+<text x="558" y="588" font-size="11.5" fill="#9fb0c8">shown once, store it on paper</text>
+<circle cx="176" cy="540" r="11" fill="#fbbf24"/>
+<text x="176" y="544.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text>
+<rect x="176" y="626" width="14" height="14" rx="3" fill="#22d3ee"/>
+<path d="M179 633 l3 3 l6 -7" fill="none" stroke="#06202a" stroke-width="1.8"/>
+<text x="200" y="638" font-size="12.5" fill="#e6edf7">I have stored the recovery kit outside this server</text>
+<rect x="176" y="700" width="100" height="40" rx="7" fill="#16223a" stroke="#27385a"/>
+<text x="226" y="724.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Back</text>
+<rect x="644" y="700" width="200" height="40" rx="7" fill="#22d3ee"/>
+<text x="744" y="724.5" font-size="14" fill="#06202a" font-weight="600" text-anchor="middle">Create and unseal</text>
+<rect x="890" y="160" width="240" height="600" rx="10" fill="#111b2e" stroke="#27385a"/>
+<text x="908" y="188" font-size="13.5" fill="#e6edf7" font-weight="700">What happens next</text>
+<line x1="890" y1="202" x2="1130" y2="202" stroke="#27385a"/>
+<circle cx="912" cy="216" r="10" fill="#16223a" stroke="#27385a"/>
+<text x="912" y="220" font-size="11.5" fill="#e6edf7" font-weight="700" text-anchor="middle">1</text>
+<text x="932" y="220" font-size="12" fill="#9fb0c8">The vault is created and</text>
+<text x="932" y="237" font-size="12" fill="#9fb0c8">unsealed.</text>
+<circle cx="912" cy="288" r="10" fill="#16223a" stroke="#27385a"/>
+<text x="912" y="292" font-size="11.5" fill="#e6edf7" font-weight="700" text-anchor="middle">2</text>
+<text x="932" y="292" font-size="12" fill="#9fb0c8">You connect the Remnawave</text>
+<text x="932" y="309" font-size="12" fill="#9fb0c8">panel with an API token.</text>
+<circle cx="912" cy="360" r="10" fill="#16223a" stroke="#27385a"/>
+<text x="912" y="364" font-size="11.5" fill="#e6edf7" font-weight="700" text-anchor="middle">3</text>
+<text x="932" y="364" font-size="12" fill="#9fb0c8">Swellwright imports the</text>
+<text x="932" y="381" font-size="12" fill="#9fb0c8">fleet and adopts the nodes.</text>
+<circle cx="912" cy="432" r="10" fill="#16223a" stroke="#27385a"/>
+<text x="912" y="436" font-size="11.5" fill="#e6edf7" font-weight="700" text-anchor="middle">4</text>
+<text x="932" y="436" font-size="12" fill="#9fb0c8">Notifications and schedules</text>
+<text x="932" y="453" font-size="12" fill="#9fb0c8">come last.</text>
+<line x1="890" y1="478" x2="1130" y2="478" stroke="#27385a"/>
+<circle cx="912" cy="508" r="7" fill="#22d3ee"/>
+<circle cx="912" cy="505" r="1" fill="#0b1220"/>
+<path d="M912 507.4 L912 511.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
+<text x="928" y="512" font-size="12" fill="#e6edf7" font-weight="700">Auto-unseal is off.</text>
+<text x="912" y="536" font-size="12" fill="#9fb0c8">After a restart you enter the</text>
+<text x="912" y="554" font-size="12" fill="#9fb0c8">passphrase again.</text>
+<text x="912" y="600" font-size="12" fill="#9fb0c8">Nothing leaves your server.</text></svg>

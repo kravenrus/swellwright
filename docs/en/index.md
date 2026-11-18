@@ -54,4 +54,4 @@ Swellwright is a self-hosted service for deploying and operating Remnawave fleet
 | [api.md](api.md) | OpenAPI conventions, resource groups, events |
 | [roadmap.md](roadmap.md) | phases and acceptance criteria |
 
-The complete design (data model, scenario catalog, engine, testing, risks) is in [`design/`](design/00-index.md). The documents were written in Russian first and are kept in sync with the originals in [`../ru/design/`](../ru/design/00-index.md).
+The complete design (data model, scenario catalog, engine, testing, risks) is in [`design/`](design/00-index.md); annotated screens are in [`design/wireframes/`](design/wireframes/README.md). The documents were written in Russian first and are kept in sync with the originals in [`../ru/design/`](../ru/design/00-index.md).
