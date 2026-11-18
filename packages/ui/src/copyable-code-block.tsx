@@ -1,7 +1,8 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/ui/copyable-code-block/{copyable-code-block.tsx,
 // copyable-code-block.module.css}. Changes: the CSS module became `sw-code-block*` classes; an optional `onCopy`
 // callback (the panel shows nothing); the copy button has an accessible name (props, English fallback) and the
-// whole block can be operated from the keyboard through that button.
+// whole block can be operated from the keyboard through that button; an optional `wrap` shows a long or multi-line
+// value in full instead of one fading line.
 import {
   ActionIcon,
   Box,
@@ -20,6 +21,11 @@ export interface CopyableCodeBlockProps {
   color?: MantineColor;
   /** 'small' is the compact variant for secondary values (a digest, a command). */
   size?: 'normal' | 'small';
+  /**
+   * Show the whole value, wrapped (line breaks are kept), instead of one line that fades out on the right. For a
+   * value the reader has to see in full: a recovery key, a key file. The text can be selected in this mode.
+   */
+  wrap?: boolean;
   /** Gives the block a label and a description. */
   inputWrapperProps?: InputWrapperProps;
   /** Called after the value was copied. */
@@ -38,6 +44,7 @@ export function CopyableCodeBlock({
   color,
   value,
   size = 'normal',
+  wrap = false,
   inputWrapperProps,
   onCopy,
   copyLabel = 'Copy',
@@ -52,7 +59,11 @@ export function CopyableCodeBlock({
       <CopyButton timeout={2000} value={text}>
         {({ copied, copy }) => (
           <Box
-            className={cx('sw-code-block', isSmall && 'sw-code-block--small')}
+            className={cx(
+              'sw-code-block',
+              isSmall && 'sw-code-block--small',
+              wrap && 'sw-code-block--wrap',
+            )}
             onClick={() => {
               copy();
               onCopy?.(text);

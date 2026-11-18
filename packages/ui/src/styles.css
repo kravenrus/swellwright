@@ -837,6 +837,31 @@ body {
   display: none;
 }
 
+/* The `wrap` mode: the whole value, wrapped, selectable, with the copy button at the top right. */
+.sw-code-block--wrap {
+  align-items: flex-start;
+}
+
+.sw-code-block--wrap .sw-code-block-wrapper {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.sw-code-block--wrap .sw-code-block-code {
+  max-height: 20rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  scrollbar-width: thin;
+}
+
+.sw-code-block--wrap .sw-code-block-code::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
 .sw-code-block-copy {
   position: relative;
   flex-shrink: 0;
