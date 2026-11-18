@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -18,6 +18,14 @@
     {
       "name": "system",
       "description": "Probes, version and the API description."
+    },
+    {
+      "name": "setup",
+      "description": "First-run setup of a new instance."
+    },
+    {
+      "name": "auth",
+      "description": "Sign-in with a password and an authenticator, sessions."
     }
   ],
   "paths": {
@@ -165,6 +173,318 @@
         },
         "description": "The OpenAPI 3.1 document generated from the route registry.",
         "security": []
+      }
+    },
+    "/setup/status": {
+      "get": {
+        "operationId": "getSetupStatus",
+        "tags": [
+          "setup"
+        ],
+        "summary": "Whether the instance owner exists",
+        "responses": {
+          "200": {
+            "description": "Setup state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lets the console choose between the first-run setup and the sign-in page.",
+        "security": []
+      }
+    },
+    "/setup/owner": {
+      "post": {
+        "operationId": "createOwner",
+        "tags": [
+          "setup"
+        ],
+        "summary": "Create the instance owner",
+        "responses": {
+          "200": {
+            "description": "The owner was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingSession"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Works once, with the setup token the server printed to its log at start. Starts a session that still needs the authenticator to be set up (`/auth/totp/enrollment`).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupOwnerRequest"
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in with a password",
+        "responses": {
+          "200": {
+            "description": "The password was accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingSession"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The first of two steps. On success a session cookie is set that is not yet usable for anything except finishing the sign-in. Wrong credentials and unknown users answer the same 401; repeated failures lock the account for a while (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/totp": {
+      "post": {
+        "operationId": "verifyTotp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish signing in with an authenticator code or a recovery code",
+        "responses": {
+          "200": {
+            "description": "Signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "A recovery code works once. The session cookie is replaced by a new one when the sign-in completes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/auth/totp/enrollment": {
+      "post": {
+        "operationId": "startTotpEnrollment",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get the authenticator secret",
+        "responses": {
+          "200": {
+            "description": "The secret to add to an authenticator.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpEnrollment"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Only before the authenticator was confirmed. Repeated calls return the same secret until it is confirmed.",
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/auth/totp/confirm": {
+      "post": {
+        "operationId": "confirmTotpEnrollment",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Confirm the authenticator and finish signing in",
+        "responses": {
+          "200": {
+            "description": "Signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpConfirmed"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the recovery codes. They are shown once and only their hashes are kept.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign out",
+        "responses": {
+          "204": {
+            "description": "The session is gone."
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Ends the current session if there is one. Always answers 204.",
+        "security": []
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "auth"
+        ],
+        "summary": "The signed-in user",
+        "responses": {
+          "200": {
+            "description": "The current session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
       }
     }
   },
@@ -314,13 +634,220 @@
         ],
         "additionalProperties": false,
         "description": "Build and API version."
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "operator",
+          "observer",
+          "terminal",
+          "auditor"
+        ]
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "language": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "displayName",
+          "role",
+          "language",
+          "theme"
+        ],
+        "additionalProperties": false,
+        "description": "The signed-in user."
+      },
+      "SetupStatus": {
+        "type": "object",
+        "properties": {
+          "initialized": {
+            "type": "boolean",
+            "description": "True once the instance owner exists."
+          }
+        },
+        "required": [
+          "initialized"
+        ],
+        "additionalProperties": false
+      },
+      "SetupOwnerRequest": {
+        "type": "object",
+        "properties": {
+          "setupToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "The one-time token the server printed to its log at start."
+          },
+          "username": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{1,31}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "setupToken",
+          "username",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "AuthNextStep": {
+        "type": "string",
+        "enum": [
+          "totp",
+          "totp_enrollment"
+        ]
+      },
+      "PendingSession": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "description": "`totp`: enter a code from the authenticator or a recovery code. `totp_enrollment`: set up the authenticator first.",
+            "$ref": "#/components/schemas/AuthNextStep"
+          }
+        },
+        "required": [
+          "next"
+        ],
+        "additionalProperties": false,
+        "description": "The password was accepted; a second step is needed to finish signing in."
+      },
+      "TotpCodeRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 32,
+            "description": "A 6-digit authenticator code, or one recovery code (only on sign-in)."
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "TotpEnrollment": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "Base32 secret for manual entry."
+          },
+          "otpauthUri": {
+            "type": "string",
+            "description": "An otpauth:// URI for QR codes."
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUri"
+        ],
+        "additionalProperties": false
+      },
+      "SessionInfo": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+            "description": "When the session ends if it stays idle."
+          }
+        },
+        "required": [
+          "user",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "TotpConfirmed": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "recoveryCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Single-use codes for a lost authenticator. Shown once, never again."
+          }
+        },
+        "required": [
+          "user",
+          "expiresAt",
+          "recoveryCodes"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
       "session": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "sw_session"
+        "name": "sw_session",
+        "description": "Set by the sign-in routes. Routes marked as needing a session accept a signed-in one; the second sign-in step accepts one whose password was accepted."
       },
       "bearer": {
         "type": "http",

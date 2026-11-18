@@ -34,6 +34,11 @@ describe('contract binding', () => {
           404,
           `${route.method} ${route.path} is in the registry but not served`,
         );
+        if (res.status >= 400) {
+          // A bare call is refused (no body, no session, no database): that must be the error envelope.
+          ApiErrorSchema.parse(await res.json());
+          continue;
+        }
         const listed: Readonly<Record<number, unknown>> = route.responses;
         assert.ok(
           listed[res.status],

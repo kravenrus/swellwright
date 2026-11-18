@@ -7,6 +7,7 @@ import {
   type ExceptionFilter,
   type ExecutionContext,
   HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   type NestInterceptor,
@@ -45,6 +46,16 @@ const CODE_BY_STATUS: Readonly<Record<number, ErrorCode>> = {
   503: 'not_ready',
 };
 
+/** 429 with a `Retry-After` header. */
+export class RateLimitedException extends HttpException {
+  constructor(
+    readonly retryAfterSeconds: number,
+    message = 'Too many attempts. Try again later.',
+  ) {
+    super(message, HttpStatus.TOO_MANY_REQUESTS);
+  }
+}
+
 /** Turns every failure into the documented error envelope. Unexpected errors never leak their message. */
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -67,6 +78,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       code = CODE_BY_STATUS[status] ?? (status >= 500 ? 'internal_error' : 'bad_request');
       message = status >= 500 ? 'Internal error.' : exception.message;
+      if (exception instanceof RateLimitedException) {
+        res.setHeader('retry-after', String(exception.retryAfterSeconds));
+      }
     } else {
       this.logger.error(
         `request ${id}: ${exception instanceof Error ? (exception.stack ?? exception.message) : 'unknown error'}`,
@@ -77,6 +91,28 @@ export class ApiExceptionFilter implements ExceptionFilter {
       error: { code, message, requestId: id, ...(details === undefined ? {} : { details }) },
     });
     res.status(status).json(body);
+  }
+}
+
+/**
+ * Validates the request body of a route against its contract before the handler runs (after the guards,
+ * so an unauthenticated caller gets 401 and not a description of the schema). Path and query values are
+ * checked too; Express exposes them read-only, so handlers read those raw until a route needs them typed.
+ */
+@Injectable()
+export class ContractRequestInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const route = Reflect.getMetadata(ROUTE_METADATA, context.getHandler()) as RouteDef | undefined;
+    const shape = route?.request;
+    if (shape) {
+      const req = context.switchToHttp().getRequest<Request>();
+      if (shape.body) {
+        req.body = shape.body.parse(req.body);
+      }
+      shape.params?.parse(req.params);
+      shape.query?.parse(req.query);
+    }
+    return next.handle();
   }
 }
 

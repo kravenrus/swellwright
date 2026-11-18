@@ -67,7 +67,7 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 Outbound traffic is restricted by the host firewall (allowed: inventory servers, the panel, DNS APIs, GitHub, Telegram), not by Docker alone.
 
 ## 3. Environment variables (main ones)
-`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_SESSION_SECRET` (cookie signing, not a vault secret), `SW_ALLOWED_ORIGINS`, `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
+`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 of 32 random bytes; seals the TOTP secrets, not a vault key, ADR 0014; required in production), `SW_SETUP_TOKEN` (optional fixed first-run token), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
 
 ## 4. Reverse proxy (nginx, modeled on the panel)
 - Domain `sw.<base>`, certificate (for example a wildcard for the base domain), `proxy_pass http://127.0.0.1:3100`.
@@ -82,7 +82,7 @@ Resources: measure the spare CPU and RAM before launch; the baseline need of Swe
 Residual risk on a shared host: the kernel and the host are shared, so a host compromise affects both systems.
 
 ## 6. First run
-`docker compose up -d` → open `/setup` → create the instance owner (password, TOTP, recovery kit) → create and **unseal** the vault (password + an optional key file) → connect the panel (P01) → import the fleet → adopt the nodes (N01) → set up notifications and schedules.
+`docker compose up -d` → open the console and enter the setup token the server printed to its log → create the instance owner (password, TOTP, recovery codes) → create and **unseal** the vault (password + an optional key file) → connect the panel (P01) → import the fleet → adopt the nodes (N01) → set up notifications and schedules.
 
 ## 7. Operations
 - **Swellwright updates:** new image version → `prisma migrate deploy` → `ready` check → rollback: the previous image plus a database restore from the pre-migration backup (an automatic backup is taken before each update).

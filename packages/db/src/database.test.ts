@@ -11,9 +11,11 @@ import {
   DatabaseNotReadyError,
   Prisma,
   schemaProblem,
+  SessionStage,
   shippedMigrations,
   UserRole,
 } from './index.js';
+import { createIsolatedDatabase } from './testing.js';
 
 describe('shipped migrations', () => {
   it('lists the migrations of this package, oldest first', async () => {
@@ -121,6 +123,65 @@ describe('users against a migrated database', { skip: !databaseUrl }, () => {
       }),
       isUnique,
     );
+  });
+
+  it('removes the credential, recovery codes and sessions together with the user', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const user = await client.user.create({
+        data: {
+          username: `${prefix}-cascade`,
+          role: UserRole.owner,
+          credential: { create: { passwordHash: '$argon2id$placeholder' } },
+          recoveryCodes: { create: [{ codeHash: 'a'.repeat(64) }, { codeHash: 'b'.repeat(64) }] },
+          sessions: {
+            create: [
+              {
+                tokenHash: 'c'.repeat(64),
+                stage: SessionStage.active,
+                expiresAt: new Date(Date.now() + 60_000),
+                absoluteExpiresAt: new Date(Date.now() + 120_000),
+              },
+            ],
+          },
+        },
+      });
+      assert.equal(await client.credential.count(), 1);
+      assert.equal(await client.recoveryCode.count(), 2);
+      assert.equal(await client.session.count(), 1);
+      await client.user.delete({ where: { id: user.id } });
+      assert.equal(await client.credential.count(), 0);
+      assert.equal(await client.recoveryCode.count(), 0);
+      assert.equal(await client.session.count(), 0);
+    } finally {
+      await isolated.drop();
+    }
+  });
+
+  it('keeps one recovery code hash per user, and one session per token hash', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const user = await client.user.create({
+        data: { username: `${prefix}-unique2`, role: UserRole.operator },
+      });
+      await client.recoveryCode.create({ data: { userId: user.id, codeHash: 'd'.repeat(64) } });
+      await assert.rejects(
+        client.recoveryCode.create({ data: { userId: user.id, codeHash: 'd'.repeat(64) } }),
+      );
+      const session = {
+        userId: user.id,
+        tokenHash: 'e'.repeat(64),
+        stage: SessionStage.password_verified,
+        expiresAt: new Date(),
+        absoluteExpiresAt: new Date(),
+      };
+      await client.session.create({ data: session });
+      await assert.rejects(client.session.create({ data: session }));
+    } finally {
+      await isolated.drop();
+    }
   });
 
   it('keeps the role set closed at the database level', async () => {

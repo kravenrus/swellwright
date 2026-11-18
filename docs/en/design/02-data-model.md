@@ -2,14 +2,14 @@
 
 > English translation of the [Russian design document](../../ru/design/02-data-model.md).
 
-The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is built from this description, entity by entity; so far `User` is implemented. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
+The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is built from this description, entity by entity; so far `User`, `Credential`, `RecoveryCode` and `Session` are implemented. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
 
 ## 1. Access and audit
 | Entity | Fields | Class |
 |---|---|---|
 | `User` | id, name, email (optional), role, status, language, theme, last login | P |
-| `Credential` | password (Argon2id), TOTP secret (S), WebAuthn keys (public), recovery codes (hashes) | S |
-| `Session` | id, user, IP, UA, created, expires, elevated until | N |
+| `Credential` | password (Argon2id), TOTP secret (S; sealed with the instance authentication key, not the vault, so sign-in works while the vault is sealed, ADR 0014), WebAuthn keys (public), recovery codes (hashes; own table `RecoveryCode`) | S |
+| `Session` | id, user, token hash, stage (`password_verified`, `active`), IP, UA, created, last seen, idle and absolute expiry, elevated until | N |
 | `Role` / `RolePermission` | name, permission set (`servers:write`, `runs:execute:deploy`, `terminal:use`, `vault:reveal` …) | N |
 | `ApiToken` (Swellwright) | name, hash, scopes, expiry, last use, IP restrictions | S (hash) |
 | `AuditLog` | seq, time, subject, action, object, outcome, IP, hash of the previous entry (chain) | N |

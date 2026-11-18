@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+import {
+  AuthNextStepSchema,
+  LoginRequestSchema,
+  PendingSessionSchema,
+  SessionInfoSchema,
+  SetupOwnerRequestSchema,
+  SetupStatusSchema,
+  TotpCodeRequestSchema,
+  TotpConfirmedSchema,
+  TotpEnrollmentSchema,
+  UserRoleSchema,
+  UserSummarySchema,
+} from './auth.js';
 import { ApiErrorSchema, ErrorCodeSchema } from './errors.js';
 import { type RouteDef, routes } from './routes.js';
 import {
@@ -10,7 +23,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.1.0';
+export const OPENAPI_INFO_VERSION = '0.2.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -20,6 +33,17 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   CheckResultSchema,
   ReadyResponseSchema,
   VersionResponseSchema,
+  UserRoleSchema,
+  UserSummarySchema,
+  SetupStatusSchema,
+  SetupOwnerRequestSchema,
+  LoginRequestSchema,
+  AuthNextStepSchema,
+  PendingSessionSchema,
+  TotpCodeRequestSchema,
+  TotpEnrollmentSchema,
+  SessionInfoSchema,
+  TotpConfirmedSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -76,10 +100,12 @@ function parameters(route: RouteDef): Json[] {
 function operation(route: RouteDef): Json {
   const responses: Json = {};
   for (const [status, def] of Object.entries(route.responses)) {
-    responses[status] = {
-      description: def.description,
-      content: { 'application/json': { schema: schemaRef(def.schema) } },
-    };
+    responses[status] = def.empty
+      ? { description: def.description }
+      : {
+          description: def.description,
+          content: { 'application/json': { schema: schemaRef(def.schema) } },
+        };
   }
   responses['default'] = {
     description: 'Error envelope.',
@@ -105,7 +131,7 @@ function operation(route: RouteDef): Json {
     };
   }
   op['security'] =
-    route.auth === 'none' ? [] : route.auth === 'session' ? [{ session: [] }] : [{ bearer: [] }];
+    route.auth === 'none' ? [] : route.auth === 'token' ? [{ bearer: [] }] : [{ session: [] }];
   return op;
 }
 
@@ -135,12 +161,22 @@ export function buildOpenApi(): Json {
       license: { name: 'AGPL-3.0-only', identifier: 'AGPL-3.0-only' },
     },
     servers: [{ url: '/api/v1' }],
-    tags: [{ name: 'system', description: 'Probes, version and the API description.' }],
+    tags: [
+      { name: 'system', description: 'Probes, version and the API description.' },
+      { name: 'setup', description: 'First-run setup of a new instance.' },
+      { name: 'auth', description: 'Sign-in with a password and an authenticator, sessions.' },
+    ],
     paths,
     components: {
       schemas,
       securitySchemes: {
-        session: { type: 'apiKey', in: 'cookie', name: 'sw_session' },
+        session: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'sw_session',
+          description:
+            'Set by the sign-in routes. Routes marked as needing a session accept a signed-in one; the second sign-in step accepts one whose password was accepted.',
+        },
         bearer: { type: 'http', scheme: 'bearer' },
       },
     },

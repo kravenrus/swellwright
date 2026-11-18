@@ -10,7 +10,7 @@
     },
     "test": {
       "dependsOn": ["build"],
-      "env": ["SW_TEST_DATABASE_URL", "SW_TEST_VALKEY_URL"]
+      "env": ["SW_TEST_DATABASE_URL", "SW_TEST_DATABASE_POOL", "SW_TEST_VALKEY_URL"]
     }
   }
 }
