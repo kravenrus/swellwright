@@ -55,6 +55,7 @@ import {
   VaultInitializedSchema,
   VaultStatusSchema,
 } from './vault.js';
+import { SessionListSchema, SessionSummarySchema, SessionsRevokedSchema } from './sessions.js';
 import {
   CheckResultSchema,
   HealthResponseSchema,
@@ -63,7 +64,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.6.0';
+export const OPENAPI_INFO_VERSION = '0.7.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -112,6 +113,9 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   VaultInitializedSchema,
   UnsealVaultRequestSchema,
   SecretViewSchema,
+  SessionSummarySchema,
+  SessionListSchema,
+  SessionsRevokedSchema,
   SecretListSchema,
   CreateSecretRequestSchema,
   UpdateSecretRequestSchema,
@@ -254,6 +258,7 @@ export function buildOpenApi(): Json {
       },
       { name: 'roles', description: 'Built-in roles and the permission catalogue.' },
       { name: 'audit', description: 'The append-only audit log and its integrity check.' },
+      { name: 'sessions', description: 'Signed-in browser sessions and how to end them.' },
     ],
     paths,
     components: {

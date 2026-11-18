@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS = [
   'secret.revealed',
   'authz.denied',
   'audit.chain.verified',
+  'session.revoked',
 ] as const;
 export const AuditActionSchema = z.enum(AUDIT_ACTIONS).meta({ id: 'AuditAction' });
 export type AuditAction = z.infer<typeof AuditActionSchema>;

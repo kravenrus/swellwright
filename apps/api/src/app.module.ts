@@ -9,7 +9,9 @@ import { AuthService } from './auth/auth.service.js';
 import { AuthGuard, OriginGuard, PermissionGuard, StepUpGuard } from './auth/guards.js';
 import { DEFAULT_PASSWORD_PARAMS, PasswordHasher, type PasswordParams } from './auth/password.js';
 import { SecretBox } from './auth/secret-box.js';
+import { SessionManagementService } from './auth/session-management.service.js';
 import { SessionService } from './auth/session.service.js';
+import { SessionsController } from './auth/sessions.controller.js';
 import { SetupController } from './auth/setup.controller.js';
 import { SetupService } from './auth/setup.service.js';
 import { type AppConfig } from './config.js';
@@ -70,6 +72,7 @@ export class AppModule implements OnApplicationShutdown {
         SystemController,
         SetupController,
         AuthController,
+        SessionsController,
         RolesController,
         AuditController,
         UsersController,
@@ -89,6 +92,7 @@ export class AppModule implements OnApplicationShutdown {
         },
         { provide: SECRET_BOX, useValue: new SecretBox(config.authKey) },
         SessionService,
+        SessionManagementService,
         AuditService,
         AuthService,
         SetupService,

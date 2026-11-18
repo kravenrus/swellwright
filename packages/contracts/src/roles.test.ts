@@ -114,7 +114,8 @@ describe('route permissions', () => {
     for (const id of ROUTES_OPEN_TO_ANY_SESSION) {
       assert.ok(ids.includes(id), id);
     }
-    assert.ok(ROUTES_OPEN_TO_ANY_SESSION.length <= 3);
+    // Your own account only: who you are, your password, your code, your sessions and your tokens.
+    assert.ok(ROUTES_OPEN_TO_ANY_SESSION.length <= 10);
   });
 
   it('puts the permission into the OpenAPI description', () => {
@@ -161,6 +162,8 @@ describe('step-up authentication on routes', () => {
       'initializeVault',
       'resetCredentials',
       'revealSecret',
+      'revokeSession',
+      'revokeUserSessions',
       'sealVault',
       'unsealVault',
       'updateSecret',

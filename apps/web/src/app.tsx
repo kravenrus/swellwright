@@ -23,6 +23,7 @@ import { navFor } from './nav.js';
 import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
 import { RolesPage } from './security/roles-page.js';
+import { SessionsPage } from './security/sessions-page.js';
 import { UsersPage } from './security/users-page.js';
 import { VaultPage } from './security/vault-page.js';
 
@@ -148,6 +149,9 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
         ) : null}
         {activeId === 'roles' && permissions.includes('roles:read') ? (
           <RolesPage currentRole={session.user.role} />
+        ) : null}
+        {activeId === 'sessions' ? (
+          <SessionsPage currentUserId={session.user.id} permissions={permissions} />
         ) : null}
         {activeId === 'audit' && permissions.includes('audit:read') ? (
           <AuditPage permissions={permissions} />
