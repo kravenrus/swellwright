@@ -40,6 +40,8 @@ import {
   UserViewSchema,
 } from './users.js';
 import {
+  ChangeVaultPassphraseRequestSchema,
+  ConfirmPassphraseRequestSchema,
   CreateSecretRequestSchema,
   InitializeVaultRequestSchema,
   RevealedSecretSchema,
@@ -49,6 +51,7 @@ import {
   UnsealVaultRequestSchema,
   UpdateSecretRequestSchema,
   VaultInitializedSchema,
+  VaultRotatedSchema,
   VaultStatusSchema,
 } from './vault.js';
 
@@ -484,6 +487,69 @@ export const revealSecretRoute = defineRoute({
   responses: { 200: { description: 'The value.', schema: RevealedSecretSchema } },
 });
 
+export const changeVaultPassphraseRoute = defineRoute({
+  operationId: 'changeVaultPassphrase',
+  method: 'post',
+  path: '/vault/passphrase',
+  tags: ['vault'],
+  summary: 'Change the passphrase of the vault',
+  description:
+    'Needs the current passphrase. The key that encrypts the secrets does not change, only the way the passphrase wraps it: nothing is re-encrypted, the recovery key stays valid, and the new passphrase is hardened with the current cost settings. Works while the vault is sealed. A wrong current passphrase answers 401 and counts towards the unseal limit.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: ChangeVaultPassphraseRequestSchema },
+  responses: { 200: { description: 'The vault.', schema: VaultStatusSchema } },
+});
+
+export const rotateRecoveryKeyRoute = defineRoute({
+  operationId: 'rotateRecoveryKey',
+  method: 'post',
+  path: '/vault/recovery-key/rotate',
+  tags: ['vault'],
+  summary: 'Issue a new recovery key',
+  description:
+    'Needs the passphrase. The old recovery key stops working at once; the new one is in the answer and nowhere else, so keep it away from this server. Nothing is re-encrypted.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: ConfirmPassphraseRequestSchema },
+  responses: { 200: { description: 'The new recovery key.', schema: VaultInitializedSchema } },
+});
+
+export const rotateKekRoute = defineRoute({
+  operationId: 'rotateKek',
+  method: 'post',
+  path: '/vault/rotate-kek',
+  tags: ['vault'],
+  summary: 'Replace the key that wraps every data key',
+  description:
+    'Needs the vault open and the passphrase. A new key-encryption key wraps every data key (the values are not re-encrypted), the key version moves forward, and a new recovery key is issued because the old one opened the old key. All or nothing: a failure leaves the vault as it was.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  request: { body: ConfirmPassphraseRequestSchema },
+  responses: {
+    200: { description: 'The new recovery key and the vault.', schema: VaultInitializedSchema },
+  },
+});
+
+export const rotateDataKeysRoute = defineRoute({
+  operationId: 'rotateDataKeys',
+  method: 'post',
+  path: '/vault/rotate-data-keys',
+  tags: ['vault'],
+  summary: 'Encrypt every secret under a fresh data key',
+  description:
+    'Needs the vault open. Every current value is decrypted in memory and encrypted again under a new data key wrapped by the current key. Versions and values do not change. All or nothing.',
+  auth: 'session',
+  permission: 'vault:manage',
+  stepUp: true,
+  responses: {
+    200: { description: 'How many secrets were re-encrypted.', schema: VaultRotatedSchema },
+  },
+});
+
 export const rolesRoute = defineRoute({
   operationId: 'getRoles',
   method: 'get',
@@ -710,6 +776,10 @@ export const routes = [
   updateSecretRoute,
   deleteSecretRoute,
   revealSecretRoute,
+  changeVaultPassphraseRoute,
+  rotateRecoveryKeyRoute,
+  rotateKekRoute,
+  rotateDataKeysRoute,
   rolesRoute,
   listAuditRoute,
   verifyAuditChainRoute,

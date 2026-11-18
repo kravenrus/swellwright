@@ -32,7 +32,9 @@ export const TokenViewSchema = z
     name: z.string(),
     prefix: z.string().describe('The first characters of the token, to recognise it in a list.'),
     permissions: z.array(PermissionSchema),
-    ipAllowlist: z.array(z.string()).describe('Addresses or ranges it may be used from; empty: anywhere.'),
+    ipAllowlist: z
+      .array(z.string())
+      .describe('Addresses or ranges it may be used from; empty: anywhere.'),
     createdAt: z.iso.datetime(),
     expiresAt: z.iso.datetime(),
     lastUsedAt: z.iso.datetime().nullable(),
@@ -43,7 +45,9 @@ export const TokenViewSchema = z
   .meta({ id: 'TokenView' });
 export type TokenView = z.infer<typeof TokenViewSchema>;
 
-export const TokenListSchema = z.object({ tokens: z.array(TokenViewSchema) }).meta({ id: 'TokenList' });
+export const TokenListSchema = z
+  .object({ tokens: z.array(TokenViewSchema) })
+  .meta({ id: 'TokenList' });
 export type TokenList = z.infer<typeof TokenListSchema>;
 
 export const CreateTokenRequestSchema = z
@@ -53,7 +57,9 @@ export const CreateTokenRequestSchema = z
       .array(PermissionSchema)
       .min(1)
       .max(PERMISSIONS.length)
-      .refine((list) => new Set(list).size === list.length, { message: 'List each permission once.' })
+      .refine((list) => new Set(list).size === list.length, {
+        message: 'List each permission once.',
+      })
       .refine((list) => list.every((p) => TOKEN_GRANTABLE_PERMISSIONS.includes(p)), {
         message: 'A token cannot carry a permission that needs a fresh second factor.',
       }),
@@ -70,7 +76,9 @@ export const CreatedTokenSchema = z
   .object({
     token: z
       .string()
-      .describe('The token. Shown once, never again; only its hash is kept. Send it as `Authorization: Bearer <token>`.'),
+      .describe(
+        'The token. Shown once, never again; only its hash is kept. Send it as `Authorization: Bearer <token>`.',
+      ),
     view: TokenViewSchema,
   })
   .meta({ id: 'CreatedToken' });

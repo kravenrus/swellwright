@@ -44,7 +44,7 @@ const FAILURE_WINDOW_MS = 10 * 60_000;
 /** A dead token that keeps being used fills the audit chain, which is never pruned: cap it per token. */
 const DENIED_NOTES_PER_TOKEN = 5;
 
-type Row = {
+interface Row {
   readonly id: string;
   readonly userId: string;
   readonly name: string;
@@ -57,7 +57,7 @@ type Row = {
   readonly lastUsedIp: string | null;
   readonly revokedAt: Date | null;
   readonly user: { readonly username: string };
-};
+}
 
 const PERMISSION_SET = new Set<string>(PERMISSIONS);
 
@@ -116,7 +116,11 @@ export class TokenService {
     return requireDatabase(this.database).client;
   }
 
-  async create(auth: AuthContext, input: CreateTokenRequest, meta: RequestMeta): Promise<CreatedToken> {
+  async create(
+    auth: AuthContext,
+    input: CreateTokenRequest,
+    meta: RequestMeta,
+  ): Promise<CreatedToken> {
     const missing = input.permissions.filter((p) => !hasPermission(auth.user.role, p));
     if (missing.length > 0) {
       throw new BadRequestException(

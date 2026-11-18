@@ -10,8 +10,8 @@ describe('address ranges', () => {
   });
 
   it('matches single addresses and subnets', () => {
-    assert.equal(ipInRanges('203.0.113.9', ['203.0.113.0/24']), true);
-    assert.equal(ipInRanges('203.0.114.9', ['203.0.113.0/24']), false);
+    assert.equal(ipInRanges('203.0.113.9', ['203.0.113.0/25']), true);
+    assert.equal(ipInRanges('203.0.113.200', ['203.0.113.0/25']), false);
     assert.equal(ipInRanges('198.51.100.7', ['198.51.100.7']), true);
     assert.equal(ipInRanges('198.51.100.8', ['198.51.100.7']), false);
     assert.equal(ipInRanges('10.1.2.3', ['203.0.113.0/24', '10.0.0.0/8']), true);
@@ -20,8 +20,8 @@ describe('address ranges', () => {
   });
 
   it('reads an IPv4 address given as an IPv6 socket reports it', () => {
-    assert.equal(ipInRanges('::ffff:203.0.113.9', ['203.0.113.0/24']), true);
-    assert.equal(ipInRanges('::FFFF:203.0.114.9', ['203.0.113.0/24']), false);
+    assert.equal(ipInRanges('::ffff:203.0.113.9', ['203.0.113.0/25']), true);
+    assert.equal(ipInRanges('::FFFF:203.0.113.200', ['203.0.113.0/25']), false);
   });
 
   it('keeps out an unknown address and anything that is not an address', () => {

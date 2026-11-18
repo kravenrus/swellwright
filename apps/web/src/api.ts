@@ -37,6 +37,8 @@ import {
   type CreatedToken,
   CreatedTokenSchema,
   type CreateTokenInput,
+  type ChangeVaultPassphraseRequest,
+  type ConfirmPassphraseRequest,
   type CreateSecretRequest,
   type InitializeVaultRequest,
   type RevealedSecret,
@@ -62,6 +64,8 @@ import {
   VaultInitializedSchema,
   type VaultStatus,
   VaultStatusSchema,
+  type VaultRotated,
+  VaultRotatedSchema,
   type VersionResponse,
   VersionResponseSchema,
 } from '@swellwright/contracts';
@@ -208,6 +212,23 @@ export const unsealVault = (request: UnsealVaultRequest): Promise<VaultStatus> =
 
 export const sealVault = (): Promise<VaultStatus> =>
   send('POST', '/vault/seal', undefined, VaultStatusSchema);
+
+/** Works while the vault is sealed; a wrong current passphrase answers 401 (`unauthorized`). */
+export const changeVaultPassphrase = (
+  request: ChangeVaultPassphraseRequest,
+): Promise<VaultStatus> => send('POST', '/vault/passphrase', request, VaultStatusSchema);
+
+/** A new recovery key, shown once; the old one stops working at once. */
+export const rotateRecoveryKey = (request: ConfirmPassphraseRequest): Promise<VaultInitialized> =>
+  send('POST', '/vault/recovery-key/rotate', request, VaultInitializedSchema);
+
+/** Needs the vault open (423 `vault_sealed` otherwise). Issues a new recovery key as well. */
+export const rotateKek = (request: ConfirmPassphraseRequest): Promise<VaultInitialized> =>
+  send('POST', '/vault/rotate-kek', request, VaultInitializedSchema);
+
+/** Needs the vault open. Every secret is encrypted again under a fresh data key. */
+export const rotateDataKeys = (): Promise<VaultRotated> =>
+  send('POST', '/vault/rotate-data-keys', undefined, VaultRotatedSchema);
 
 export const listSecrets = (): Promise<SecretList> =>
   send('GET', '/secrets', undefined, SecretListSchema);

@@ -53,7 +53,11 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     // The proxy at the loopback address may say who the client is, so a test can come "from" another address.
     instance = await start({ SW_TRUSTED_PROXIES: 'loopback' });
     ({ secret: ownerSecret } = await createOwner(instance));
-    ({ id: operatorId, secret: operatorSecret } = await createUser(instance, 'operator', 'operator'));
+    ({ id: operatorId, secret: operatorSecret } = await createUser(
+      instance,
+      'operator',
+      'operator',
+    ));
     ({ secret: observerSecret } = await createUser(instance, 'observer', 'observer'));
     ({ secret: auditorSecret } = await createUser(instance, 'auditor', 'auditor'));
     owner = await signInAs(instance, 'owner', ownerSecret);
@@ -183,11 +187,18 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     assert.equal((await cli.call('GET', '/auth/sessions', undefined, headers)).status, 401);
     assert.equal((await cli.call('GET', '/auth/tokens', undefined, headers)).status, 401);
     assert.equal(
-      (await cli.call('POST', '/tokens', { name: 'x', permissions: ['users:read'] }, headers)).status,
+      (await cli.call('POST', '/tokens', { name: 'x', permissions: ['users:read'] }, headers))
+        .status,
       401,
     );
-    assert.equal((await cli.call('POST', '/auth/step-up', { code: '123456' }, headers)).status, 401);
-    assert.equal((await cli.call('POST', '/users', { username: 'x', role: 'observer' }, headers)).status, 401);
+    assert.equal(
+      (await cli.call('POST', '/auth/step-up', { code: '123456' }, headers)).status,
+      401,
+    );
+    assert.equal(
+      (await cli.call('POST', '/users', { username: 'x', role: 'observer' }, headers)).status,
+      401,
+    );
     // A route for tokens that also lets a token read what it was given.
     assert.equal((await cli.call('GET', '/sessions', undefined, headers)).status, 200);
     assert.equal((await cli.call('GET', '/tokens', undefined, headers)).status, 200);
@@ -211,11 +222,19 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     assert.deepEqual(await grants(), ['servers:read', 'panel:write']);
     const users = instance.isolated.database.client.user;
     await users.update({ where: { id: operatorId }, data: { role: 'observer' } });
-    assert.deepEqual(await grants(), ['servers:read'], 'a demoted owner takes the extra away at once');
+    assert.deepEqual(
+      await grants(),
+      ['servers:read'],
+      'a demoted owner takes the extra away at once',
+    );
     await users.update({ where: { id: operatorId }, data: { status: 'disabled' } });
     assert.equal((await cli.call('GET', '/auth/me', undefined, bearer(token))).status, 401);
     await users.update({ where: { id: operatorId }, data: { status: 'active', role: 'operator' } });
-    assert.deepEqual(await grants(), ['servers:read', 'panel:write'], 'and gives it back with the role');
+    assert.deepEqual(
+      await grants(),
+      ['servers:read', 'panel:write'],
+      'and gives it back with the role',
+    );
   });
 
   it('stops at its expiry and when it is revoked, and says why in the audit chain', async () => {
@@ -257,19 +276,24 @@ describe('API tokens', { skip: !databaseUrl }, () => {
       ipAllowlist: ['203.0.113.0/24', '2001:db8::/32'],
     });
     const cli = bare();
-    const from = (address: string) =>
-      cli.call('GET', '/users', undefined, bearer(token, address));
+    const from = (address: string) => cli.call('GET', '/users', undefined, bearer(token, address));
     assert.equal((await from('203.0.113.77')).status, 200);
     assert.equal((await from('2001:db8::42')).status, 200);
     assert.equal((await from('198.51.100.1')).status, 401);
-    assert.equal((await cli.call('GET', '/users', undefined, bearer(token))).status, 401, 'from the proxy itself');
+    assert.equal(
+      (await cli.call('GET', '/users', undefined, bearer(token))).status,
+      401,
+      'from the proxy itself',
+    );
     const denial = found(
       (await auditEvents(instance)).findLast((e) => e.action === 'auth.token.denied'),
       'the denial',
     );
     assert.equal(denial.details['reason'], 'address');
     assert.equal(denial.object?.id, id);
-    const row = await instance.isolated.database.client.apiToken.findUniqueOrThrow({ where: { id } });
+    const row = await instance.isolated.database.client.apiToken.findUniqueOrThrow({
+      where: { id },
+    });
     // The use is written at most once a minute, so the first good address of the minute is the one kept.
     assert.equal(row.lastUsedIp, '203.0.113.77');
   });
@@ -307,9 +331,18 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     assert.equal(last, 429);
     // Another address is not affected.
     const ok = await mint(owner, ['users:read']);
-    assert.equal((await cli.call('GET', '/users', undefined, bearer(ok.token, '198.51.100.5'))).status, 200);
-    assert.equal((await cli.call('GET', '/users', undefined, { authorization: 'Bearer ' })).status, 401);
-    assert.equal((await cli.call('GET', '/users', undefined, { authorization: 'Basic abc' })).status, 401);
+    assert.equal(
+      (await cli.call('GET', '/users', undefined, bearer(ok.token, '198.51.100.5'))).status,
+      200,
+    );
+    assert.equal(
+      (await cli.call('GET', '/users', undefined, { authorization: 'Bearer ' })).status,
+      401,
+    );
+    assert.equal(
+      (await cli.call('GET', '/users', undefined, { authorization: 'Basic abc' })).status,
+      401,
+    );
   });
 
   it('records when it was last used, not on every request', async () => {
@@ -341,7 +374,9 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     const auditor = await signInAs(instance, 'auditor', auditorSecret);
     const all = TokenListSchema.parse((await auditor.get('/tokens')).body).tokens;
     assert.ok(all.some((t) => t.id === mine.id) && all.some((t) => t.username === 'owner'));
-    const only = TokenListSchema.parse((await owner.get(`/tokens?userId=${operatorId}`)).body).tokens;
+    const only = TokenListSchema.parse(
+      (await owner.get(`/tokens?userId=${operatorId}`)).body,
+    ).tokens;
     assert.ok(only.length > 0 && only.every((t) => t.username === 'operator'));
     // The auditor may read, not revoke.
     const forbidden = await auditor.call('DELETE', `/tokens/${mine.id}`);
@@ -367,7 +402,10 @@ describe('API tokens', { skip: !databaseUrl }, () => {
     await elevate(instance);
     const maker = await signInAs(instance, 'auditor', auditorSecret);
     // The auditor may not create tokens: use the owner for the limit.
-    assert.equal((await maker.post('/tokens', { name: 'x', permissions: ['users:read'] })).status, 403);
+    assert.equal(
+      (await maker.post('/tokens', { name: 'x', permissions: ['users:read'] })).status,
+      403,
+    );
     const users = instance.isolated.database.client;
     const ownerRow = await users.user.findFirstOrThrow({ where: { username: 'owner' } });
     const active = await users.apiToken.count({
@@ -378,7 +416,7 @@ describe('API tokens', { skip: !databaseUrl }, () => {
         data: {
           userId: ownerRow.id,
           name: `filler ${String(i)}`,
-          tokenHash: `${String(i).padStart(2, '0')}`.repeat(32),
+          tokenHash: String(i).padStart(2, '0').repeat(32),
           prefix: 'swt_fill',
           permissions: ['users:read'],
           ipAllowlist: [],
@@ -395,11 +433,18 @@ describe('API tokens', { skip: !databaseUrl }, () => {
       where: { userId: ownerRow.id, name: { startsWith: 'filler' } },
       data: { revokedAt: new Date(Date.now() - 40 * 86_400_000) },
     });
-    const kept = await users.apiToken.count({ where: { userId: ownerRow.id, name: { startsWith: 'filler' } } });
+    const kept = await users.apiToken.count({
+      where: { userId: ownerRow.id, name: { startsWith: 'filler' } },
+    });
     assert.ok(kept > 0);
-    assert.equal((await owner.post('/tokens', { name: 'fits now', permissions: ['users:read'] })).status, 201);
     assert.equal(
-      await users.apiToken.count({ where: { userId: ownerRow.id, name: { startsWith: 'filler' } } }),
+      (await owner.post('/tokens', { name: 'fits now', permissions: ['users:read'] })).status,
+      201,
+    );
+    assert.equal(
+      await users.apiToken.count({
+        where: { userId: ownerRow.id, name: { startsWith: 'filler' } },
+      }),
       0,
     );
   });

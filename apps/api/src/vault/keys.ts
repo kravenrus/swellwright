@@ -82,6 +82,21 @@ export function encryptSecret(
   }
 }
 
+/** Wraps the data key of one secret version under a new KEK. The value is not touched. Throws if the old KEK is wrong. */
+export function rewrapDek(
+  oldKek: Buffer,
+  newKek: Buffer,
+  identity: { readonly id: string; readonly version: number },
+  wrappedDek: Uint8Array,
+): Buffer {
+  const dek = new SecretBox(oldKek).open(wrappedDek, dekContext(identity.id, identity.version));
+  try {
+    return new SecretBox(newKek).seal(dek, dekContext(identity.id, identity.version));
+  } finally {
+    dek.fill(0);
+  }
+}
+
 /** Throws when either blob was altered, moved to another secret, version or type, or the KEK is wrong. */
 export function decryptSecret(
   kek: Buffer,
