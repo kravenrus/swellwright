@@ -33,6 +33,8 @@ import {
   PluginViewSchema,
   type ReadyResponse,
   ReadyResponseSchema,
+  type UpdatesResponse,
+  UpdatesResponseSchema,
   type RoleCatalog,
   RoleCatalogSchema,
   type SessionInfo,
@@ -199,6 +201,14 @@ export async function loadSystemStatus(): Promise<SystemStatus> {
   ]);
   return { health, ready, version };
 }
+
+/** What this build is (the number, the build and the commit). Public, like the rest of the system documents. */
+export const getVersion = (): Promise<VersionResponse> =>
+  getJson('/version', VersionResponseSchema);
+
+/** The newest release and the stars of the project, read from GitHub by the server (signed in). */
+export const getUpdates = (): Promise<UpdatesResponse> =>
+  send('GET', '/updates', undefined, UpdatesResponseSchema);
 
 export const getSetupStatus = (): Promise<SetupStatus> =>
   send('GET', '/setup/status', undefined, SetupStatusSchema);

@@ -267,7 +267,13 @@ export function navFor(
   for (const section of navigation(t)) {
     const items = section.items
       .filter((item) => item.permission === undefined || permissions.includes(item.permission))
-      .map(({ permission: _permission, ...item }) => item);
+      .map((item): NavItem => ({
+        id: item.id,
+        name: item.name,
+        href: item.href,
+        icon: item.icon,
+        ...(item.planned === true ? { planned: true } : {}),
+      }));
     if (items.length > 0) {
       sections.push({ ...section, items });
     }

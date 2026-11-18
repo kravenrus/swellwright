@@ -1,12 +1,4 @@
-import {
-  AppShell,
-  Box,
-  Burger,
-  Container,
-  Divider,
-  Group,
-  ScrollArea,
-} from '@mantine/core';
+import { AppShell, Box, Burger, Container, Divider, Group, ScrollArea } from '@mantine/core';
 import { useClickOutside, useDisclosure } from '@mantine/hooks';
 import { Suspense, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +36,11 @@ function Content() {
 function CompactLayout({ navigation }: { navigation: ReactNode }) {
   const hiRes = useIsHiResDesktop();
   return (
-    <AppShell className="sw-shell" header={{ height: hiRes ? 64 : 116, offset: false }} padding="xl">
+    <AppShell
+      className="sw-shell"
+      header={{ height: hiRes ? 64 : 116, offset: false }}
+      padding="xl"
+    >
       <AppShell.Header className="sw-header">
         <div className="sw-brand-row">
           <Group align="stretch" gap="xs" h="100%" style={{ minWidth: 0 }} wrap="nowrap">
@@ -138,7 +134,10 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main pb="var(--mantine-spacing-md)" pt="calc(var(--app-shell-header-height) + 10px)">
+      <AppShell.Main
+        pb="var(--mantine-spacing-md)"
+        pt="calc(var(--app-shell-header-height) + 10px)"
+      >
         <Content />
         <ScrollRestoration />
       </AppShell.Main>

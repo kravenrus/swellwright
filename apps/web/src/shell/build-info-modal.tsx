@@ -23,7 +23,7 @@ import {
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
-import type { UpdateInfo, VersionInfo } from '@swellwright/contracts';
+import type { UpdatesResponse, VersionResponse } from '@swellwright/contracts';
 import { LogoMark, OverlayHeader } from '@swellwright/ui';
 
 import { useDateTime } from '../format.js';
@@ -64,8 +64,8 @@ function BuildInfo({
   updates,
   isNewVersion,
 }: {
-  version: VersionInfo;
-  updates: UpdateInfo | undefined;
+  version: VersionResponse;
+  updates: UpdatesResponse | undefined;
   isNewVersion: boolean;
 }) {
   const { t } = useTranslation('shell');
@@ -115,12 +115,7 @@ function BuildInfo({
         <Stack gap="sm">
           <Group justify="space-between" wrap="nowrap">
             <Group gap="xs">
-              <Badge
-                color="cyan"
-                leftSection={<LogoMark size={16} />}
-                size="lg"
-                variant="light"
-              >
+              <Badge color="cyan" leftSection={<LogoMark size={16} />} size="lg" variant="light">
                 {version.version}
               </Badge>
               <Badge
@@ -233,8 +228,8 @@ export function openBuildInfo({
   isNewVersion,
 }: {
   title: string;
-  version: VersionInfo;
-  updates: UpdateInfo | undefined;
+  version: VersionResponse;
+  updates: UpdatesResponse | undefined;
   isNewVersion: boolean;
 }): void {
   modals.open({

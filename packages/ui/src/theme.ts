@@ -31,13 +31,7 @@ import {
   type VariantColorsResolver,
 } from '@mantine/core';
 
-import {
-  BREAKPOINTS,
-  DARK,
-  FONT_FAMILY,
-  FONT_FAMILY_MONOSPACE,
-  SHADED_GRAY,
-} from './tokens.js';
+import { BREAKPOINTS, DARK, FONT_FAMILY, FONT_FAMILY_MONOSPACE, SHADED_GRAY } from './tokens.js';
 
 const tuple = (values: readonly string[]): MantineColorsTuple =>
   values as unknown as MantineColorsTuple;

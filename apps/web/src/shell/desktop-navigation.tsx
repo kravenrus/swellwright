@@ -80,7 +80,9 @@ export function DesktopNavigation({
                   </Menu.Item>
                 ) : (
                   <Menu.Item
-                    className={isPathActive(pathname, item.href) ? 'sw-menu-item-active' : undefined}
+                    className={
+                      isPathActive(pathname, item.href) ? 'sw-menu-item-active' : undefined
+                    }
                     component={Link}
                     key={item.id}
                     leftSection={<NavIcon icon={item.icon} />}
