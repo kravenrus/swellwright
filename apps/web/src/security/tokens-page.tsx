@@ -93,6 +93,8 @@ const RESOURCE_OF = {
   'tokens:create': 'tokens',
   'tokens:read': 'tokens',
   'tokens:revoke': 'tokens',
+  'plugins:read': 'plugins',
+  'plugins:manage': 'plugins',
 } as const satisfies { readonly [P in Permission]: ResourceOf<P> };
 
 interface PermissionGroup {

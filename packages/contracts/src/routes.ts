@@ -26,6 +26,12 @@ import {
   UserSummarySchema,
 } from './auth.js';
 import { ApiErrorSchema } from './errors.js';
+import {
+  EnablePluginRequestSchema,
+  PluginIdParamsSchema,
+  PluginListSchema,
+  PluginViewSchema,
+} from './plugins.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
 import {
   SessionIdParamsSchema,
@@ -817,6 +823,49 @@ export const revokeTokenRoute = defineRoute({
   responses: { 204: { description: 'The token is revoked.', schema: z.undefined(), empty: true } },
 });
 
+export const listPluginsRoute = defineRoute({
+  operationId: 'listPlugins',
+  method: 'get',
+  path: '/plugins',
+  tags: ['plugins'],
+  summary: 'The plugins of this instance',
+  description:
+    'Reads the plugin directories on every call and says, for each plugin, what its files declare, what it asks for, and whether an administrator approved exactly that. A plugin that was enabled and whose files changed, went missing or became invalid is switched off here and the change is recorded.',
+  auth: 'any',
+  permission: 'plugins:read',
+  responses: { 200: { description: 'The plugins.', schema: PluginListSchema } },
+});
+
+export const enablePluginRoute = defineRoute({
+  operationId: 'enablePlugin',
+  method: 'post',
+  path: '/plugins/{id}/enable',
+  tags: ['plugins'],
+  summary: 'Enable a plugin and approve what it asks for',
+  description:
+    'Approves the plugin as it is now: the digest of its files and the permissions of its manifest. The digest in the request is what the administrator was shown; if the files differ now the answer is 409 and nothing is enabled. Only a plugin that is usable can be enabled (not invalid, not for other versions of Swellwright).',
+  auth: 'session',
+  permission: 'plugins:manage',
+  stepUp: true,
+  request: { params: PluginIdParamsSchema, body: EnablePluginRequestSchema },
+  responses: { 200: { description: 'The plugin, now enabled.', schema: PluginViewSchema } },
+});
+
+export const disablePluginRoute = defineRoute({
+  operationId: 'disablePlugin',
+  method: 'post',
+  path: '/plugins/{id}/disable',
+  tags: ['plugins'],
+  summary: 'Disable a plugin',
+  description:
+    'Switches the plugin off at once. The approval stays on record; enabling again needs a new approval of what the files are then. Disabling a plugin that is not enabled succeeds and changes nothing.',
+  auth: 'session',
+  permission: 'plugins:manage',
+  stepUp: true,
+  request: { params: PluginIdParamsSchema },
+  responses: { 200: { description: 'The plugin, now disabled.', schema: PluginViewSchema } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -883,6 +932,9 @@ export const routes = [
   createTokenRoute,
   listTokensRoute,
   revokeTokenRoute,
+  listPluginsRoute,
+  enablePluginRoute,
+  disablePluginRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

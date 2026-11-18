@@ -273,3 +273,22 @@ model ApiToken {
   @@index([userId])
   @@map("api_tokens")
 }
+
+/// What an administrator approved for a plugin: its files, by digest, and the permissions of its manifest at that
+/// moment (ADR 0027). A plugin runs only while it is `enabled` and its files still have this digest.
+model PluginApproval {
+  pluginId    String   @id @map("plugin_id") @db.VarChar(48)
+  enabled     Boolean
+  version     String   @db.VarChar(64)
+  trust       String   @db.VarChar(16)
+  /// SHA-256 over every file of the plugin.
+  digest      String   @db.VarChar(64)
+  /// The approved permissions: the canonical JSON text of the manifest's `permissions`.
+  permissions String
+  approvedAt  DateTime @map("approved_at") @db.Timestamptz(3)
+  /// The user name at the time. No foreign key, like the audit log: deleting the user does not erase who approved.
+  approvedBy  String   @map("approved_by") @db.VarChar(64)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("plugin_approvals")
+}

@@ -31,6 +31,8 @@ export const PERMISSION_INFO = {
   'tokens:create': 'Create API tokens in your own name.',
   'tokens:read': 'See the API tokens of every user, never their values.',
   'tokens:revoke': 'Revoke the API tokens of other users.',
+  'plugins:read': 'See the plugins of this instance, what each asks for and whether it is enabled.',
+  'plugins:manage': 'Enable plugins, approving what they ask for, and disable them.',
 } as const satisfies Record<string, string>;
 
 export type Permission = keyof typeof PERMISSION_INFO;
@@ -51,6 +53,7 @@ export const IMPLIED_PERMISSIONS: Readonly<Partial<Record<Permission, Permission
   'audit:export': 'audit:read',
   'sessions:revoke': 'sessions:read',
   'tokens:revoke': 'tokens:read',
+  'plugins:manage': 'plugins:read',
 };
 
 /**
@@ -66,6 +69,7 @@ export const STEP_UP_PERMISSIONS: readonly Permission[] = [
   'sessions:revoke',
   'tokens:create',
   'tokens:revoke',
+  'plugins:manage',
 ];
 
 const READ_ONLY_OPERATIONS: readonly Permission[] = [
@@ -73,6 +77,7 @@ const READ_ONLY_OPERATIONS: readonly Permission[] = [
   'panel:read',
   'runs:read',
   'vault:read',
+  'plugins:read',
 ];
 
 export const ROLE_INFO: Readonly<
@@ -93,6 +98,7 @@ export const ROLE_INFO: Readonly<
       'runs:read',
       'runs:execute',
       'vault:read',
+      'plugins:read',
       'tokens:create',
     ],
   },

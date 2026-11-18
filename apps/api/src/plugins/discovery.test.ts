@@ -255,4 +255,58 @@ describe('plugin discovery', () => {
     );
     assert.match(found[1]?.problems.join() ?? '', /already used by/u);
   });
+
+  it('gives a usable plugin the digest of its files and an unusable one none', async () => {
+    await plugin(official, 'dns-rucenter');
+    await plugin(
+      official,
+      'dns-other',
+      manifest('dns-other', { engines: { swellwright: '>=9.0' } }),
+    );
+    await mkdir(join(official.directory, 'no-manifest'));
+    const found = await discoverPlugins([official], CORE);
+    const byFolder = Object.fromEntries(found.map((p) => [p.folder, p]));
+    assert.match(byFolder['dns-rucenter']?.digest ?? '', /^[0-9a-f]{64}$/u);
+    assert.match(
+      byFolder['dns-other']?.digest ?? '',
+      /^[0-9a-f]{64}$/u,
+      'an incompatible plugin has one to show',
+    );
+    assert.equal(byFolder['no-manifest']?.digest, undefined);
+    assert.equal(byFolder['dns-rucenter']?.digest === byFolder['dns-other']?.digest, false);
+  });
+
+  it('changes the digest when a file changes, is added or is removed', async () => {
+    await plugin(official, 'dns-rucenter');
+    const digest = async (): Promise<string | undefined> =>
+      only(await discoverPlugins([official], CORE)).digest;
+    const first = await digest();
+    await writeFile(
+      join(official.directory, 'dns-rucenter', 'dist', 'provider.js'),
+      'export const x = 1;',
+    );
+    const changed = await digest();
+    await writeFile(join(official.directory, 'dns-rucenter', 'notes.txt'), 'new');
+    const added = await digest();
+    await rm(join(official.directory, 'dns-rucenter', 'notes.txt'));
+    const removed = await digest();
+    assert.equal(new Set([first, changed, added]).size, 3);
+    assert.equal(removed, changed, 'back to the same files, the same digest');
+  });
+
+  it('refuses a link inside a plugin, even one that stays inside it', async () => {
+    await plugin(official, 'dns-rucenter');
+    try {
+      await symlink(
+        join(official.directory, 'dns-rucenter', 'dist'),
+        join(official.directory, 'dns-rucenter', 'alias'),
+        'dir',
+      );
+    } catch {
+      return; // creating links needs a privilege on some systems
+    }
+    const found = only(await discoverPlugins([official], CORE));
+    assert.equal(found.state, 'invalid');
+    assert.match(found.problems.join(), /may not contain links/u);
+  });
 });

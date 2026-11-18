@@ -60,5 +60,7 @@ export const roles = {
     tokensCreate: 'Create API tokens in your own name.',
     tokensRead: 'See the API tokens of every user, never their values.',
     tokensRevoke: 'Revoke the API tokens of other users.',
+    pluginsRead: 'See the plugins of this instance, what each asks for and whether it is enabled.',
+    pluginsManage: 'Enable plugins, approving what they ask for, and disable them.',
   },
 } as const;

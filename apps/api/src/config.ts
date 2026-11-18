@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
+import { resolve } from 'node:path';
 
 import { z } from 'zod';
 
 import { AUTH_KEY_BYTES } from './auth/secret-box.js';
+import type { PluginRoot } from './plugins/discovery.js';
 import type { KdfParams } from './vault/kdf.js';
 
 /** An empty variable (`SW_X=`) means "not set", as in most env files. */
@@ -46,6 +48,10 @@ const EnvSchema = z.object({
   /** Argon2id cost of the vault passphrase (ADR 0018). Raising it only affects vaults set up afterwards. */
   SW_VAULT_KDF_MEMORY_MIB: z.coerce.number().int().min(64).max(4096).default(256),
   SW_VAULT_KDF_PASSES: z.coerce.number().int().min(1).max(10).default(3),
+  /** Plugins that ship with Swellwright (trust `official`), one directory per plugin (ADR 0021). */
+  SW_PLUGINS_OFFICIAL_DIR: optionalString,
+  /** Plugins of this instance (trust `local`): the administrator's own responsibility (ADR 0008). */
+  SW_PLUGINS_LOCAL_DIR: optionalString,
 });
 
 export interface AppConfig {
@@ -76,6 +82,8 @@ export interface AppConfig {
   readonly trustProxy: number | string[] | false;
   /** The cost with which a new vault passphrase is hardened. */
   readonly vaultKdf: KdfParams;
+  /** Where plugins are looked for, the more trusted first. Empty: no plugins. */
+  readonly pluginRoots: readonly PluginRoot[];
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -176,5 +184,13 @@ export function loadConfig(
       passes: e.SW_VAULT_KDF_PASSES,
       parallelism: 1,
     },
+    pluginRoots: [
+      ...(e.SW_PLUGINS_OFFICIAL_DIR
+        ? [{ directory: resolve(e.SW_PLUGINS_OFFICIAL_DIR), trust: 'official' as const }]
+        : []),
+      ...(e.SW_PLUGINS_LOCAL_DIR
+        ? [{ directory: resolve(e.SW_PLUGINS_LOCAL_DIR), trust: 'local' as const }]
+        : []),
+    ],
   };
 }

@@ -28,6 +28,7 @@ import { SessionsPage } from './security/sessions-page.js';
 import { TokensPage } from './security/tokens-page.js';
 import { UsersPage } from './security/users-page.js';
 import { VaultPage } from './security/vault-page.js';
+import { PluginsPage } from './settings/plugins-page.js';
 
 function AccountMenu({
   session,
@@ -175,6 +176,9 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
         ) : null}
         {activeId === 'audit' && permissions.includes('audit:read') ? (
           <AuditPage permissions={permissions} />
+        ) : null}
+        {activeId === 'plugins' && permissions.includes('plugins:read') ? (
+          <PluginsPage permissions={permissions} />
         ) : null}
       </main>
     </StepUpProvider>
