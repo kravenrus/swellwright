@@ -106,6 +106,7 @@ Other extension points: `CertDistributor`, `CertIssuer` (ACME), `ClientProfile` 
 - **Plugin storage:** an isolated namespace (key-value and JSON tables), with no database migrations of its own and no access to the core schema.
 - **Settings:** the schema from the manifest builds the form in the UI; secrets are saved in the vault, not in the plugin settings.
 - **Compatibility:** a core version range; incompatible plugins are not loaded and are shown in the UI with the reason.
+- **Rules the schema enforces** (`packages/plugin-api`, ADR 0021): unknown keys are refused; paths are relative and stay inside the plugin; network permissions are public `host:port` names (no wildcard, address or local name); a declarative driver only for REST kinds; the storage namespace equals the id; the directory is named after the id; a `package.json` may not have install scripts; links are not followed. Discovery only describes plugins (`available`, `incompatible`, `invalid` with every reason) and never loads or runs one.
 
 ## 5. Lifecycle
 Discovery (the `plugins/` directory mounted into the container, npm packages `@swellwright/plugin-*` and `swellwright-plugin-*`, local directories) → listing in the UI ("Settings → Plugins") → enabling after approving the permissions → configuration → use → update (no automatic download from the network; permission diff first) → disable → removal (plugin data optional). Plugin events go to the audit log.

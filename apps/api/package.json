@@ -23,12 +23,15 @@
     "@nestjs/platform-express": "12.5.0",
     "@swellwright/contracts": "workspace:*",
     "@swellwright/db": "workspace:*",
+    "@swellwright/plugin-api": "workspace:*",
     "iovalkey": "0.4.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
+    "semver": "7.8.6",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/express": "5.0.6"
+    "@types/express": "5.0.6",
+    "@types/semver": "7.8.0"
   }
 }
