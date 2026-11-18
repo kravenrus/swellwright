@@ -5,12 +5,15 @@
 <br>
 
 [![Статус](https://img.shields.io/badge/%D1%81%D1%82%D0%B0%D1%82%D1%83%D1%81-pre--alpha-f59e0b?style=flat-square)](docs/en/roadmap.md)
+[![CI](https://img.shields.io/github/actions/workflow/status/kravenrus/swellwright/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/kravenrus/swellwright/actions/workflows/ci.yml)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-AGPL--3.0--only-3b82f6?style=flat-square)](LICENSE)
 [![Remnawave](https://img.shields.io/badge/Remnawave-3.4.x-22d3ee?style=flat-square)](https://docs.rw)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6ba539?style=flat-square&logo=openapiinitiative&logoColor=white)](docs/en/api.md)
 [![Стек](https://img.shields.io/badge/NestJS%20%C2%B7%20React%20%C2%B7%20PostgreSQL-%D1%81%D1%82%D0%B5%D0%BA%20%D0%BF%D0%B0%D0%BD%D0%B5%D0%BB%D0%B8-3178c6?style=flat-square&logo=typescript&logoColor=white)](docs/en/architecture.md)
 [![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.example.yml)
 [![DCO](https://img.shields.io/badge/DCO-signed--off-8b5cf6?style=flat-square)](CONTRIBUTING.md)
+[![Stars](https://img.shields.io/github/stars/kravenrus/swellwright?style=flat-square&logo=github&color=eab308)](https://github.com/kravenrus/swellwright/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/kravenrus/swellwright?style=flat-square&color=64748b)](https://github.com/kravenrus/swellwright/commits/main)
 
 <a href="docs/ru/design/00-index.md"><img src="https://img.shields.io/badge/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-%D1%87%D0%B8%D1%82%D0%B0%D1%82%D1%8C%20%E2%86%92-0969da?style=for-the-badge" alt="Документация" height="34"></a>
 <a href="docs/en/roadmap.md"><img src="https://img.shields.io/badge/%D0%94%D0%BE%D1%80%D0%BE%D0%B6%D0%BD%D0%B0%D1%8F%20%D0%BA%D0%B0%D1%80%D1%82%D0%B0-%D1%84%D0%B0%D0%B7%D1%8B-0e7490?style=for-the-badge" alt="Дорожная карта" height="34"></a>
@@ -35,12 +38,7 @@
 Swellwright превращает каждую из них в сценарий **план → согласование → применение → проверка → откат** с журналом, живым прогрессом и полным откатом: из одной веб-консоли и одного OpenAPI.
 
 <p align="center">
-  <img src="assets/flow.svg" alt="Любое изменение проходит пять этапов: план, согласование, применение, проверка и откат." width="100%">
-</p>
-
-## С чем работает
-
-<p align="center">
+  <img src="assets/flow.svg" alt="Любое изменение проходит пять этапов: план, согласование, применение, проверка и откат." width="100%"><br>
   <img src="assets/overview.svg" alt="Swellwright управляет панелью Remnawave, серверами и нодами по SSH, DNS-провайдерами, сертификатами, API хостеров, уведомлениями и зондами." width="100%">
 </p>
 
