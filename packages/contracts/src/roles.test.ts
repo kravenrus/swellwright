@@ -166,6 +166,7 @@ describe('step-up authentication on routes', () => {
       'disablePlugin',
       'enablePlugin',
       'exportAudit',
+      'getPluginSidecar',
       'initializeVault',
       'resetCredentials',
       'revealSecret',

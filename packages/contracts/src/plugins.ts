@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
-/** Where a plugin directory comes from (ADR 0021): the monorepo's plugins, or a directory of this instance. */
-export const PLUGIN_TRUSTS = ['official', 'local'] as const;
+/**
+ * Where a plugin directory comes from (ADR 0021, 0031): the monorepo's plugins, a directory of this instance, or a
+ * directory of plugins by others. A community plugin never runs code in a process of the core's: only as a sidecar
+ * container or as a declarative driver.
+ */
+export const PLUGIN_TRUSTS = ['official', 'local', 'community'] as const;
 export const PluginTrustSchema = z.enum(PLUGIN_TRUSTS).meta({ id: 'PluginTrust' });
 export type PluginTrust = z.infer<typeof PluginTrustSchema>;
 
@@ -116,6 +120,15 @@ export const PluginViewSchema = z
       .describe('The manifest carries a signature. It is not verified yet, so it proves nothing.'),
     hasSettings: z.boolean().describe('It brings a settings page of its own.'),
     hasConfig: z.boolean().describe('It has settings of its own to fill in (a `config.schema`).'),
+    sidecar: z
+      .object({
+        image: z.string(),
+        port: z.number().int(),
+        memoryMiB: z.number().int(),
+        cpus: z.number(),
+      })
+      .nullable()
+      .describe('How its container is run, when its code runs as a sidecar (ADR 0031).'),
     approval: PluginApprovalSchema.nullable(),
     runtime: PluginRuntimeSchema,
     change: PluginPermissionChangeSchema.nullable().describe(
@@ -129,7 +142,7 @@ export const PluginListSchema = z
   .object({
     plugins: z.array(PluginViewSchema),
     directories: z
-      .object({ official: z.boolean(), local: z.boolean() })
+      .object({ official: z.boolean(), local: z.boolean(), community: z.boolean() })
       .describe('Which plugin directories are configured.'),
   })
   .meta({ id: 'PluginList' });
@@ -184,6 +197,57 @@ export const UpdatePluginConfigRequestSchema = z
   .object({ values: z.record(z.string(), ConfigValueSchema) })
   .meta({ id: 'UpdatePluginConfigRequest' });
 export type UpdatePluginConfigRequest = z.infer<typeof UpdatePluginConfigRequestSchema>;
+
+/** What the administrator applies to run a plugin's container: a Docker Compose fragment (ADR 0031). */
+export const PluginSidecarFragmentSchema = z
+  .object({
+    service: z.string().describe('The name of the compose service of the sidecar.'),
+    compose: z
+      .string()
+      .describe(
+        "The compose file to add to the stack. It holds the plugin's token: keep it like a secret.",
+      ),
+    coreUrl: z.string().describe('Where the sidecar reaches Swellwright from its network.'),
+  })
+  .meta({ id: 'PluginSidecarFragment' });
+export type PluginSidecarFragment = z.infer<typeof PluginSidecarFragmentSchema>;
+
+/**
+ * What a sidecar asks of the core, over HTTP with its token. The same three things a plugin process asks over
+ * its channel (ADR 0028, 0029): the network, a secret bound to a setting, its storage.
+ */
+export const PluginGatewayRequestSchema = z
+  .discriminatedUnion('op', [
+    z.object({
+      op: z.literal('fetch'),
+      url: z.string().max(4096),
+      init: z
+        .object({
+          method: z.string().max(10).optional(),
+          headers: z.record(z.string().max(100), z.string().max(8192)).optional(),
+          body: z.string().max(2_000_000).optional(),
+        })
+        .optional(),
+    }),
+    z.object({ op: z.literal('secret'), field: z.string().max(64) }),
+    z.object({
+      op: z.literal('storage'),
+      action: z.enum(['get', 'set', 'delete', 'keys']),
+      key: z.string().max(200).optional(),
+      value: z.unknown().optional(),
+    }),
+  ])
+  .meta({ id: 'PluginGatewayRequest' });
+export type PluginGatewayRequest = z.infer<typeof PluginGatewayRequestSchema>;
+
+export const PluginGatewayReplySchema = z
+  .object({
+    ok: z.boolean(),
+    value: z.unknown().optional(),
+    message: z.string().optional().describe('Why the core refused, when `ok` is false.'),
+  })
+  .meta({ id: 'PluginGatewayReply' });
+export type PluginGatewayReply = z.infer<typeof PluginGatewayReplySchema>;
 
 export const PluginIdParamsSchema = z.object({
   id: z

@@ -37,11 +37,14 @@ import {
   PluginConfigViewSchema,
   UpdatePluginConfigRequestSchema,
   PluginDiscoveryStateSchema,
+  PluginGatewayReplySchema,
+  PluginGatewayRequestSchema,
   PluginListSchema,
   PluginPermissionChangeSchema,
   PluginPermissionsViewSchema,
   PluginProvidedSchema,
   PluginRuntimeSchema,
+  PluginSidecarFragmentSchema,
   PluginStatusSchema,
   PluginTrustSchema,
   PluginViewSchema,
@@ -95,7 +98,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.15.0';
+export const OPENAPI_INFO_VERSION = '0.16.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -174,6 +177,9 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   PluginConfigFieldSchema,
   PluginConfigViewSchema,
   UpdatePluginConfigRequestSchema,
+  PluginSidecarFragmentSchema,
+  PluginGatewayRequestSchema,
+  PluginGatewayReplySchema,
   SecretListSchema,
   CreateSecretRequestSchema,
   UpdateSecretRequestSchema,

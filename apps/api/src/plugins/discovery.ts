@@ -19,7 +19,7 @@ import { digestPlugin } from './digest.js';
 import { readDriver } from './driver-file.js';
 
 /** Where a plugin directory comes from, which decides how far it is trusted (ADR 0008). */
-export type TrustLevel = 'official' | 'local';
+export type TrustLevel = 'official' | 'local' | 'community';
 
 export interface PluginRoot {
   /** A directory whose sub-directories are plugins. */
@@ -279,6 +279,11 @@ async function inspect(
   problems.push(...settings.problems);
   const declarative = await readDrivers(directory, manifest, settings.schema);
   problems.push(...declarative.problems);
+  if (root.trust === 'community' && manifest.provides.some((p) => p.entry !== undefined)) {
+    problems.push(
+      'a community plugin does not run code in the process of Swellwright: it must be a sidecar container or a declarative driver',
+    );
+  }
   if (semver.validRange(manifest.engines.swellwright) === null) {
     problems.push(`engines.swellwright "${manifest.engines.swellwright}" is not a valid range`);
   }

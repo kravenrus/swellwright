@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.15.0",
+    "version": "0.16.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -2734,6 +2734,116 @@
         "x-sw-permission": "plugins:manage",
         "x-sw-step-up": true
       }
+    },
+    "/plugins/{id}/sidecar": {
+      "get": {
+        "operationId": "getPluginSidecar",
+        "tags": [
+          "plugins"
+        ],
+        "summary": "The compose fragment that runs the container of a plugin",
+        "responses": {
+          "200": {
+            "description": "The fragment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginSidecarFragment"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "For a plugin whose code runs as a sidecar container: a Docker Compose file that adds the container to the stack on an internal network with no way out, read-only, without privileges, with the memory and cpu the manifest names and the image pinned by digest. It holds the token with which the sidecar proves itself to the core, derived from the plugin and its digest: keep it like a secret. Swellwright never starts a container itself.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 48,
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "plugins:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/plugins/{id}/gateway": {
+      "post": {
+        "operationId": "pluginGateway",
+        "tags": [
+          "plugin-gateway"
+        ],
+        "summary": "What a sidecar asks of the core",
+        "responses": {
+          "200": {
+            "description": "The result or the refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginGatewayReply"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Called by a plugin's container, not by people: it proves itself with `Authorization: Bearer <token>`, the token of the compose fragment. The core does what the plugin was approved for and nothing else: requests to the approved hosts, the secret bound to a setting, the plugin's own storage. The answer is always 200 with `ok`; a refusal says why. A wrong token, a plugin that is not enabled or whose files changed answer 401.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 48,
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginGatewayRequest"
+              }
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "components": {
@@ -3269,7 +3379,9 @@
           "plugin.failed",
           "plugin.network.denied",
           "plugin.config.updated",
-          "plugin.secret.used"
+          "plugin.secret.used",
+          "plugin.sidecar.exported",
+          "plugin.gateway.denied"
         ]
       },
       "AuditOutcome": {
@@ -4577,7 +4689,8 @@
         "type": "string",
         "enum": [
           "official",
-          "local"
+          "local",
+          "community"
         ]
       },
       "PluginDiscoveryState": {
@@ -4959,6 +5072,42 @@
             "type": "boolean",
             "description": "It has settings of its own to fill in (a `config.schema`)."
           },
+          "sidecar": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "memoryMiB": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "cpus": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "image",
+                  "port",
+                  "memoryMiB",
+                  "cpus"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How its container is run, when its code runs as a sidecar (ADR 0031)."
+          },
           "approval": {
             "anyOf": [
               {
@@ -5001,6 +5150,7 @@
           "signed",
           "hasSettings",
           "hasConfig",
+          "sidecar",
           "approval",
           "runtime",
           "change"
@@ -5024,11 +5174,15 @@
               },
               "local": {
                 "type": "boolean"
+              },
+              "community": {
+                "type": "boolean"
               }
             },
             "required": [
               "official",
-              "local"
+              "local",
+              "community"
             ],
             "additionalProperties": false,
             "description": "Which plugin directories are configured."
@@ -5285,6 +5439,139 @@
         },
         "required": [
           "values"
+        ],
+        "additionalProperties": false
+      },
+      "PluginSidecarFragment": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "The name of the compose service of the sidecar."
+          },
+          "compose": {
+            "type": "string",
+            "description": "The compose file to add to the stack. It holds the plugin's token: keep it like a secret."
+          },
+          "coreUrl": {
+            "type": "string",
+            "description": "Where the sidecar reaches Swellwright from its network."
+          }
+        },
+        "required": [
+          "service",
+          "compose",
+          "coreUrl"
+        ],
+        "additionalProperties": false
+      },
+      "PluginGatewayRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "fetch"
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "init": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "maxLength": 10
+                  },
+                  "headers": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "maxLength": 8192
+                    }
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 2000000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "url"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "secret"
+              },
+              "field": {
+                "type": "string",
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "op",
+              "field"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "storage"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "get",
+                  "set",
+                  "delete",
+                  "keys"
+                ]
+              },
+              "key": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "value": {}
+            },
+            "required": [
+              "op",
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "PluginGatewayReply": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "value": {},
+          "message": {
+            "description": "Why the core refused, when `ok` is false.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok"
         ],
         "additionalProperties": false
       },

@@ -27,6 +27,8 @@ import {
   PluginConfigViewSchema,
   type PluginList,
   PluginListSchema,
+  type PluginSidecarFragment,
+  PluginSidecarFragmentSchema,
   type PluginView,
   PluginViewSchema,
   type ReadyResponse,
@@ -407,6 +409,14 @@ export const updatePluginConfig = (
   values: UpdatePluginConfigRequest['values'],
 ): Promise<PluginConfigView> =>
   send('PUT', `/plugins/${id}/config`, { values }, PluginConfigViewSchema);
+
+/**
+ * The Docker Compose fragment that runs the container of a plugin whose code is a sidecar (`plugins:manage`, needs a
+ * fresh confirmation with a code). It holds the token the container proves itself with: a secret. Swellwright never
+ * starts the container; the administrator applies the file.
+ */
+export const getPluginSidecar = (id: string): Promise<PluginSidecarFragment> =>
+  send('GET', `/plugins/${id}/sidecar`, undefined, PluginSidecarFragmentSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

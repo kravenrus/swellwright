@@ -150,7 +150,7 @@ describe('plugins of an instance', { skip: !databaseUrl }, () => {
     assert.equal(reply.status, 200);
     assert.deepEqual(PluginListSchema.parse(reply.body), {
       plugins: [],
-      directories: { official: false, local: true },
+      directories: { official: false, local: true, community: false },
     });
   });
 

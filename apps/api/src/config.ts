@@ -52,6 +52,24 @@ const EnvSchema = z.object({
   SW_PLUGINS_OFFICIAL_DIR: optionalString,
   /** Plugins of this instance (trust `local`): the administrator's own responsibility (ADR 0008). */
   SW_PLUGINS_LOCAL_DIR: optionalString,
+  /** Plugins by others (trust `community`): only as sidecar containers or declarative drivers (ADR 0031). */
+  SW_PLUGINS_COMMUNITY_DIR: optionalString,
+  /** Where a sidecar reaches Swellwright from its network (ADR 0031). */
+  SW_PLUGIN_CORE_URL: z.preprocess(unsetIfEmpty, z.url().default('http://swellwright:3000')),
+  /** How the core reaches a sidecar: `{id}` is the plugin id and `{port}` the port of its manifest. */
+  SW_PLUGIN_SIDECAR_URL: z.preprocess(
+    unsetIfEmpty,
+    z.string().default('http://plugin-{id}:{port}'),
+  ),
+  /** The compose network the sidecars live on, and the compose service of Swellwright that joins it. */
+  SW_PLUGIN_NETWORK: z
+    .string()
+    .regex(/^[a-z][a-z0-9_-]{0,40}$/u)
+    .default('plugins'),
+  SW_PLUGIN_CORE_SERVICE: z
+    .string()
+    .regex(/^[a-z][a-z0-9_-]{0,40}$/u)
+    .default('swellwright'),
   /** The heap limit of a plugin's process, in MiB (ADR 0028). */
   SW_PLUGIN_MEMORY_MIB: z.coerce.number().int().min(32).max(1024).default(128),
   /** How long one call to a plugin may take before its process is ended, in seconds. */
@@ -90,12 +108,35 @@ export interface AppConfig {
   readonly vaultKdf: KdfParams;
   /** Where plugins are looked for, the more trusted first. Empty: no plugins. */
   readonly pluginRoots: readonly PluginRoot[];
+  /** How sidecar containers are reached and generated (ADR 0031). */
+  readonly pluginSidecar: {
+    readonly coreUrl: string;
+    readonly urlTemplate: string;
+    readonly network: string;
+    readonly coreService: string;
+  };
   /** What every plugin process is held to (ADR 0028). */
   readonly pluginLimits: {
     readonly memoryMiB: number;
     readonly callTimeoutMs: number;
     readonly idleMs: number;
   };
+}
+
+/** What comes out of the template must be an http(s) URL: a typo is refused at start. */
+function checkSidecarTemplate(template: string): string {
+  const sample = template.replaceAll('{id}', 'example').replaceAll('{port}', '8080');
+  if (!/^https?:\/\//u.test(sample)) {
+    throw new Error(
+      'Invalid configuration: SW_PLUGIN_SIDECAR_URL is an http(s) URL with {id} and {port}.',
+    );
+  }
+  try {
+    new URL(sample);
+  } catch {
+    throw new Error('Invalid configuration: SW_PLUGIN_SIDECAR_URL is not a URL.');
+  }
+  return template;
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -203,7 +244,16 @@ export function loadConfig(
       ...(e.SW_PLUGINS_LOCAL_DIR
         ? [{ directory: resolve(e.SW_PLUGINS_LOCAL_DIR), trust: 'local' as const }]
         : []),
+      ...(e.SW_PLUGINS_COMMUNITY_DIR
+        ? [{ directory: resolve(e.SW_PLUGINS_COMMUNITY_DIR), trust: 'community' as const }]
+        : []),
     ],
+    pluginSidecar: {
+      coreUrl: e.SW_PLUGIN_CORE_URL.replace(/\/$/u, ''),
+      urlTemplate: checkSidecarTemplate(e.SW_PLUGIN_SIDECAR_URL),
+      network: e.SW_PLUGIN_NETWORK,
+      coreService: e.SW_PLUGIN_CORE_SERVICE,
+    },
     pluginLimits: {
       memoryMiB: e.SW_PLUGIN_MEMORY_MIB,
       callTimeoutMs: e.SW_PLUGIN_CALL_TIMEOUT_SECONDS * 1000,

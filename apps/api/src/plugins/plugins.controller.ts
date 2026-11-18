@@ -1,14 +1,19 @@
-import { Body, Controller, Inject, Req } from '@nestjs/common';
+import { Body, Controller, Headers, Inject, Req } from '@nestjs/common';
 import {
   checkPluginRoute,
   disablePluginRoute,
   enablePluginRoute,
   type EnablePluginRequest,
   getPluginConfigRoute,
+  getPluginSidecarRoute,
   listPluginsRoute,
   PluginIdParamsSchema,
   type PluginConfigView,
+  type PluginGatewayReply,
+  type PluginGatewayRequest,
+  pluginGatewayRoute,
   type PluginList,
+  type PluginSidecarFragment,
   type PluginView,
   updatePluginConfigRoute,
   type UpdatePluginConfigRequest,
@@ -67,5 +72,22 @@ export class PluginsController {
   ): Promise<PluginConfigView> {
     const { id } = PluginIdParamsSchema.parse(req.params);
     return this.plugins.updateConfig(actorOf(req), id, body.values, requestMeta(req));
+  }
+
+  @ContractRoute(getPluginSidecarRoute)
+  sidecar(@Req() req: AuthedRequest): Promise<PluginSidecarFragment> {
+    const { id } = PluginIdParamsSchema.parse(req.params);
+    return this.host.fragment(actorOf(req), id, requestMeta(req));
+  }
+
+  /** Open to the network and guarded by the token of the plugin: see `PluginHostService.gateway`. */
+  @ContractRoute(pluginGatewayRoute)
+  gateway(
+    @Body() body: PluginGatewayRequest,
+    @Headers('authorization') authorization: string | undefined,
+    @Req() req: AuthedRequest,
+  ): Promise<PluginGatewayReply> {
+    const { id } = PluginIdParamsSchema.parse(req.params);
+    return this.host.sidecarGateway(id, authorization, body, req.ip);
   }
 }

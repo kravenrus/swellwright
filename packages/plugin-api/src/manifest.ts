@@ -116,17 +116,38 @@ export const PluginPermissionsSchema = z.strictObject({
 });
 export type PluginPermissions = z.infer<typeof PluginPermissionsSchema>;
 
+/**
+ * An image of a sidecar (ADR 0031): a name, optionally with a registry and a tag, and **always the digest** of the
+ * content. A tag can be moved to other content; a digest cannot, so what the administrator approved is what runs.
+ */
+export const SIDECAR_IMAGE_PATTERN = /^[a-z0-9][a-z0-9._/:-]{0,250}@sha256:[0-9a-f]{64}$/u;
+
+/** How a sidecar is run: the image, the port it listens on inside its container, and what it may use. */
+export const SidecarSchema = z.strictObject({
+  image: z.string().regex(SIDECAR_IMAGE_PATTERN, 'must end with @sha256: and the 64-digit digest'),
+  port: z.number().int().min(1024).max(65535),
+  memoryMiB: z.number().int().min(32).max(2048).default(256),
+  cpus: z.number().min(0.1).max(4).default(0.5),
+});
+export type Sidecar = z.infer<typeof SidecarSchema>;
+
 export const ProvidedExtensionSchema = z
   .strictObject({
     kind: ExtensionKindSchema,
-    /** The module that implements it. */
+    /** The module that implements it, run in a process of its own (ADR 0028). */
     entry: RelativePathSchema.optional(),
-    /** The declarative driver (YAML) that replaces code, for the kinds that allow it. */
+    /** The declarative driver (YAML) that replaces code, for the kinds that allow it (ADR 0030). */
     driver: RelativePathSchema.optional(),
+    /** It is implemented by the sidecar container the manifest describes (ADR 0031). */
+    sidecar: z.literal(true).optional(),
   })
   .superRefine((value, ctx) => {
-    if ((value.entry === undefined) === (value.driver === undefined)) {
-      ctx.addIssue({ code: 'custom', message: 'give exactly one of "entry" and "driver"' });
+    const given = [value.entry, value.driver, value.sidecar].filter((v) => v !== undefined).length;
+    if (given !== 1) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'give exactly one of "entry", "driver" and "sidecar"',
+      });
     }
     if (
       value.driver !== undefined &&
@@ -173,6 +194,8 @@ export const PluginManifestSchema = z
     ui: z.strictObject({ settings: RelativePathSchema }).optional(),
     /** The plugin's own corner of storage. It is the plugin's id; two plugins cannot share one. */
     storage: z.strictObject({ namespace: z.string().max(48) }).optional(),
+    /** The container that runs the plugin's code, when any `provides` is a sidecar. */
+    sidecar: SidecarSchema.optional(),
     license: z.string().min(1).max(64),
     signature: z.string().min(1).max(4096).optional(),
   })
@@ -182,6 +205,21 @@ export const PluginManifestSchema = z
         code: 'custom',
         path: ['storage', 'namespace'],
         message: 'must equal the plugin id (a namespace is never shared)',
+      });
+    }
+    const wantsSidecar = value.provides.some((p) => p.sidecar === true);
+    if (wantsSidecar && value.sidecar === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sidecar'],
+        message: 'a plugin that provides a sidecar describes it (image, port)',
+      });
+    }
+    if (!wantsSidecar && value.sidecar !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sidecar'],
+        message: 'is only for a plugin that provides a sidecar',
       });
     }
   });
