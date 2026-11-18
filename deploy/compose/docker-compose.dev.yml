@@ -1,5 +1,5 @@
 # Development dependencies only: Postgres and Valkey, reachable from this machine and nowhere else.
-# Not a deployment file (see docker-compose.example.yml).
+# Not a deployment file (see docker-compose.yml).
 name: swellwright-dev
 
 services:

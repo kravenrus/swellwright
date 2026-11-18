@@ -1,0 +1,23 @@
+# Version updates for what is pinned by hand: the base image and the images of the compose file (by digest),
+# and the actions of the workflows (by commit). Packages are not listed: the lockfile is updated on purpose,
+# after the three-day wait of ADR 0009. A new release is only proposed when it has been out for a week.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: docker-compose
+    directory: /deploy/compose
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
