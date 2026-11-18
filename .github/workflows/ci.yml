@@ -8,14 +8,19 @@ on:
 permissions:
   contents: read
 
+env:
+  DO_NOT_TRACK: "1"
+  TURBO_TELEMETRY_DISABLED: "1"
+
+# Third-party actions are pinned by commit SHA (the tag is in the comment); updates are reviewed by hand.
 jobs:
   hygiene:
     runs-on: ubuntu-latest
     steps:
-      # TODO: pin actions by commit SHA before the first release (supply-chain policy).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Repository hygiene (secrets, personal data, forbidden patterns)
         env:
           SW_FORBIDDEN_PATTERNS: ${{ secrets.SW_FORBIDDEN_PATTERNS }}
@@ -23,3 +28,28 @@ jobs:
       - name: DCO sign-off
         if: github.event_name == 'pull_request'
         run: bash scripts/check-dco.sh "origin/${{ github.base_ref }}" "${{ github.sha }}"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pnpm version comes from the "packageManager" field of package.json.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install (frozen lockfile, no lifecycle scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Format
+        run: pnpm run format
+      - name: Lint
+        run: pnpm run lint
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Build
+        run: pnpm run build

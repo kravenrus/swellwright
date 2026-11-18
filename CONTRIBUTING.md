@@ -16,8 +16,20 @@ This adds a `Signed-off-by: Your Name <you@example.com>` line. Use an address yo
 
 1. Open an issue first for anything larger than a typo or small fix.
 2. Fork, create a branch, make focused commits ([Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
-3. Run `python scripts/check-hygiene.py` and `bash scripts/check-dco.sh` locally.
+3. Run `pnpm run check`, `python scripts/check-hygiene.py` and `bash scripts/check-dco.sh` locally.
 4. Open a pull request using the template.
+
+## Development setup
+
+You need Node.js 26 (see `.nvmrc`) and pnpm 10 (the exact version is in the `packageManager` field of `package.json`). Corepack is not bundled with Node.js 25 and later, so install pnpm explicitly (for example with `npm install --global pnpm@10.34.9`).
+
+```bash
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run check      # format, lint, typecheck and build every package
+python scripts/check-hygiene.py
+```
+
+The workspace is `apps/*` and `packages/*` (pnpm workspaces plus Turborepo); the layout and the reasons are in [ADR 0009](docs/adr/0009-monorepo-and-tooling.md).
 
 ## Never commit real deployment data
 

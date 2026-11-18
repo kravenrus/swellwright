@@ -1,0 +1,21 @@
+{
+  "name": "@swellwright/ssh",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ssh2 layer: pooling, detached steps, sudo, terminal, SFTP, certificates",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
