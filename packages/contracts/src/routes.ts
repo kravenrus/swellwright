@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
-import { AuditPageSchema, AuditQuerySchema, ChainVerificationSchema } from './audit.js';
+import {
+  AuditCheckpointSchema,
+  AuditCheckpointVerificationSchema,
+  AuditExportQuerySchema,
+  AuditExportSchema,
+  AuditPageSchema,
+  AuditQuerySchema,
+  ChainVerificationSchema,
+  VerifyAuditCheckpointRequestSchema,
+} from './audit.js';
 import {
   AcceptInvitationRequestSchema,
   ChangePasswordRequestSchema,
@@ -667,6 +676,50 @@ export const revokeUserSessionsRoute = defineRoute({
   responses: { 200: { description: 'How many were ended.', schema: SessionsRevokedSchema } },
 });
 
+export const exportAuditRoute = defineRoute({
+  operationId: 'exportAudit',
+  method: 'get',
+  path: '/audit/export',
+  tags: ['audit'],
+  summary: 'Export the audit log for checking outside the database',
+  description:
+    'Pages of events, oldest first, with every field their hashes cover, so that a copy can be verified without this server (`node dist/admin.js audit-verify <file>`). Each page is recorded. Needs a fresh second factor: a copy of the whole log is a lot to hand over.',
+  auth: 'session',
+  permission: 'audit:export',
+  stepUp: true,
+  request: { query: AuditExportQuerySchema },
+  responses: { 200: { description: 'One page of the export.', schema: AuditExportSchema } },
+});
+
+export const createAuditCheckpointRoute = defineRoute({
+  operationId: 'createAuditCheckpoint',
+  method: 'post',
+  path: '/audit/checkpoints',
+  tags: ['audit'],
+  summary: 'Note the head of the audit chain in a form that cannot be made up in the database',
+  description:
+    'Returns the last event with a signature made with a key that is not in the database. Keep the text somewhere else (a ticket, a vault of your own, a cron job). Later, a check against it proves that nothing up to that event was changed, and that no tail was cut off.',
+  auth: 'any',
+  permission: 'audit:verify',
+  responses: { 200: { description: 'The checkpoint.', schema: AuditCheckpointSchema } },
+});
+
+export const verifyAuditCheckpointRoute = defineRoute({
+  operationId: 'verifyAuditCheckpoint',
+  method: 'post',
+  path: '/audit/checkpoints/verify',
+  tags: ['audit'],
+  summary: 'Check the log against a checkpoint',
+  description:
+    'Checks the signature, finds the event, compares its hash and checks the chain up to it. A failed check is a normal answer (`ok: false` with the reason). The check is recorded.',
+  auth: 'any',
+  permission: 'audit:verify',
+  request: { body: VerifyAuditCheckpointRequestSchema },
+  responses: {
+    200: { description: 'The result.', schema: AuditCheckpointVerificationSchema },
+  },
+});
+
 export const listMyTokensRoute = defineRoute({
   operationId: 'listMyTokens',
   method: 'get',
@@ -783,6 +836,9 @@ export const routes = [
   rolesRoute,
   listAuditRoute,
   verifyAuditChainRoute,
+  exportAuditRoute,
+  createAuditCheckpointRoute,
+  verifyAuditCheckpointRoute,
   listMySessionsRoute,
   revokeMySessionRoute,
   revokeOtherSessionsRoute,

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -1666,6 +1666,163 @@
         "x-sw-permission": "audit:verify"
       }
     },
+    "/audit/export": {
+      "get": {
+        "operationId": "exportAudit",
+        "tags": [
+          "audit"
+        ],
+        "summary": "Export the audit log for checking outside the database",
+        "responses": {
+          "200": {
+            "description": "One page of the export.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditExport"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pages of events, oldest first, with every field their hashes cover, so that a copy can be verified without this server (`node dist/admin.js audit-verify <file>`). Each page is recorded. Needs a fresh second factor: a copy of the whole log is a lot to hand over.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "The first sequence number to return, 1 by default. Continue with `nextFrom` of the last page.",
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Events per page, 1000 by default.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "audit:export",
+        "x-sw-step-up": true
+      }
+    },
+    "/audit/checkpoints": {
+      "post": {
+        "operationId": "createAuditCheckpoint",
+        "tags": [
+          "audit"
+        ],
+        "summary": "Note the head of the audit chain in a form that cannot be made up in the database",
+        "responses": {
+          "200": {
+            "description": "The checkpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditCheckpoint"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the last event with a signature made with a key that is not in the database. Keep the text somewhere else (a ticket, a vault of your own, a cron job). Later, a check against it proves that nothing up to that event was changed, and that no tail was cut off.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "audit:verify"
+      }
+    },
+    "/audit/checkpoints/verify": {
+      "post": {
+        "operationId": "verifyAuditCheckpoint",
+        "tags": [
+          "audit"
+        ],
+        "summary": "Check the log against a checkpoint",
+        "responses": {
+          "200": {
+            "description": "The result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditCheckpointVerification"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Checks the signature, finds the event, compares its hash and checks the chain up to it. A failed check is a normal answer (`ok: false` with the reason). The check is recorded.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyAuditCheckpointRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "audit:verify"
+      }
+    },
     "/auth/sessions": {
       "get": {
         "operationId": "listMySessions",
@@ -2655,6 +2812,9 @@
           "secret.revealed",
           "authz.denied",
           "audit.chain.verified",
+          "audit.exported",
+          "audit.checkpoint.created",
+          "audit.checkpoint.verified",
           "session.revoked",
           "token.created",
           "token.revoked",
@@ -2915,6 +3075,182 @@
           "checked",
           "head",
           "problem"
+        ],
+        "additionalProperties": false
+      },
+      "AuditExport": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "swellwright-audit-export"
+          },
+          "version": {
+            "type": "number",
+            "const": 1
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "description": "Oldest first, with every field a hash covers."
+          },
+          "nextFrom": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The `from` of the next page; null when this page reaches the end of the log."
+          },
+          "head": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "seq": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "hash": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "seq",
+                  "hash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last event of the whole log when the page was read."
+          }
+        },
+        "required": [
+          "format",
+          "version",
+          "events",
+          "nextFrom",
+          "head"
+        ],
+        "additionalProperties": false,
+        "description": "A page of the log in the form that can be checked offline: the events with their hashes, in order. A file is the lines `{\"format\":\"swellwright-audit-export\",\"version\":1}` followed by one event per line."
+      },
+      "AuditCheckpoint": {
+        "type": "object",
+        "properties": {
+          "checkpoint": {
+            "type": "string",
+            "description": "Opaque text that names the last event and carries a signature only this instance can make. Store it somewhere outside the database."
+          },
+          "seq": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "hash": {
+            "type": "string"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "checkpoint",
+          "seq",
+          "hash",
+          "issuedAt"
+        ],
+        "additionalProperties": false
+      },
+      "VerifyAuditCheckpointRequest": {
+        "type": "object",
+        "properties": {
+          "checkpoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "checkpoint"
+        ],
+        "additionalProperties": false
+      },
+      "AuditCheckpointVerification": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "malformed",
+              "not_ours",
+              "event_missing",
+              "hash_differs",
+              "chain_broken"
+            ],
+            "description": "`ok`: the chain up to the checkpoint is intact and the event is what it was. `malformed`: not a checkpoint. `not_ours`: the signature is wrong (another instance, or made up). `event_missing`: the log is shorter than the checkpoint says (a tail was cut off). `hash_differs`: the event at that number is not the one the checkpoint saw (history was rewritten). `chain_broken`: the chain up to that event does not check out."
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issuedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eventsSince": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many events were added after the checkpoint; null when it could not be checked."
+          }
+        },
+        "required": [
+          "ok",
+          "result",
+          "seq",
+          "issuedAt",
+          "eventsSince"
         ],
         "additionalProperties": false
       },
