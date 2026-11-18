@@ -1,7 +1,8 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/ui/copyable-code-block/{copyable-code-block.tsx,
 // copyable-code-block.module.css}. Changes: the CSS module became `sw-code-block*` classes; an optional `onCopy`
 // callback (the panel shows nothing); the copy button has an accessible name (props, English fallback) and the
-// whole block can be operated from the keyboard through that button.
+// whole block can be operated from the keyboard through that button; the optional `multiline` mode keeps line breaks and
+// scrolls inside the block (a compose file), which the panel's one-line block does not do.
 import {
   ActionIcon,
   Box,
@@ -28,6 +29,15 @@ export interface CopyableCodeBlockProps {
   copyLabel?: string;
   /** Accessible name of the button right after a copy, already translated. */
   copiedLabel?: string;
+  /**
+   * A file rather than a line: keeps line breaks and indentation and scrolls inside the block (a compose fragment, a
+   * configuration). The panel's block is one line.
+   */
+  multiline?: boolean;
+  /** With `multiline`: the height at which the block starts to scroll; 360 px by default. */
+  maxHeight?: number | string;
+  /** With `multiline`: the accessible name of the scrollable region (a keyboard user can scroll it), already translated. */
+  regionLabel?: string;
 }
 
 /**
@@ -42,6 +52,9 @@ export function CopyableCodeBlock({
   onCopy,
   copyLabel = 'Copy',
   copiedLabel = 'Copied',
+  multiline = false,
+  maxHeight = 360,
+  regionLabel,
 }: CopyableCodeBlockProps) {
   const isSmall = size === 'small';
   const iconSize = isSmall ? 14 : 18;
@@ -52,14 +65,29 @@ export function CopyableCodeBlock({
       <CopyButton timeout={2000} value={text}>
         {({ copied, copy }) => (
           <Box
-            className={cx('sw-code-block', isSmall && 'sw-code-block--small')}
+            className={cx(
+              'sw-code-block',
+              isSmall && 'sw-code-block--small',
+              multiline && 'sw-code-block--multiline',
+            )}
             onClick={() => {
               copy();
               onCopy?.(text);
             }}
           >
             <Box className="sw-code-block-wrapper">
-              <Box className="sw-code-block-code" {...(color === undefined ? {} : { c: color })}>
+              <Box
+                className="sw-code-block-code"
+                {...(color === undefined ? {} : { c: color })}
+                {...(multiline
+                  ? {
+                      mah: maxHeight,
+                      role: 'region',
+                      tabIndex: 0,
+                      ...(regionLabel === undefined ? {} : { 'aria-label': regionLabel }),
+                    }
+                  : {})}
+              >
                 {value}
               </Box>
             </Box>

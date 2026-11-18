@@ -837,6 +837,34 @@ body {
   display: none;
 }
 
+/* A file in the block (`multiline`): line breaks and indentation stay, and it scrolls inside the block, with a
+   visible scrollbar and a focus ring for a keyboard user. The panel's block is one line; this is our addition. */
+.sw-code-block--multiline {
+  align-items: flex-start;
+}
+
+/* The fade on the right would hide the scrollbar. */
+.sw-code-block--multiline .sw-code-block-wrapper {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.sw-code-block--multiline .sw-code-block-code {
+  overflow: auto;
+  white-space: pre;
+  scrollbar-width: thin;
+  scrollbar-color: #0d9488 rgba(22, 27, 35, 0.6);
+}
+
+.sw-code-block--multiline .sw-code-block-code::-webkit-scrollbar {
+  display: block;
+}
+
+.sw-code-block--multiline .sw-code-block-code:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: 2px;
+}
+
 .sw-code-block-copy {
   position: relative;
   flex-shrink: 0;
@@ -1118,6 +1146,25 @@ body {
 
 .sw-entity-card[data-layout='row'] .sw-entity-card-actions {
   flex: none;
+}
+
+/* A card with many badges (`wrap`): the title keeps at least 200 px and the badges drop under it when they do not fit. */
+.sw-entity-card[data-wrap] .sw-entity-card-content {
+  flex-wrap: wrap;
+  row-gap: 5px;
+}
+
+.sw-entity-card[data-wrap] .sw-entity-card-title {
+  flex: 1 1 200px;
+}
+
+.sw-entity-card[data-wrap] .sw-entity-card-meta {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  max-width: 100%;
+  height: auto;
+  min-height: 26px;
 }
 
 .sw-entity-card[data-clickable] {
