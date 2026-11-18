@@ -5,7 +5,7 @@
 <br>
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-f59e0b?style=flat-square)](docs/en/roadmap.md)
-[![CI](https://img.shields.io/github/actions/workflow/status/kravenrus/swellwright/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/kravenrus/swellwright/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/swellwright/swellwright/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/swellwright/swellwright/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-3b82f6?style=flat-square)](LICENSE)
 [![Remnawave](https://img.shields.io/badge/Remnawave-3.4.x-22d3ee?style=flat-square)](https://docs.rw)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6ba539?style=flat-square&logo=openapiinitiative&logoColor=white)](docs/en/api.md)
@@ -13,8 +13,8 @@
 [![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.example.yml)
 [![DCO](https://img.shields.io/badge/DCO-signed--off-8b5cf6?style=flat-square)](CONTRIBUTING.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-22c55e?style=flat-square)](CONTRIBUTING.md)
-[![Stars](https://img.shields.io/github/stars/kravenrus/swellwright?style=flat-square&logo=github&color=eab308)](https://github.com/kravenrus/swellwright/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/kravenrus/swellwright?style=flat-square&color=64748b)](https://github.com/kravenrus/swellwright/commits/main)
+[![Stars](https://img.shields.io/github/stars/swellwright/swellwright?style=flat-square&logo=github&color=eab308)](https://github.com/swellwright/swellwright/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/swellwright/swellwright?style=flat-square&color=64748b)](https://github.com/swellwright/swellwright/commits/main)
 
 <a href="docs/en/index.md"><img src="https://img.shields.io/badge/Documentation-read%20%E2%86%92-0969da?style=for-the-badge" alt="Documentation" height="34"></a>
 <a href="docs/en/roadmap.md"><img src="https://img.shields.io/badge/Roadmap-phases-0e7490?style=for-the-badge" alt="Roadmap" height="34"></a>
