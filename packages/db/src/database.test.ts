@@ -88,7 +88,8 @@ describe('users against a migrated database', { skip: !databaseUrl }, () => {
     });
     assert.match(user.id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
     assert.equal(user.status, 'active');
-    assert.equal(user.language, 'en');
+    // A language is a choice (ADR 0026): nobody has chosen one yet, so the console follows the browser.
+    assert.equal(user.language, null);
     assert.equal(user.theme, 'dark');
     assert.equal(user.email, null);
     assert.equal(user.lastLoginAt, null);

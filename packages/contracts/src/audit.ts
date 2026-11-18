@@ -20,6 +20,7 @@ export const AUDIT_ACTIONS = [
   'auth.password.changed',
   'user.created',
   'user.updated',
+  'user.deleted',
   'user.credentials.reset',
   'vault.initialized',
   'vault.unsealed',

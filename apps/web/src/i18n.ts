@@ -58,4 +58,15 @@ export async function setLanguage(language: Language): Promise<void> {
   announce(language);
 }
 
+/**
+ * Follows the language saved on the account, when there is one the console has texts for and it is not the one in
+ * use. It never calls the server: the value came from there, so there is nothing to save. `null` (the person has
+ * not chosen) keeps what this browser chose or detected.
+ */
+export function followSavedLanguage(saved: string | null): void {
+  if (saved !== null && isLanguage(saved) && saved !== currentLanguage()) {
+    void setLanguage(saved);
+  }
+}
+
 export { i18next };

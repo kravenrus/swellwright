@@ -14,6 +14,7 @@ import {
   VerifyAuditCheckpointRequestSchema,
 } from './audit.js';
 import {
+  UpdatePreferencesRequestSchema,
   AcceptInvitationRequestSchema,
   AuthNextStepSchema,
   ChangePasswordRequestSchema,
@@ -78,7 +79,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.11.0';
+export const OPENAPI_INFO_VERSION = '0.12.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -98,6 +99,7 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   TotpCodeRequestSchema,
   TotpEnrollmentSchema,
   SessionInfoSchema,
+  UpdatePreferencesRequestSchema,
   TotpConfirmedSchema,
   PermissionSchema,
   PermissionSummarySchema,

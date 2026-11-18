@@ -1,6 +1,10 @@
 import { Body, Controller, Inject, Req } from '@nestjs/common';
 import {
   createUserRoute,
+  deleteUserRoute,
+  updatePreferencesRoute,
+  type UpdatePreferencesRequest,
+  type UserSummary,
   type CreateUserRequest,
   listUsersRoute,
   resetCredentialsRoute,
@@ -47,5 +51,19 @@ export class UsersController {
   reset(@Req() req: AuthedRequest): Promise<UserInvitation> {
     const { id } = UserIdParamsSchema.parse(req.params);
     return this.users.resetCredentials(actorOf(req), id, requestMeta(req), 'console');
+  }
+
+  @ContractRoute(deleteUserRoute)
+  async remove(@Req() req: AuthedRequest): Promise<void> {
+    const { id } = UserIdParamsSchema.parse(req.params);
+    await this.users.remove(actorOf(req), id, requestMeta(req));
+  }
+
+  @ContractRoute(updatePreferencesRoute)
+  preferences(
+    @Body() body: UpdatePreferencesRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<UserSummary> {
+    return this.users.setLanguage(requireAuth(req).user.id, body.language);
   }
 }

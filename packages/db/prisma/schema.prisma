@@ -50,7 +50,8 @@ model User {
   email       String?    @unique @db.VarChar(254)
   role        UserRole
   status      UserStatus @default(active)
-  language    String     @default("en") @db.VarChar(16)
+  /// The language the person chose; null until they do (the console then follows the browser, ADR 0026).
+  language    String?    @db.VarChar(16)
   theme       String     @default("dark") @db.VarChar(16)
   lastLoginAt DateTime?  @map("last_login_at") @db.Timestamptz(3)
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)

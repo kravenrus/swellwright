@@ -59,12 +59,15 @@ import {
   TokenListSchema,
   type UnsealVaultRequest,
   type UpdateSecretRequest,
+  type UpdatePreferencesRequest,
   type UpdateUserRequest,
   type UserInvitation,
   UserInvitationSchema,
   type UserList,
   type UserListQuery,
   UserListSchema,
+  type UserSummary,
+  UserSummarySchema,
   type UserView,
   UserViewSchema,
   type VaultInitialized,
@@ -272,6 +275,15 @@ export const updateUser = (id: string, request: UpdateUserRequest): Promise<User
 
 export const resetCredentials = (id: string): Promise<UserInvitation> =>
   send('POST', `/users/${id}/reset-credentials`, undefined, UserInvitationSchema);
+
+/** Removes a disabled account for good (`users:write`, needs a fresh confirmation with a code). Its history stays in the audit log. */
+export const deleteUser = (id: string): Promise<void> =>
+  send('DELETE', `/users/${id}`, undefined, undefined);
+
+/** Saves your language on the account so it follows you to other browsers; `null` follows the browser again. */
+export const updatePreferences = (
+  language: UpdatePreferencesRequest['language'],
+): Promise<UserSummary> => send('PATCH', '/auth/preferences', { language }, UserSummarySchema);
 
 export const getRoles = (): Promise<RoleCatalog> =>
   send('GET', '/roles', undefined, RoleCatalogSchema);

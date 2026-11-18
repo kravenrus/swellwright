@@ -8,17 +8,18 @@ import {
   IconSearch,
   IconUser,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { SessionInfo } from '@swellwright/contracts';
 import { LANGUAGES, LANGUAGE_NAMES, isLanguage } from '@swellwright/i18n';
 import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
+import { updatePreferences } from './api.js';
 import { ChangePasswordDialog } from './auth/change-password.js';
 import { AuthGate } from './auth/gate.js';
 import { StepUpProvider } from './auth/step-up.js';
-import { setLanguage } from './i18n.js';
+import { followSavedLanguage, setLanguage } from './i18n.js';
 import { navFor } from './nav.js';
 import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
@@ -101,6 +102,9 @@ function AccountDropdown({
             onClick={() => {
               if (isLanguage(language)) {
                 void setLanguage(language);
+                // The choice already works here. Saving it on the account only makes it follow the person to
+                // other browsers, so a failure is not worth a message.
+                void updatePreferences(language).catch(() => undefined);
               }
             }}
           >
@@ -125,6 +129,18 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
   const { t } = useTranslation(['common', 'nav']);
   const [activeId, setActiveId] = useState('overview');
   const { permissions } = session;
+
+  // The language saved on the account wins once, when the session is first known. Later changes in this browser
+  // are the person's own and must not be undone by an older value read back from the server. A layout effect
+  // switches before the first paint, so the console does not flash in the wrong language.
+  const appliedFor = useRef<string | undefined>(undefined);
+  const { id: userId, language: savedLanguage } = session.user;
+  useLayoutEffect(() => {
+    if (appliedFor.current !== userId) {
+      appliedFor.current = userId;
+      followSavedLanguage(savedLanguage);
+    }
+  }, [userId, savedLanguage]);
   return (
     <StepUpProvider>
       <AppHeader

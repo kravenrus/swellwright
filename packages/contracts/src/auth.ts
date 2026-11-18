@@ -20,7 +20,12 @@ export const UserSummarySchema = z
     username: z.string(),
     displayName: z.string().nullable(),
     role: UserRoleSchema,
-    language: z.string(),
+    language: z
+      .string()
+      .nullable()
+      .describe(
+        'The language the person chose; null until they do (the console follows the browser).',
+      ),
     theme: z.string(),
   })
   .meta({ id: 'UserSummary', description: 'The signed-in user.' });
@@ -141,3 +146,15 @@ export const TotpConfirmedSchema = z
   })
   .meta({ id: 'TotpConfirmed' });
 export type TotpConfirmed = z.infer<typeof TotpConfirmedSchema>;
+
+/** A language code as the console knows them: `en`, `ru`. The console offers the ones it has texts for. */
+export const UpdatePreferencesRequestSchema = z
+  .object({
+    language: z
+      .string()
+      .regex(/^[a-z]{2,3}$/u)
+      .nullable()
+      .describe('The language to use after signing in; null: follow the browser again.'),
+  })
+  .meta({ id: 'UpdatePreferencesRequest' });
+export type UpdatePreferencesRequest = z.infer<typeof UpdatePreferencesRequestSchema>;
