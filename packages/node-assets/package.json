@@ -1,0 +1,8 @@
+{
+  "name": "@swellwright/node-assets",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Node-side artifacts: versioned POSIX sh installer, Python node engine, check baselines, versions and hashes",
+  "license": "AGPL-3.0-only",
+  "type": "module"
+}

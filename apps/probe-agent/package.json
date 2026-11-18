@@ -1,0 +1,21 @@
+{
+  "name": "@swellwright/probe-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Probe agent (TCP, TLS/SNI, REALITY, freeze checks)",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
