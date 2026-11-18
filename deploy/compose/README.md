@@ -23,6 +23,17 @@ The first build downloads and compiles everything and takes a few minutes. When 
 
 What starts: `postgres`, `valkey`, then `migrate` (applies the database migrations and exits), then the server. The server container has a read-only file system, no capabilities and runs as a normal user; the database and the cache sit on a network nothing outside can reach; the only published port is the server's, on the loopback address.
 
+## When `binaries.prisma.sh` is not reachable
+
+The build downloads the Prisma schema engine from `binaries.prisma.sh`. From some networks (a residential connection in Russia, for example) that host does not answer and the build stops with `ECONNRESET` or a timeout. Point the build at a mirror of it:
+
+```sh
+docker compose build --build-arg PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
+docker compose up -d
+```
+
+Any mirror that keeps the layout of `binaries.prisma.sh` works. The mirror is only a source: the downloaded engine is compared with the checksum pinned in `packages/db/engine-checksums.json`, and a different file fails the build.
+
 ## Keep these
 
 - **`SW_AUTH_KEY`** seals the authenticator secrets in the database. Without it nobody can sign in with an authenticator and every user sets it up again. Keep a copy outside the server.
