@@ -63,3 +63,6 @@ Tabs, server selection, font and size, copy and paste with confirmation of multi
 
 ## 7. Language and universality
 The UI is English by default, Russian is complete (i18next); core texts are not tied to a country or provider; plugin contributions are described declaratively (settings pages, widgets) and rendered with the same set of Mantine components; arbitrary React bundles from plugins are not loaded in the first version.
+
+## 8. Wireframes
+Annotated wireframes of the key screens (overview, server card, plan and approval, run card, sealed vault, vault, first-run setup, phone layouts) are in [`wireframes/`](wireframes/README.md).
