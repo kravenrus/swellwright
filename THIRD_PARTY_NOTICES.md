@@ -30,9 +30,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Fonts (referenced, not bundled)
+## Fonts (bundled in the web build)
 
-The wireframes name Montserrat and Fira Mono, the fonts of the Remnawave panel theme. Both are distributed under the SIL Open Font License 1.1. They are not part of this repository yet; when the UI bundles them, the font files and their license texts are added here.
+Montserrat and Fira Mono, the fonts of the Remnawave panel theme, are bundled into the web build from the `@fontsource/montserrat` and `@fontsource/fira-mono` packages. Both are distributed under the SIL Open Font License 1.1; the license texts ship inside those packages, and a release adds them next to the build output.
 
 ## Remnawave panel frontend (AGPL-3.0-only)
 

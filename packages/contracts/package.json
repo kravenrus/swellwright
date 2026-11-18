@@ -2,7 +2,7 @@
   "name": "@swellwright/contracts",
   "version": "0.0.0",
   "private": true,
-  "description": "Zod schemas and types shared by the API, web, CLI and SDK",
+  "description": "Zod schemas, the route registry and the OpenAPI document, shared by the API, web, CLI and SDK",
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
@@ -16,6 +16,10 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "zod": "4.6.7"
   }
 }
