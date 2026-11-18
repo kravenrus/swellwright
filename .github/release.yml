@@ -7,7 +7,7 @@ changelog:
     - title: Breaking changes
       labels: [breaking]
     - title: New features
-      labels: [enhancement, feature]
+      labels: [enhancement]
     - title: Plugins
       labels: [plugin]
     - title: Fixes
@@ -15,6 +15,6 @@ changelog:
     - title: Security
       labels: [security]
     - title: Documentation
-      labels: [documentation, docs]
+      labels: [documentation]
     - title: Other changes
       labels: ["*"]
