@@ -655,3 +655,804 @@ body {
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Primitives ported from the panel (src/shared/ui/* of frontend 3.4.11, AGPL-3.0-only). The panel's CSS modules use
+   postcss-preset-mantine: `@mixin dark X` became the plain rule, `@mixin hover` became `:hover`, `rem(n)` became n/16 rem
+   and `light-dark(a, b)` became `b`. The panel's breakpoints are the values of BREAKPOINTS in tokens.ts. */
+
+/* Section card (section-card): the neutral grouped card. */
+.sw-section-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Settings card (settings-card.module.css): a gradient from dark-6 to dark-7. */
+.sw-settings-card {
+  background: linear-gradient(
+    135deg,
+    var(--mantine-color-dark-6) 0%,
+    var(--mantine-color-dark-7) 100%
+  );
+  animation: sw-fade-in 200ms linear both;
+}
+
+/* Modal footer (ModalFooter.module.css): a Modal.Header used as a sticky footer, as wide as the body plus its padding. */
+.sw-modal-footer {
+  width: calc(100% + 2 * var(--mantine-spacing-sm));
+  margin-left: calc(-1 * var(--mantine-spacing-sm));
+  bottom: -1px;
+  background: rgba(22, 27, 35, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: none;
+  padding-left: var(--mantine-spacing-sm);
+  padding-right: var(--mantine-spacing-sm);
+  padding-top: var(--mantine-spacing-sm) !important;
+  padding-bottom: var(--mantine-spacing-sm) !important;
+  border-radius: 0;
+}
+
+/* Drawer footer (DrawerFooter.module.css). */
+.sw-drawer-footer-bar {
+  position: sticky;
+  bottom: -1px;
+  z-index: 2;
+  width: calc(100% + 2 * var(--mantine-spacing-sm));
+  margin-top: var(--mantine-spacing-md);
+  margin-left: calc(-1 * var(--mantine-spacing-sm));
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--mantine-color-body);
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sw-drawer-footer-bar {
+    padding-bottom: max(var(--mantine-spacing-sm), env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Shimmer skeleton (shimmer-skeleton.module.css); the sweep reuses the sw-shimmer keyframes of the header controls. */
+.sw-shimmer-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--mantine-color-dark-4);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-dark-6);
+}
+
+.sw-shimmer-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(6, 182, 212, 0.04) 25%,
+    rgba(6, 182, 212, 0.08) 50%,
+    rgba(6, 182, 212, 0.04) 75%,
+    transparent 100%
+  );
+  animation: sw-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Metric card (metric-card.module.css). The panel's value colour is a variable Mantine does not define, so the value
+   takes the page text colour. */
+.sw-metric-title {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-metric-value {
+  font-weight: 700;
+  font-size: var(--mantine-font-size-xl);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: var(--mantine-font-family-monospace);
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.sw-metric-subtitle {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.sw-metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.sw-metric-trend-value {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+}
+
+.sw-metric-trend-text {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 400;
+}
+
+/* Copyable code block (copyable-code-block.module.css). */
+.sw-code-block {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(22, 27, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mantine-radius-md);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-3);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.sw-code-block--small {
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: var(--mantine-font-size-xs);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.sw-code-block:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sw-code-block-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+.sw-code-block--small .sw-code-block-wrapper {
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+
+.sw-code-block-code {
+  overflow-x: auto;
+  white-space: nowrap;
+  user-select: none;
+  scrollbar-width: none;
+}
+
+.sw-code-block-code::-webkit-scrollbar {
+  display: none;
+}
+
+.sw-code-block-copy {
+  position: relative;
+  flex-shrink: 0;
+  opacity: 0.6;
+  z-index: 2;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+}
+
+.sw-code-block:hover .sw-code-block-copy,
+.sw-code-block-copy:focus-visible {
+  opacity: 1;
+}
+
+.sw-code-block-copy[data-copied='true'] {
+  opacity: 1;
+  color: var(--mantine-color-teal-5);
+}
+
+/* Copyable data-list item (copyable-data-list-item.module.css). */
+.sw-copyable-item-value {
+  min-width: 0;
+}
+
+[data-orientation='vertical'] .sw-copyable-item-value {
+  width: 100%;
+}
+
+.sw-copyable-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding-inline: 6px;
+  margin-inline: -6px;
+  border-radius: var(--mantine-radius-sm);
+  color: var(--mantine-color-text);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.sw-copyable-item:hover {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.sw-copyable-item[data-copied] {
+  color: var(--mantine-color-teal-6);
+}
+
+.sw-copyable-item:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: 1px;
+}
+
+.sw-copyable-item-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sw-copyable-item[data-monospace] .sw-copyable-item-text {
+  font-family: monospace;
+}
+
+.sw-copyable-item-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.sw-copyable-item:hover .sw-copyable-item-icon,
+.sw-copyable-item:focus-visible .sw-copyable-item-icon,
+.sw-copyable-item[data-copied] .sw-copyable-item-icon {
+  opacity: 0.7;
+}
+
+.sw-copyable-item-empty {
+  color: var(--mantine-color-dimmed);
+}
+
+/* Copyable field (copyable-field.module.css): a read-only input that fades out on the right. */
+.sw-copyable-field {
+  position: relative;
+}
+
+.sw-copyable-field::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 10px;
+  bottom: 1px;
+  width: 80px;
+  background: linear-gradient(to right, transparent, var(--mantine-color-default) 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sw-copyable-field-input {
+  cursor: copy;
+  font-family: monospace;
+  padding-right: 30px;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.sw-copyable-field-section {
+  z-index: 2;
+}
+
+.sw-copyable-field-button {
+  position: relative;
+  z-index: 10;
+}
+
+/* Error message block (ErrorMessageBlock.module.css). */
+.sw-error-block {
+  position: relative;
+  padding: 12px 44px 12px 14px;
+  background: rgba(22, 27, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 2px solid var(--mantine-color-red-5);
+  border-radius: var(--mantine-radius-md);
+}
+
+.sw-error-block-text {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.6;
+  color: var(--mantine-color-red-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sw-error-block-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.5;
+  transition: opacity 150ms ease;
+}
+
+.sw-error-block:hover .sw-error-block-copy,
+.sw-error-block-copy:focus-visible,
+.sw-error-block-copy[data-copied='true'] {
+  opacity: 1;
+}
+
+/* Callout: the panel's `.oneTimeNotice` of the API-token card, generalised by colour through three variables that
+   the component sets (the tint, the icon colour and the emphasis colour). */
+.sw-callout {
+  --sw-callout-color: rgb(245, 159, 11);
+  --sw-callout-icon: var(--mantine-color-yellow-5);
+  --sw-callout-emphasis: var(--mantine-color-yellow-4);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid color-mix(in srgb, var(--sw-callout-color) 22%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sw-callout-color) 10%, transparent) 0%,
+    color-mix(in srgb, var(--sw-callout-color) 2%, transparent) 100%
+  );
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.sw-callout-icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--sw-callout-icon);
+}
+
+.sw-callout-body {
+  min-width: 0;
+}
+
+.sw-callout-title {
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--sw-callout-emphasis);
+}
+
+.sw-callout-text {
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.45;
+  color: var(--mantine-color-gray-3);
+}
+
+.sw-callout-title + .sw-callout-text {
+  margin-top: 2px;
+}
+
+.sw-callout-emphasis {
+  font-weight: 700;
+  color: var(--sw-callout-emphasis);
+}
+
+/* Page header and the title of a table card (page-header.module.css, table.module.css). */
+.sw-ph-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+}
+
+.sw-ph-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sw-ph-actions {
+  flex: 0 1 auto;
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sw-dtc-title {
+  position: relative;
+  animation: sw-fade-in 200ms linear both;
+}
+
+.sw-dtc-icon {
+  cursor: default;
+}
+
+/* Entity card (entity-card.module.css). The panel reserves 28 px on the right of the actions for a drag handle; there
+   is none here, which is the panel's own `data-drag-handle='hidden'` case. */
+.sw-entity-card {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  background: #1b1f26;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.sw-entity-card[data-layout='row'] {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-header {
+  flex: 1;
+  min-width: 0;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-content {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-title {
+  flex: 1;
+  margin-right: 0;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-meta {
+  flex: none;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-actions {
+  flex: none;
+}
+
+.sw-entity-card[data-clickable] {
+  cursor: pointer;
+}
+
+.sw-entity-card[data-clickable]:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: -2px;
+}
+
+.sw-entity-card:hover {
+  background-color: var(--mantine-color-gray-outline-hover);
+}
+
+.sw-entity-card-rail {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--mantine-color-cyan-5);
+}
+
+.sw-entity-card-rail--inactive {
+  background: var(--mantine-color-dark-4);
+}
+
+.sw-entity-card-icon {
+  flex-shrink: 0;
+}
+
+.sw-entity-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sw-entity-card-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--mantine-color-bright);
+  font-size: var(--mantine-font-size-md);
+  line-height: 22px;
+}
+
+.sw-entity-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sw-entity-card-tags {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sw-entity-card[data-layout='row'] .sw-entity-card-tags {
+  flex: none;
+  max-width: 220px;
+}
+
+.sw-entity-card-subtitle {
+  overflow: hidden;
+  color: var(--mantine-color-dimmed);
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sw-entity-card-menu {
+  border: 0;
+}
+
+@media (max-width: 48em) {
+  .sw-entity-card[data-layout='row'] .sw-entity-card-content {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+
+  .sw-entity-card[data-layout='row'] .sw-entity-card-title {
+    flex: 1 0 100%;
+  }
+
+  .sw-entity-card[data-layout='row'] .sw-entity-card-tags {
+    max-width: 100%;
+  }
+}
+
+/* Tag filter bar: the strip the panel draws around its filter tabs (inline style in tag-filter-bar.tsx). */
+.sw-tag-filter-bar {
+  border: 1px solid rgb(255, 255, 255, 0.08);
+  background: #1b1f26;
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+/* List table. The panel's list tables are `@kastov/mantine-datatable` (MIT), which is a Mantine Table plus a small
+   stylesheet; the variables below are that stylesheet's dark-scheme values (background = body, border = dark-4, striped
+   = dark-6, hover = dark-5; selection and scroll shadows are not used). The table is `border-collapse: separate` so the
+   header and the pinned columns keep their borders while they are sticky. */
+
+.sw-list-table {
+  --sw-table-bg: var(--mantine-color-body);
+  --sw-table-border: var(--mantine-color-dark-4);
+  --sw-table-striped: var(--mantine-color-dark-6);
+  --sw-table-hover: var(--mantine-color-dark-5);
+  --sw-table-head-height: 37px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--mantine-color-text);
+  background: var(--sw-table-bg);
+}
+
+.sw-list-table[data-with-border] {
+  border: 1px solid var(--sw-table-border);
+}
+
+.sw-list-table-scroll {
+  flex: 1 1 100%;
+  min-height: 0;
+}
+
+.sw-list-table-table {
+  width: 100%;
+  /* On a narrow screen the table scrolls inside its card instead of squeezing the columns. */
+  min-width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: inherit;
+  background: var(--sw-table-bg);
+}
+
+/* The header: on the body colour, a line under it, sticky while the body scrolls. */
+.sw-list-table[data-sticky] .sw-list-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.sw-list-table-th {
+  background: var(--sw-table-bg);
+  border-bottom: 1px solid var(--sw-table-border);
+  font-weight: 700;
+  transition: background-color 0.2s;
+}
+
+.sw-list-table-th-text {
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.sw-list-table-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25em;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.sw-list-table-sort:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: 2px;
+}
+
+.sw-list-table-th:has(.sw-list-table-sort):hover {
+  background: var(--mantine-color-dark-6);
+}
+
+.sw-list-table-sort-icon {
+  flex-shrink: 0;
+  transition:
+    transform 0.2s,
+    color 0.2s;
+}
+
+.sw-list-table-sort-icon--desc {
+  transform: scaleY(-1);
+}
+
+.sw-list-table-sort-icon--idle {
+  color: var(--mantine-color-dark-3);
+}
+
+.sw-list-table-th:hover .sw-list-table-sort-icon--idle {
+  color: var(--mantine-color-dark-2);
+}
+
+/* Rows: a line between rows, a line between columns, stripes on the odd rows, a tint under the pointer. */
+.sw-list-table[data-row-borders] tbody tr:not(:last-of-type) td {
+  border-bottom: 1px solid var(--sw-table-border);
+}
+
+.sw-list-table[data-column-borders] :is(th, td):not(:last-child) {
+  border-right: 1px solid var(--sw-table-border);
+}
+
+.sw-list-table[data-striped] tbody tr:nth-of-type(odd) {
+  background: var(--sw-table-striped);
+}
+
+.sw-list-table[data-hover] tbody tr:hover {
+  background: var(--sw-table-hover);
+}
+
+.sw-list-table-row[data-clickable] {
+  cursor: pointer;
+}
+
+.sw-list-table-row:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: -2px;
+}
+
+.sw-list-table-cell--nowrap {
+  white-space: nowrap;
+}
+
+.sw-list-table-cell--ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A pinned column sticks to its side and keeps an opaque background, also on striped and hovered rows. */
+.sw-list-table [data-pinned] {
+  position: sticky;
+  z-index: 2;
+  background: var(--sw-table-bg);
+}
+
+.sw-list-table th[data-pinned] {
+  z-index: 5;
+}
+
+.sw-list-table [data-pinned='left'] {
+  left: 0;
+}
+
+.sw-list-table [data-pinned='right'] {
+  right: 0;
+}
+
+.sw-list-table[data-striped] tbody tr:nth-of-type(odd) td[data-pinned] {
+  background: var(--sw-table-striped);
+}
+
+.sw-list-table[data-hover] tbody tr:hover td[data-pinned] {
+  background: var(--sw-table-hover);
+}
+
+/* The row that holds the space of an empty table, and the empty state laid over it. */
+.sw-list-table[data-striped] tbody tr.sw-list-table-empty-row,
+.sw-list-table[data-hover] tbody tr.sw-list-table-empty-row:hover {
+  background: transparent;
+}
+
+.sw-list-table .sw-list-table-empty-cell {
+  height: 160px;
+  padding: 0;
+  border-bottom: none;
+}
+
+.sw-list-table-empty {
+  position: absolute;
+  top: var(--sw-table-head-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  color: var(--mantine-color-dark-3);
+}
+
+.sw-list-table-empty :where(a, button, input, select, textarea, [role='button']) {
+  pointer-events: auto;
+}
+
+.sw-list-table-empty-icon {
+  display: flex;
+  margin-bottom: calc(var(--mantine-spacing-xs) / 2);
+  padding: var(--mantine-spacing-xs);
+  border-radius: 50%;
+  background: var(--mantine-color-dark-5);
+}
+
+/* The loading overlay: the body colour at 75 % over the rows, and a spinner. */
+.sw-list-table-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--sw-table-head-height);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--sw-table-bg), transparent 25%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sw-list-table-loader[data-active] {
+  pointer-events: all;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-shimmer-skeleton::after,
+  .sw-page-header,
+  .sw-dtc-title,
+  .sw-settings-card {
+    animation: none;
+  }
+
+  .sw-list-table-loader,
+  .sw-list-table-th,
+  .sw-list-table-sort-icon {
+    transition: none;
+  }
+}

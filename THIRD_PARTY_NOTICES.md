@@ -1,6 +1,6 @@
 # Third-party notices
 
-No third-party code is bundled in the application yet. Material that is already included in the repository, and material that is referenced, is listed here with its license and attribution. When dependencies or adapted code are added they are listed here too. Any code derived from Remnawave (`AGPL-3.0-only`) is listed with its origin and the retained notices.
+Material that is included in the repository or bundled in the application, and material that is referenced, is listed here with its license and attribution. When dependencies or adapted code are added they are listed here too. Any code derived from Remnawave (`AGPL-3.0-only`) is listed with its origin and the retained notices.
 
 ## Tabler Icons (MIT)
 
@@ -45,3 +45,7 @@ The navigation and the header controls use a few glyphs from the Phosphor (`reac
 The design tokens described in `docs/en/design/wireframes/README.md` (palette, primary color, fonts, radii, component variants, layout) were read from the open-source Remnawave frontend, version 3.4.11, under `src/shared/constants/theme`.
 
 Code adapted from that frontend (Copyright (C) 2025 Remnawave, AGPL-3.0-only, the license of this project too, as ADR 0011 describes) lives in `packages/ui` and `apps/web/src/shell`. Every adapted file says in its header which file of the panel it comes from and what was changed. The panel's name, logo and links are not copied.
+
+The shared components of `packages/ui` are adapted from the same frontend (ADR 0011). Every adapted file starts with a line `Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): <panel path>. Changes: ...`; the panel's CSS modules are translated into the `sw-*` rules at the end of `packages/ui/src/styles.css`. The adapted components are `OverlayHeader`, `SectionCard`, `SettingsCard`, `ModalFooter`, `DrawerFooter`, `MetricCard`, `ShimmerSkeleton`, `LoaderModal`, `EmptyPageLayout`, `CopyableCodeBlock`, `CopyableDataListItem`, `CopyableField`, `ErrorMessageBlock`, `Callout` (from the one-time notice of the API-token card), `PageHeader`, `EntityCard`, `TagFilterBar`, `SingleRowOverflowList` and `DataTableCard`. `HeaderActions`, `HeaderAction`, `StatusBadge` and `ListTable` encode patterns of the panel without copying its files. No Remnawave name, logo or link is used.
+
+The look of `ListTable` follows the stylesheet of `@kastov/mantine-datatable` 9.3.4 (MIT, a fork of `icflorescu/mantine-datatable`), which the panel uses for its list tables: only values (colours, borders, spacing) were read from it; no code of that package is included and the package is not installed.
