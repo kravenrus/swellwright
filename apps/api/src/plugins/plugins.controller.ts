@@ -1,5 +1,6 @@
 import { Body, Controller, Inject, Req } from '@nestjs/common';
 import {
+  checkPluginRoute,
   disablePluginRoute,
   enablePluginRoute,
   type EnablePluginRequest,
@@ -11,6 +12,7 @@ import {
 
 import { type AuthedRequest, requestMeta, requireAuth } from '../auth/context.js';
 import { ContractRoute } from '../contract-route.js';
+import { PluginHostService } from './host/plugin-host.service.js';
 import { PluginsService } from './plugins.service.js';
 
 const actorOf = (req: AuthedRequest): { id: string; name: string } => {
@@ -20,7 +22,10 @@ const actorOf = (req: AuthedRequest): { id: string; name: string } => {
 
 @Controller()
 export class PluginsController {
-  constructor(@Inject(PluginsService) private readonly plugins: PluginsService) {}
+  constructor(
+    @Inject(PluginsService) private readonly plugins: PluginsService,
+    @Inject(PluginHostService) private readonly host: PluginHostService,
+  ) {}
 
   @ContractRoute(listPluginsRoute)
   list(): Promise<PluginList> {
@@ -37,5 +42,11 @@ export class PluginsController {
   disable(@Req() req: AuthedRequest): Promise<PluginView> {
     const { id } = PluginIdParamsSchema.parse(req.params);
     return this.plugins.disable(actorOf(req), id, requestMeta(req));
+  }
+
+  @ContractRoute(checkPluginRoute)
+  check(@Req() req: AuthedRequest): Promise<PluginView> {
+    const { id } = PluginIdParamsSchema.parse(req.params);
+    return this.host.check(actorOf(req), id, requestMeta(req));
   }
 }

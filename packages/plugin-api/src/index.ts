@@ -20,3 +20,12 @@ export {
   type ListChange,
   type PermissionDiff,
 } from './permissions.js';
+export {
+  definePlugin,
+  PLUGIN_LIMITS,
+  type PluginContext,
+  type PluginFetchInit,
+  type PluginFetchResponse,
+  type PluginMethod,
+  type PluginModule,
+} from './module.js';

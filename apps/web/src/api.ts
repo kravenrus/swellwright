@@ -381,6 +381,13 @@ export const enablePlugin = (id: string, digest: string): Promise<PluginView> =>
 export const disablePlugin = (id: string): Promise<PluginView> =>
   send('POST', `/plugins/${id}/disable`, undefined, PluginViewSchema);
 
+/**
+ * Starts an enabled plugin in its restricted process and loads its modules (`plugins:manage`, needs a fresh
+ * confirmation with a code). A plugin that fails to load is an answer (`runtime.state` is `failed`), not an error.
+ */
+export const checkPlugin = (id: string): Promise<PluginView> =>
+  send('POST', `/plugins/${id}/check`, undefined, PluginViewSchema);
+
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {
   try {

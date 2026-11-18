@@ -36,18 +36,20 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import type {
   Permission,
+  PluginList,
   PluginPermissionChange,
   PluginPermissionsView,
+  PluginRuntime,
   PluginStatus,
   PluginTrust,
   PluginView,
 } from '@swellwright/contracts';
 import { PageHeader } from '@swellwright/ui';
 
-import { ApiRequestError, disablePlugin, enablePlugin, listPlugins } from '../api.js';
+import { ApiRequestError, checkPlugin, disablePlugin, enablePlugin, listPlugins } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime } from '../format.js';
+import { useDateTime, useNumber } from '../format.js';
 
 /** Shown where a plugin has no value (a plugin that is gone has no version). */
 const DASH = '—';
@@ -63,6 +65,13 @@ const STATUS_BADGE = {
   unavailable: { color: 'red', variant: 'light' },
   missing: { color: 'red', variant: 'light' },
 } as const satisfies Record<PluginStatus, { color: string; variant: 'light' | 'outline' }>;
+
+/** Colour and style of the badge for the state of a plugin's process. Never colour alone: the word is always there too. */
+const RUNTIME_BADGE = {
+  stopped: { color: 'gray', variant: 'light' },
+  running: { color: 'teal', variant: 'light' },
+  failed: { color: 'red', variant: 'light' },
+} as const satisfies Record<PluginRuntime['state'], { color: string; variant: 'light' }>;
 
 /** The statuses from which a plugin can be (re)enabled: usable, and not running now. */
 const ENABLEABLE: readonly PluginStatus[] = ['not_enabled', 'disabled', 'changed'];
@@ -113,11 +122,36 @@ function PluginStatusBadge({ status }: { status: PluginStatus }) {
     <Badge
       color={color}
       leftSection={status === 'changed' ? <IconAlertTriangle aria-hidden size={13} /> : undefined}
+      maw="none"
+      styles={{ root: { width: 'max-content' }, label: { overflow: 'visible' } }}
       variant={variant}
     >
       {t(`statuses.${status}`)}
     </Badge>
   );
+}
+
+/**
+ * In the table, only the two states worth a second badge: the process is running, or it failed (the error is on
+ * hover). A plugin that is stopped has nothing to add to its status.
+ */
+function RuntimeBadge({ runtime }: { runtime: PluginRuntime }) {
+  const { t } = useTranslation('plugins');
+  if (runtime.state === 'running') {
+    return (
+      <Badge color="teal" size="sm" variant="dot">
+        {t('runtime.states.running')}
+      </Badge>
+    );
+  }
+  if (runtime.state === 'failed') {
+    return (
+      <Badge color="red" size="sm" title={runtime.lastError ?? undefined} variant="light">
+        {t('runtime.states.failed')}
+      </Badge>
+    );
+  }
+  return null;
 }
 
 function TrustBadge({ trust }: { trust: PluginTrust | null }) {
@@ -463,14 +497,176 @@ function StatusBlocks({ plugin }: { plugin: PluginView }) {
   ) : null;
 }
 
-/** What is inside the review dialog. Keyed by the plugin, so a mutation's state never carries over. */
+/** What the plugin's process loaded: each extension kind and the methods it offers (names are data). */
+function ModuleList({ modules }: { modules: PluginRuntime['modules'] }) {
+  const { t } = useTranslation('plugins');
+  return (
+    <Stack gap="xs">
+      <Text c="dimmed" fz="sm">
+        {t('runtime.modulesTitle')}
+      </Text>
+      {modules.map((module) => (
+        <Stack gap={4} key={module.kind}>
+          <Text ff="monospace" fw={500} fz="sm">
+            {module.kind}
+          </Text>
+          <Text c="dimmed" fz="xs">
+            {t('runtime.methodsTitle')}
+          </Text>
+          {module.methods.length === 0 ? (
+            <Text c="dimmed" fz="xs">
+              {t('runtime.noMethods')}
+            </Text>
+          ) : (
+            <Group gap={4} wrap="wrap">
+              {module.methods.map((method) => (
+                <Badge
+                  color="gray"
+                  ff="monospace"
+                  key={method}
+                  size="sm"
+                  tt="none"
+                  variant="outline"
+                >
+                  {method}
+                </Badge>
+              ))}
+            </Group>
+          )}
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
+/**
+ * The state of the plugin's process, and the Check button that loads it. The process is restricted; the section says
+ * so plainly, because an enabled plugin is code from somewhere. A plugin that is only data has no process.
+ */
+function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: boolean }) {
+  const { t } = useTranslation(['plugins', 'common']);
+  const formatDate = useDateTime('short');
+  const formatNumber = useNumber();
+  const queryClient = useQueryClient();
+  const step = useStepUp();
+  const { runtime } = plugin;
+  const { color, variant } = RUNTIME_BADGE[runtime.state];
+  const enabled = plugin.status === 'enabled';
+  // Only data (declarative): there is no code, so no process ever starts and there is nothing to check.
+  const noCode =
+    enabled &&
+    runtime.state === 'stopped' &&
+    plugin.provides.every((item) => item.mode === 'declarative');
+  const check = useMutation({
+    mutationFn: () => step.run(() => checkPlugin(plugin.id)),
+    onSuccess: (checked) => {
+      // The dialog follows the list, so the fresh runtime goes in at once; the refetch below settles the rest.
+      queryClient.setQueryData<PluginList>(['plugins'], (list) =>
+        list
+          ? {
+              ...list,
+              plugins: list.plugins.map((item) => (item.id === checked.id ? checked : item)),
+            }
+          : list,
+      );
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['plugins'] });
+    },
+  });
+
+  return (
+    <Stack gap="xs">
+      <Group gap="xs">
+        <Text fw={600} fz="sm">
+          {t('runtime.title')}
+        </Text>
+        {noCode ? null : (
+          <Badge color={color} size="sm" variant={variant}>
+            {t(`runtime.states.${runtime.state}`)}
+          </Badge>
+        )}
+      </Group>
+
+      {noCode ? (
+        <Text fz="sm">{t('runtime.noCode')}</Text>
+      ) : (
+        <>
+          {runtime.state === 'stopped' ? (
+            <Text c="dimmed" fz="sm">
+              {t('runtime.idle')}
+            </Text>
+          ) : null}
+          {runtime.state === 'running' ? (
+            <Stack gap="xs">
+              {runtime.startedAt ? (
+                <Field label={t('runtime.started')}>
+                  <Text fz="sm">{formatDate(runtime.startedAt)}</Text>
+                </Field>
+              ) : null}
+              <Field label={t('runtime.calls')}>
+                <Text fz="sm">{formatNumber(runtime.calls)}</Text>
+              </Field>
+            </Stack>
+          ) : null}
+          {runtime.state === 'failed' ? (
+            <Alert
+              color="red"
+              icon={<IconAlertCircle size={16} />}
+              title={t('runtime.failedTitle')}
+              variant="light"
+            >
+              <Text fz="sm" style={{ wordBreak: 'break-word' }}>
+                {runtime.lastError ?? t('runtime.failedUnknown')}
+              </Text>
+            </Alert>
+          ) : null}
+          {runtime.modules.length > 0 ? <ModuleList modules={runtime.modules} /> : null}
+          <Text c="dimmed" fz="xs">
+            {t('runtime.restricted')}
+          </Text>
+          {canManage && enabled ? (
+            <Stack gap={6}>
+              <ErrorNote error={check.error} fallback={t('runtime.check.forbidden')} />
+              <Group>
+                <Button
+                  leftSection={<IconPlayerPlay size={16} />}
+                  loading={check.isPending}
+                  onClick={() => {
+                    check.mutate();
+                  }}
+                  size="xs"
+                  variant="default"
+                >
+                  {t('runtime.check.button')}
+                </Button>
+              </Group>
+              <Text c="dimmed" fz="xs">
+                {t('runtime.check.note')}
+              </Text>
+            </Stack>
+          ) : null}
+        </>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * What is inside the review dialog. Keyed by the plugin, so a mutation's state never carries over. `opened` is the
+ * plugin as it was when the dialog opened; `live` is the same plugin in the list now. An enabled plugin cannot be
+ * approved, so what is shown for it follows the list (a check changes its runtime, and may switch it off). Any other
+ * plugin keeps what was shown when the dialog opened: an approval is of that, not of whatever the files became since.
+ */
 function ReviewBody({
-  plugin,
+  plugin: opened,
+  live,
   canManage,
   onClose,
   onDone,
 }: {
   plugin: PluginView;
+  live: PluginView | undefined;
   canManage: boolean;
   onClose: () => void;
   onDone: (notice: Notice) => void;
@@ -478,6 +674,7 @@ function ReviewBody({
   const { t } = useTranslation(['plugins', 'common']);
   const queryClient = useQueryClient();
   const step = useStepUp();
+  const plugin = opened.status === 'enabled' && live !== undefined ? live : opened;
   const { digest } = plugin;
   const canEnable =
     canManage &&
@@ -551,6 +748,10 @@ function ReviewBody({
         <AsksSection permissions={approvedPermissions} title={t('asks.approvedTitle')} />
       ) : null}
 
+      {plugin.status === 'enabled' || plugin.runtime.state !== 'stopped' ? (
+        <RuntimeSection canManage={canManage} plugin={plugin} />
+      ) : null}
+
       {plugin.trust === 'local' ? (
         <Alert
           color="yellow"
@@ -596,11 +797,13 @@ function ReviewBody({
 /** The detail dialog. It is also where a plugin is enabled: the person confirms what they were just shown. */
 function ReviewDialog({
   plugin,
+  live,
   canManage,
   onClose,
   onDone,
 }: {
   plugin: PluginView | undefined;
+  live: PluginView | undefined;
   canManage: boolean;
   onClose: () => void;
   onDone: (notice: Notice) => void;
@@ -617,6 +820,7 @@ function ReviewDialog({
         <ReviewBody
           canManage={canManage}
           key={plugin.id}
+          live={live}
           onClose={onClose}
           onDone={onDone}
           plugin={plugin}
@@ -739,7 +943,10 @@ function PluginsTable({
                   <TrustBadge trust={plugin.trust} />
                 </Table.Td>
                 <Table.Td>
-                  <PluginStatusBadge status={plugin.status} />
+                  <Group gap={6} wrap="wrap">
+                    <PluginStatusBadge status={plugin.status} />
+                    {plugin.status === 'enabled' ? <RuntimeBadge runtime={plugin.runtime} /> : null}
+                  </Group>
                   {plugin.status === 'unavailable' && problem !== undefined ? (
                     <Text
                       c="dimmed"
@@ -851,6 +1058,7 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
   };
 
   const plugins = list.data?.plugins ?? [];
+  const liveReviewing = reviewing ? plugins.find((item) => item.id === reviewing.id) : undefined;
   const configured = list.data
     ? list.data.directories.official || list.data.directories.local
     : true;
@@ -928,6 +1136,7 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
 
       <ReviewDialog
         canManage={canManage}
+        live={liveReviewing}
         onClose={() => {
           setReviewing(undefined);
         }}

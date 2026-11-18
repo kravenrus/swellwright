@@ -52,6 +52,12 @@ const EnvSchema = z.object({
   SW_PLUGINS_OFFICIAL_DIR: optionalString,
   /** Plugins of this instance (trust `local`): the administrator's own responsibility (ADR 0008). */
   SW_PLUGINS_LOCAL_DIR: optionalString,
+  /** The heap limit of a plugin's process, in MiB (ADR 0028). */
+  SW_PLUGIN_MEMORY_MIB: z.coerce.number().int().min(32).max(1024).default(128),
+  /** How long one call to a plugin may take before its process is ended, in seconds. */
+  SW_PLUGIN_CALL_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(300).default(10),
+  /** How long a plugin's process may sit idle before it is stopped, in minutes. */
+  SW_PLUGIN_IDLE_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
 });
 
 export interface AppConfig {
@@ -84,6 +90,12 @@ export interface AppConfig {
   readonly vaultKdf: KdfParams;
   /** Where plugins are looked for, the more trusted first. Empty: no plugins. */
   readonly pluginRoots: readonly PluginRoot[];
+  /** What every plugin process is held to (ADR 0028). */
+  readonly pluginLimits: {
+    readonly memoryMiB: number;
+    readonly callTimeoutMs: number;
+    readonly idleMs: number;
+  };
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -192,5 +204,10 @@ export function loadConfig(
         ? [{ directory: resolve(e.SW_PLUGINS_LOCAL_DIR), trust: 'local' as const }]
         : []),
     ],
+    pluginLimits: {
+      memoryMiB: e.SW_PLUGIN_MEMORY_MIB,
+      callTimeoutMs: e.SW_PLUGIN_CALL_TIMEOUT_SECONDS * 1000,
+      idleMs: e.SW_PLUGIN_IDLE_MINUTES * 60_000,
+    },
   };
 }
