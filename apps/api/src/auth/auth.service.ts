@@ -8,6 +8,7 @@ import {
 import type { AuthNextStep, TotpEnrollment } from '@swellwright/contracts';
 import { type Credential, type Database, SessionStage } from '@swellwright/db';
 
+import { AuditService } from '../audit/audit.service.js';
 import { type AppConfig } from '../config.js';
 import { RateLimitedException } from '../http.js';
 import { CONFIG, DATABASE, PASSWORD_HASHER, SECRET_BOX } from '../tokens.js';
@@ -27,6 +28,13 @@ import {
 const ISSUER = 'Swellwright';
 const LOGIN_ATTEMPTS_PER_ADDRESS = 30;
 const LOGIN_WINDOW_MS = 5 * 60_000;
+/**
+ * Sign-ins for accounts that do not exist or are disabled are written to the audit chain at most this often
+ * per address. The chain is never pruned, and a caller who is not signed in must not be able to grow it
+ * without bound. The server log still has every one.
+ */
+const UNKNOWN_ACCOUNT_EVENTS_PER_ADDRESS = 10;
+const UNKNOWN_ACCOUNT_WINDOW_MS = 15 * 60_000;
 
 export interface Completed {
   readonly session: IssuedSession;
@@ -45,6 +53,10 @@ const totpContext = (userId: string): string => `swellwright:totp:v1:${userId}`;
 export class AuthService {
   private readonly logger = new Logger('Auth');
   private readonly loginLimiter = new WindowLimiter(LOGIN_ATTEMPTS_PER_ADDRESS, LOGIN_WINDOW_MS);
+  private readonly unknownAccountEvents = new WindowLimiter(
+    UNKNOWN_ACCOUNT_EVENTS_PER_ADDRESS,
+    UNKNOWN_ACCOUNT_WINDOW_MS,
+  );
 
   constructor(
     @Inject(DATABASE) private readonly database: Database | undefined,
@@ -52,6 +64,7 @@ export class AuthService {
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(SessionService) private readonly sessions: SessionService,
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
   private get db(): Database['client'] {
@@ -75,11 +88,30 @@ export class AuthService {
     if (!user || !credential || user.status !== 'active') {
       await this.hasher.verifyDummy(password);
       this.logger.warn('sign-in refused: unknown or disabled account');
+      // Nothing the caller typed goes into the record: people paste passwords into the name field.
+      if (this.unknownAccountEvents.hit(meta.ip ?? 'unknown')) {
+        await this.audit.note({
+          action: 'auth.login.failed',
+          outcome: 'failure',
+          actor: user ? { id: user.id, name: user.username } : null,
+          details: {
+            reason: !user ? 'unknown_account' : !credential ? 'no_credential' : 'disabled',
+          },
+          meta,
+        });
+      }
       throw new UnauthorizedException('Invalid credentials.');
     }
     this.assertNotLocked(credential.lockedUntil);
     if (!(await this.hasher.verify(credential.passwordHash, password))) {
-      await this.registerFailure(user.id);
+      await this.audit.note({
+        action: 'auth.login.failed',
+        outcome: 'failure',
+        actor: { id: user.id, name: user.username },
+        details: { reason: 'invalid_credentials' },
+        meta,
+      });
+      await this.registerFailure(user, meta);
       throw new UnauthorizedException('Invalid credentials.');
     }
     if (this.hasher.needsRehash(credential.passwordHash)) {
@@ -90,6 +122,20 @@ export class AuthService {
     }
     const session = await this.sessions.create(user.id, SessionStage.password_verified, meta);
     return { session, next: credential.totpConfirmedAt ? 'totp' : 'totp_enrollment' };
+  }
+
+  /** Ends the session behind a cookie. A sign-out of a real session is recorded; one that never got that far is not. */
+  async logout(token: string, meta: RequestMeta): Promise<void> {
+    const ctx = await this.sessions.authenticate(token);
+    await this.sessions.revokeToken(token);
+    if (ctx?.stage === SessionStage.active) {
+      await this.audit.note({
+        action: 'auth.logout',
+        outcome: 'success',
+        actor: this.actorOf(ctx),
+        meta,
+      });
+    }
   }
 
   /** Starts a password-verified session for an account created in the setup. */
@@ -105,14 +151,32 @@ export class AuthService {
       throw new ConflictException('The authenticator is not set up yet.');
     }
     this.assertNotLocked(credential.lockedUntil);
-    const accepted = looksLikeTotpCode(code)
-      ? await this.acceptTotp(ctx.user.id, credential.totpSecret, credential.totpLastStep, code)
-      : await this.acceptRecoveryCode(ctx.user.id, code);
+    const method = looksLikeTotpCode(code) ? 'totp' : 'recovery_code';
+    const accepted =
+      method === 'totp'
+        ? await this.acceptTotp(ctx.user.id, credential.totpSecret, credential.totpLastStep, code)
+        : await this.acceptRecoveryCode(ctx.user.id, code);
     if (!accepted) {
-      await this.registerFailure(ctx.user.id);
+      await this.audit.note({
+        action: 'auth.second_step.failed',
+        outcome: 'failure',
+        actor: this.actorOf(ctx),
+        details: { method },
+        meta,
+      });
+      await this.registerFailure(ctx.user, meta);
       throw new UnauthorizedException('Invalid code.');
     }
-    return this.complete(ctx, meta);
+    if (method === 'recovery_code') {
+      // A code was used up: that is a change, so the record is not optional.
+      await this.audit.record({
+        action: 'auth.recovery_code.used',
+        outcome: 'success',
+        actor: this.actorOf(ctx),
+        meta,
+      });
+    }
+    return this.complete(ctx, meta, method);
   }
 
   /** The secret to add to an authenticator. The same secret is returned until it is confirmed. */
@@ -155,7 +219,14 @@ export class AuthService {
       code,
     );
     if (!accepted) {
-      await this.registerFailure(ctx.user.id);
+      await this.audit.note({
+        action: 'auth.second_step.failed',
+        outcome: 'failure',
+        actor: this.actorOf(ctx),
+        details: { method: 'enrollment' },
+        meta,
+      });
+      await this.registerFailure(ctx.user, meta);
       throw new UnauthorizedException('Invalid code.');
     }
     const recoveryCodes = newRecoveryCodes();
@@ -172,7 +243,17 @@ export class AuthService {
         })),
       }),
     ]);
-    return { ...(await this.complete(ctx, meta)), recoveryCodes };
+    await this.audit.record({
+      action: 'auth.totp.enrolled',
+      outcome: 'success',
+      actor: this.actorOf(ctx),
+      meta,
+    });
+    return { ...(await this.complete(ctx, meta, 'enrollment')), recoveryCodes };
+  }
+
+  private actorOf(ctx: AuthContext): { id: string; name: string } {
+    return { id: ctx.user.id, name: ctx.user.username };
   }
 
   private async credentialOf(ctx: AuthContext): Promise<Credential> {
@@ -215,7 +296,11 @@ export class AuthService {
     return used.count === 1;
   }
 
-  private async complete(ctx: AuthContext, meta: RequestMeta): Promise<Completed> {
+  private async complete(
+    ctx: AuthContext,
+    meta: RequestMeta,
+    method: 'totp' | 'recovery_code' | 'enrollment',
+  ): Promise<Completed> {
     const now = new Date();
     await this.db.credential.update({
       where: { userId: ctx.user.id },
@@ -224,6 +309,14 @@ export class AuthService {
     const user = await this.db.user.update({
       where: { id: ctx.user.id },
       data: { lastLoginAt: now },
+    });
+    // Recorded before the session exists: without a record there is no session.
+    await this.audit.record({
+      action: 'auth.login.succeeded',
+      outcome: 'success',
+      actor: this.actorOf(ctx),
+      details: { method },
+      meta,
     });
     // The password-verified session is replaced by a new one: nothing carries over.
     const session = await this.sessions.create(ctx.user.id, SessionStage.active, meta);
@@ -242,7 +335,11 @@ export class AuthService {
   }
 
   /** Counts a failed step; at the limit the account locks and every session of the user ends. */
-  private async registerFailure(userId: string): Promise<void> {
+  private async registerFailure(
+    user: { readonly id: string; readonly username: string },
+    meta: RequestMeta,
+  ): Promise<void> {
+    const userId = user.id;
     const updated = await this.db.credential.update({
       where: { userId },
       data: { failedAttempts: { increment: 1 } },
@@ -255,6 +352,17 @@ export class AuthService {
       });
       await this.sessions.revokeAllOf(userId);
       this.logger.warn(`account of user ${userId} locked`);
+      // Refusals while the account is locked are not recorded one by one; this event is the one that counts.
+      await this.audit.note({
+        action: 'auth.account.locked',
+        outcome: 'success',
+        actor: { id: user.id, name: user.username },
+        details: {
+          failures: updated.failedAttempts,
+          minutes: Math.round(this.config.lockoutMs / 60_000),
+        },
+        meta,
+      });
     }
   }
 }

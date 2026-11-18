@@ -8,7 +8,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 - Ошибки по RFC 9457 (`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`, `code`, `errors[]`. Кодов ограниченный перечень (см. п. 6).
 - Пагинация курсорная (`limit`, `cursor`), фильтры и сортировка единообразно (`filter[...]`, `sort`), `ETag` и `If-Match` для оптимистичных обновлений.
 - Долгие операции: `202 Accepted` + ресурс запуска `runs/{id}`; повторный `POST` с тем же `Idempotency-Key` возвращает тот же запуск.
-- Расширения OpenAPI: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (требуется согласование), `x-sw-scopes`, `x-sw-locks` (какие ресурсы блокируются).
+- Расширения OpenAPI: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (требуется согласование), `x-sw-scopes`, `x-sw-locks` (какие ресурсы блокируются), `x-sw-permission` (разрешение, которое должна иметь роль вошедшего вызывающего; реализовано, ADR 0015).
 - Версионирование: мажорная версия в пути; несовместимые изменения только с новой мажорной; политика устаревания (`Deprecation`, `Sunset`).
 
 ## 2. Аутентификация
@@ -24,7 +24,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (только первый запуск, нужен токен установки) |
 | auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
-| users, roles | CRUD пользователей и ролей Swellwright, `GET /roles/permissions` |
+| users, roles | CRUD пользователей и ролей Swellwright. Реализовано: `GET /roles` (встроенные роли с наборами разрешений и каталог разрешений одним документом) |
 | tokens | `POST/GET/DELETE /tokens` (токены Swellwright), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (значения только на запись), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |
 | servers | CRUD, `POST /servers/{id}/facts/refresh`, `GET /servers/{id}/facts`, `/events`, `/snapshots`, `/baseline-results` |
@@ -50,7 +50,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | probes | `/probes/agents`, `/targets`, `/results`, `POST /probes/run`, `GET /probes/matrix` |
 | alerts, notifications | `/alerts`, `/alert-rules`, `/notification-channels`, `POST /notifications/test` |
 | reports | `POST /reports`, `GET /reports/{id}` (HTML, Markdown, PDF) |
-| audit | `GET /audit`, `POST /audit/verify-chain`, экспорт |
+| audit | `GET /audit` (сначала новые, `cursor`, фильтры по действию, исходу и субъекту), `POST /audit/verify-chain` (оба реализованы, ADR 0015); экспорт |
 | artifacts | `/artifacts` (установщик, node-engine, эталоны), `POST /artifacts/{id}/promote` |
 | advisories | `/advisories`, `POST /advisories/{id}/ack` |
 | system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |

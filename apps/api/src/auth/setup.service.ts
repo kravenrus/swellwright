@@ -11,6 +11,7 @@ import {
 import type { SetupOwnerRequest, SetupStatus } from '@swellwright/contracts';
 import { type Database, UserRole } from '@swellwright/db';
 
+import { AuditService } from '../audit/audit.service.js';
 import { type AppConfig } from '../config.js';
 import { RateLimitedException } from '../http.js';
 import { CONFIG, DATABASE, PASSWORD_HASHER } from '../tokens.js';
@@ -42,6 +43,7 @@ export class SetupService implements OnApplicationBootstrap {
     @Inject(CONFIG) private readonly config: AppConfig,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -94,6 +96,13 @@ export class SetupService implements OnApplicationBootstrap {
     this.ensureToken();
     if (!this.tokenMatches(request.setupToken)) {
       this.logger.warn('setup refused: wrong token');
+      // At most 10 attempts per address and quarter hour get this far, so the record cannot be flooded.
+      await this.audit.note({
+        action: 'setup.owner.refused',
+        outcome: 'failure',
+        details: { reason: 'invalid_token' },
+        meta,
+      });
       throw new ForbiddenException('Invalid setup token.');
     }
     const passwordHash = await this.hasher.hash(request.password);
@@ -111,6 +120,17 @@ export class SetupService implements OnApplicationBootstrap {
           credential: { create: { passwordHash } },
         },
       });
+      // The owner and the record of the owner stand or fall together.
+      await this.audit.record(
+        {
+          action: 'setup.owner.created',
+          outcome: 'success',
+          actor: { id: user.id, name: user.username },
+          object: { type: 'user', id: user.id },
+          meta,
+        },
+        tx,
+      );
       return user.id;
     });
     this.token = undefined;

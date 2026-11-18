@@ -6,14 +6,20 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { RouteDef } from '@swellwright/contracts';
+import { hasPermission, type RouteDef } from '@swellwright/contracts';
 
+import { AuditService } from '../audit/audit.service.js';
 import { type AppConfig } from '../config.js';
 import { ROUTE_METADATA } from '../contract-route.js';
 import { CONFIG } from '../tokens.js';
-import { type AuthedRequest } from './context.js';
+import { type AuthedRequest, requestMeta } from './context.js';
 import { readCookie, SESSION_COOKIE } from './cookies.js';
+import { WindowLimiter } from './rate-limit.js';
 import { SessionService } from './session.service.js';
+
+/** A user who keeps calling what they may not call fills the audit chain, which is never pruned: cap it. */
+const DENIED_EVENTS_PER_USER = 20;
+const DENIED_WINDOW_MS = 10 * 60_000;
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -84,5 +90,44 @@ export class AuthGuard implements CanActivate {
     }
     req.auth = auth;
     return true;
+  }
+}
+
+/**
+ * Enforces the `permission` a route declares (ADR 0015) against the role of the signed-in user, read from the
+ * user row on this request, so a changed role or a disabled user takes effect at once. Runs after
+ * `AuthGuard`. A refusal is recorded in the audit chain and answers 403.
+ */
+@Injectable()
+export class PermissionGuard implements CanActivate {
+  private readonly deniedEvents = new WindowLimiter(DENIED_EVENTS_PER_USER, DENIED_WINDOW_MS);
+
+  constructor(@Inject(AuditService) private readonly audit: AuditService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const route = routeOf(context);
+    if (!route?.permission) {
+      return true;
+    }
+    const req = context.switchToHttp().getRequest<AuthedRequest>();
+    const auth = req.auth;
+    if (!auth) {
+      // A permission on a route nobody signed in can reach is a mistake in the contract: refuse, do not allow.
+      throw new UnauthorizedException('Authentication required.');
+    }
+    if (hasPermission(auth.user.role, route.permission)) {
+      return true;
+    }
+    if (this.deniedEvents.hit(auth.user.id)) {
+      await this.audit.note({
+        action: 'authz.denied',
+        outcome: 'denied',
+        actor: { id: auth.user.id, name: auth.user.username },
+        object: { type: 'route', id: route.operationId },
+        details: { permission: route.permission },
+        meta: requestMeta(req),
+      });
+    }
+    throw new ForbiddenException('Your role does not allow this.');
   }
 }

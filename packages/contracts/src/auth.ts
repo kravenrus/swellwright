@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-/** The built-in roles (docs/en/design/05-security.md). Permission sets per role come with the RBAC work. */
-export const USER_ROLES = ['owner', 'operator', 'observer', 'terminal', 'auditor'] as const;
-export const UserRoleSchema = z.enum(USER_ROLES).meta({ id: 'UserRole' });
-export type UserRole = z.infer<typeof UserRoleSchema>;
+import { PermissionSchema, UserRoleSchema } from './roles.js';
 
 /** Login names are stored lower-case, 2 to 32 characters. */
 export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{1,31}$/u;
@@ -93,9 +90,16 @@ export const TotpEnrollmentSchema = z
   .meta({ id: 'TotpEnrollment' });
 export type TotpEnrollment = z.infer<typeof TotpEnrollmentSchema>;
 
+const PermissionsField = z
+  .array(PermissionSchema)
+  .describe(
+    "What the user's role allows. The console uses it to show or hide pages; every route checks again.",
+  );
+
 export const SessionInfoSchema = z
   .object({
     user: UserSummarySchema,
+    permissions: PermissionsField,
     expiresAt: z.iso.datetime().describe('When the session ends if it stays idle.'),
   })
   .meta({ id: 'SessionInfo' });
@@ -104,6 +108,7 @@ export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 export const TotpConfirmedSchema = z
   .object({
     user: UserSummarySchema,
+    permissions: PermissionsField,
     expiresAt: z.iso.datetime(),
     recoveryCodes: z
       .array(z.string())

@@ -2,7 +2,7 @@
 
 The Prisma schema, the SQL migrations and the database client shared by the API and the worker. Decisions: [ADR 0013](../../docs/adr/0013-prisma-for-the-data-layer.md). Data model design: `docs/en/design/02-data-model.md`.
 
-Status: `User`, `Credential` (password hash, sealed TOTP secret, lockout counters), `RecoveryCode` and `Session`. Permissions, the audit log and the vault follow in their own migrations.
+Status: `User`, `Credential` (password hash, sealed TOTP secret, lockout counters), `RecoveryCode`, `Session` and `AuditEvent` (the append-only audit chain; its migration installs triggers that refuse update, delete and truncate, [ADR 0015](../../docs/adr/0015-permissions-and-the-audit-chain.md)). The vault follows in its own migration. Raw SQL in a test must name the schema of the isolated database (`isolated.schema`): the client qualifies its own queries, raw SQL is not.
 
 `@swellwright/db/testing` makes a database of its own for a test file (a fresh schema with every migration applied); it is for tests only.
 

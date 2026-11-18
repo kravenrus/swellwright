@@ -2,9 +2,11 @@ import { type DynamicModule, Module, type OnApplicationShutdown, Inject } from '
 import { APP_GUARD } from '@nestjs/core';
 import { Database } from '@swellwright/db';
 
+import { AuditController } from './audit/audit.controller.js';
+import { AuditService } from './audit/audit.service.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
-import { AuthGuard, OriginGuard } from './auth/guards.js';
+import { AuthGuard, OriginGuard, PermissionGuard } from './auth/guards.js';
 import { DEFAULT_PASSWORD_PARAMS, PasswordHasher, type PasswordParams } from './auth/password.js';
 import { SecretBox } from './auth/secret-box.js';
 import { SessionService } from './auth/session.service.js';
@@ -19,6 +21,7 @@ import {
   ReadinessService,
   ValkeyCheck,
 } from './readiness.js';
+import { RolesController } from './roles.controller.js';
 import { SystemController } from './system.controller.js';
 
 export interface AppOptions {
@@ -55,7 +58,13 @@ export class AppModule implements OnApplicationShutdown {
       (config.databaseUrl ? new Database({ url: config.databaseUrl }) : undefined);
     return {
       module: AppModule,
-      controllers: [SystemController, SetupController, AuthController],
+      controllers: [
+        SystemController,
+        SetupController,
+        AuthController,
+        RolesController,
+        AuditController,
+      ],
       providers: [
         { provide: CONFIG, useValue: config },
         { provide: DATABASE, useValue: database },
@@ -70,11 +79,13 @@ export class AppModule implements OnApplicationShutdown {
         },
         { provide: SECRET_BOX, useValue: new SecretBox(config.authKey) },
         SessionService,
+        AuditService,
         AuthService,
         SetupService,
-        // Guards run in this order: the origin check first, then the session.
+        // Guards run in this order: the origin check, then the session, then the role's permission.
         { provide: APP_GUARD, useClass: OriginGuard },
         { provide: APP_GUARD, useClass: AuthGuard },
+        { provide: APP_GUARD, useClass: PermissionGuard },
       ],
     };
   }

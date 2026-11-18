@@ -15,9 +15,9 @@ The Phase 1 acceptance criterion starts with "login with TOTP". Three questions 
 - **First run:** `POST /setup/owner` works once. It needs a setup token that the server prints to its log at start (or `SW_SETUP_TOKEN`), is limited to 10 attempts in 15 minutes per address, and creates the owner under a PostgreSQL advisory lock, so two simultaneous requests produce one owner.
 - **CSRF:** `SameSite=Strict` plus a check of `Origin` on state-changing methods (the list in `SW_ALLOWED_ORIGINS`, by default the host the request was sent to), with `Sec-Fetch-Site` as the fallback. A request that carries neither is not from a browser. A CSRF token is added together with step-up authentication.
 - **Contract:** every route states its `auth` level (`none`, `pending`, `session`, `token`); global guards enforce it and refuse `token` until tokens exist. Request bodies are validated against the contract before a handler runs, and a response without a body (204) is part of the contract.
-- **Audit:** sign-in events go to the log for now (user ids only, never names, codes or passwords). The audit chain records them once it exists.
+- **Audit:** sign-in events are recorded in the audit chain (ADR 0015): user ids and login names of known accounts only, never codes or passwords, and nothing an unknown caller typed.
 
 ## Consequences
 - The owner can sign in while the vault is sealed, and the database copy is still useless without the key. The price is a second key to look after: it lives with the deployment's secrets, and a lost `SW_AUTH_KEY` means every user enrolls the authenticator again.
-- Known gaps, to be closed in later slices: no password change or reset, no user management, so an owner who loses both password and authenticator has no supported way back in yet (a command-line reset is planned); no WebAuthn, OIDC, step-up authentication or IP restrictions; no audit chain.
+- Known gaps, to be closed in later slices: no password change or reset, no user management, so an owner who loses both password and authenticator has no supported way back in yet (a command-line reset is planned); no WebAuthn, OIDC, step-up authentication or IP restrictions.
 - Node 24.7 or later is required for `crypto.argon2`; the project already pins Node 26 (ADR 0009).

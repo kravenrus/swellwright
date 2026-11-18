@@ -10,7 +10,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 - Errors follow RFC 9457 (`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`, `code`, `errors[]`. The set of codes is limited (see section 6).
 - Cursor pagination (`limit`, `cursor`), uniform filters and sorting (`filter[...]`, `sort`), `ETag` and `If-Match` for optimistic updates.
 - Long operations: `202 Accepted` plus a run resource `runs/{id}`; a repeated `POST` with the same `Idempotency-Key` returns the same run.
-- OpenAPI extensions: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (approval required), `x-sw-scopes`, `x-sw-locks` (which resources are locked).
+- OpenAPI extensions: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (approval required), `x-sw-scopes`, `x-sw-locks` (which resources are locked), `x-sw-permission` (the permission a signed-in caller's role must hold; built, ADR 0015).
 - Versioning: the major version is in the path; breaking changes only with a new major version; deprecation policy (`Deprecation`, `Sunset`).
 
 ## 2. Authentication
@@ -26,7 +26,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (first run only, needs the setup token) |
 | auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
-| users, roles | CRUD for Swellwright users and roles, `GET /roles/permissions` |
+| users, roles | CRUD for Swellwright users and roles. Built: `GET /roles` (the built-in roles with their permission sets, and the permission catalogue, in one document) |
 | tokens | `POST/GET/DELETE /tokens` (Swellwright tokens), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (values are write-only), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |
 | servers | CRUD, `POST /servers/{id}/facts/refresh`, `GET /servers/{id}/facts`, `/events`, `/snapshots`, `/baseline-results` |
@@ -52,7 +52,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 | probes | `/probes/agents`, `/targets`, `/results`, `POST /probes/run`, `GET /probes/matrix` |
 | alerts, notifications | `/alerts`, `/alert-rules`, `/notification-channels`, `POST /notifications/test` |
 | reports | `POST /reports`, `GET /reports/{id}` (HTML, Markdown, PDF) |
-| audit | `GET /audit`, `POST /audit/verify-chain`, export |
+| audit | `GET /audit` (newest first, `cursor`, filters by action, outcome and actor), `POST /audit/verify-chain` (both built, ADR 0015); export |
 | artifacts | `/artifacts` (installer, node-engine, baselines), `POST /artifacts/{id}/promote` |
 | advisories | `/advisories`, `POST /advisories/{id}/ack` |
 | system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |

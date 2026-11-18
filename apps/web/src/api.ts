@@ -1,5 +1,10 @@
 import {
+  type AuditPage,
+  AuditPageSchema,
+  type AuditQuery,
   ApiErrorSchema,
+  type ChainVerification,
+  ChainVerificationSchema,
   type ErrorCode,
   type HealthResponse,
   HealthResponseSchema,
@@ -8,6 +13,8 @@ import {
   PendingSessionSchema,
   type ReadyResponse,
   ReadyResponseSchema,
+  type RoleCatalog,
+  RoleCatalogSchema,
   type SessionInfo,
   SessionInfoSchema,
   type SetupOwnerRequest,
@@ -144,6 +151,27 @@ export const confirmTotpEnrollment = (code: string): Promise<TotpConfirmed> =>
   send('POST', '/auth/totp/confirm', { code }, TotpConfirmedSchema);
 
 export const logout = (): Promise<void> => send('POST', '/auth/logout', undefined, undefined);
+
+export const getRoles = (): Promise<RoleCatalog> =>
+  send('GET', '/roles', undefined, RoleCatalogSchema);
+
+/** `?a=1&b=2` from the values that are set, or nothing. */
+function queryString(query: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) {
+      params.set(key, String(value));
+    }
+  }
+  const text = params.toString();
+  return text ? `?${text}` : '';
+}
+
+export const listAudit = (query: AuditQuery): Promise<AuditPage> =>
+  send('GET', `/audit${queryString(query)}`, undefined, AuditPageSchema);
+
+export const verifyAuditChain = (): Promise<ChainVerification> =>
+  send('POST', '/audit/verify-chain', undefined, ChainVerificationSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

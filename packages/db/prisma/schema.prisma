@@ -14,7 +14,8 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Built-in roles (docs/en/design/05-security.md). Custom roles and permission sets come with the RBAC work.
+/// Built-in roles (docs/en/design/05-security.md). Their permission sets live in packages/contracts (ADR 0015);
+/// custom roles come with user management.
 enum UserRole {
   owner
   operator
@@ -95,6 +96,41 @@ model RecoveryCode {
 
   @@unique([userId, codeHash])
   @@map("recovery_codes")
+}
+
+/// What happened to an action an audit event describes.
+enum AuditOutcome {
+  success
+  failure
+  denied
+
+  @@map("audit_outcome")
+}
+
+/// One row of the append-only audit chain (docs/adr/0015-permissions-and-the-audit-chain.md). Nothing here
+/// points at another table on purpose: the record must outlive the user it names. The migration installs
+/// triggers that refuse UPDATE, DELETE and TRUNCATE; they are not part of this schema, so do not drop them.
+model AuditEvent {
+  /// Position in the chain, from 1, assigned under a lock so there are no gaps.
+  seq        BigInt       @id
+  occurredAt DateTime     @map("occurred_at") @db.Timestamptz(3)
+  actorId    String?      @map("actor_id") @db.Uuid
+  /// The login name when the event happened.
+  actorName  String?      @map("actor_name") @db.VarChar(64)
+  action     String       @db.VarChar(64)
+  outcome    AuditOutcome
+  objectType String?      @map("object_type") @db.VarChar(32)
+  objectId   String?      @map("object_id") @db.VarChar(64)
+  ip         String?      @db.VarChar(64)
+  requestId  String?      @map("request_id") @db.VarChar(64)
+  /// Canonical JSON text, exactly what the hash covers. Text, not jsonb: reading it back must not reorder it.
+  details    String       @default("{}")
+  prevHash   String       @map("prev_hash") @db.VarChar(64)
+  hash       String       @unique @db.VarChar(64)
+
+  @@index([action, seq])
+  @@index([actorId, seq])
+  @@map("audit_events")
 }
 
 /// A browser session. The cookie holds a random token; only its SHA-256 hash is stored.

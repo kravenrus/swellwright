@@ -10,6 +10,11 @@ const MIGRATIONS_DIR = new URL('../prisma/migrations/', import.meta.url);
 
 export interface IsolatedDatabase {
   readonly database: Database;
+  /**
+   * The name of the schema. Queries made through Prisma are qualified with it; raw SQL is not, so a test that
+   * writes its own SQL must qualify table names with it.
+   */
+  readonly schema: string;
   /** Closes the client and drops the schema with everything in it. */
   drop(): Promise<void>;
 }
@@ -55,6 +60,7 @@ export async function createIsolatedDatabase(url: string): Promise<IsolatedDatab
   const database = new Database({ url, schema, poolSize });
   return {
     database,
+    schema,
     async drop() {
       await database.close();
       await withClient(url, async (client) => {

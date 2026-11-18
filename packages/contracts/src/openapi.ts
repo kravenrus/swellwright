@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
 import {
+  AuditActionSchema,
+  AuditDetailsSchema,
+  AuditEventSchema,
+  AuditOutcomeSchema,
+  AuditPageSchema,
+  ChainProblemSchema,
+  ChainVerificationSchema,
+} from './audit.js';
+import {
   AuthNextStepSchema,
   LoginRequestSchema,
   PendingSessionSchema,
@@ -10,10 +19,16 @@ import {
   TotpCodeRequestSchema,
   TotpConfirmedSchema,
   TotpEnrollmentSchema,
-  UserRoleSchema,
   UserSummarySchema,
 } from './auth.js';
 import { ApiErrorSchema, ErrorCodeSchema } from './errors.js';
+import {
+  PermissionSchema,
+  PermissionSummarySchema,
+  RoleCatalogSchema,
+  RoleSummarySchema,
+  UserRoleSchema,
+} from './roles.js';
 import { type RouteDef, routes } from './routes.js';
 import {
   CheckResultSchema,
@@ -23,7 +38,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.2.0';
+export const OPENAPI_INFO_VERSION = '0.3.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -44,6 +59,17 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   TotpEnrollmentSchema,
   SessionInfoSchema,
   TotpConfirmedSchema,
+  PermissionSchema,
+  PermissionSummarySchema,
+  RoleSummarySchema,
+  RoleCatalogSchema,
+  AuditActionSchema,
+  AuditOutcomeSchema,
+  AuditDetailsSchema,
+  AuditEventSchema,
+  AuditPageSchema,
+  ChainProblemSchema,
+  ChainVerificationSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -132,6 +158,10 @@ function operation(route: RouteDef): Json {
   }
   op['security'] =
     route.auth === 'none' ? [] : route.auth === 'token' ? [{ bearer: [] }] : [{ session: [] }];
+  if (route.permission) {
+    // Not part of OpenAPI: tells a reader and a generated client which role may call the operation.
+    op['x-sw-permission'] = route.permission;
+  }
   return op;
 }
 
@@ -165,6 +195,8 @@ export function buildOpenApi(): Json {
       { name: 'system', description: 'Probes, version and the API description.' },
       { name: 'setup', description: 'First-run setup of a new instance.' },
       { name: 'auth', description: 'Sign-in with a password and an authenticator, sessions.' },
+      { name: 'roles', description: 'Built-in roles and the permission catalogue.' },
+      { name: 'audit', description: 'The append-only audit log and its integrity check.' },
     ],
     paths,
     components: {
