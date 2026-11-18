@@ -26,6 +26,13 @@ export const VaultStatusSchema = z
     secretCount: z.number().int().nonnegative(),
     kekVersion: z.number().int().positive().nullable(),
     createdAt: z.iso.datetime().nullable(),
+    passphraseChangedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe('Null: never changed since the vault was set up.'),
+    recoveryKeyRotatedAt: z.iso.datetime().nullable(),
+    kekRotatedAt: z.iso.datetime().nullable(),
+    dataKeysRotatedAt: z.iso.datetime().nullable(),
   })
   .meta({ id: 'VaultStatus' });
 export type VaultStatus = z.infer<typeof VaultStatusSchema>;
@@ -63,6 +70,28 @@ export const UnsealVaultRequestSchema = z
   })
   .meta({ id: 'UnsealVaultRequest' });
 export type UnsealVaultRequest = z.infer<typeof UnsealVaultRequestSchema>;
+
+export const ChangeVaultPassphraseRequestSchema = z
+  .object({
+    currentPassphrase: z.string().min(1).max(VAULT_PASSPHRASE_MAX_LENGTH),
+    newPassphrase: z.string().min(VAULT_PASSPHRASE_MIN_LENGTH).max(VAULT_PASSPHRASE_MAX_LENGTH),
+  })
+  .meta({ id: 'ChangeVaultPassphraseRequest' });
+export type ChangeVaultPassphraseRequest = z.infer<typeof ChangeVaultPassphraseRequestSchema>;
+
+/** Rotations that replace the key the recovery key opens ask for the passphrase again, as a second proof. */
+export const ConfirmPassphraseRequestSchema = z
+  .object({ passphrase: z.string().min(1).max(VAULT_PASSPHRASE_MAX_LENGTH) })
+  .meta({ id: 'ConfirmPassphraseRequest' });
+export type ConfirmPassphraseRequest = z.infer<typeof ConfirmPassphraseRequestSchema>;
+
+export const VaultRotatedSchema = z
+  .object({
+    status: VaultStatusSchema,
+    rotated: z.number().int().nonnegative().describe('How many secrets were re-encrypted.'),
+  })
+  .meta({ id: 'VaultRotated' });
+export type VaultRotated = z.infer<typeof VaultRotatedSchema>;
 
 export const SecretViewSchema = z
   .object({

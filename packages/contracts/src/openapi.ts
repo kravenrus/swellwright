@@ -45,6 +45,8 @@ import {
 } from './users.js';
 import {
   CreateSecretRequestSchema,
+  ChangeVaultPassphraseRequestSchema,
+  ConfirmPassphraseRequestSchema,
   InitializeVaultRequestSchema,
   RevealedSecretSchema,
   SecretListSchema,
@@ -53,6 +55,7 @@ import {
   UnsealVaultRequestSchema,
   UpdateSecretRequestSchema,
   VaultInitializedSchema,
+  VaultRotatedSchema,
   VaultStatusSchema,
 } from './vault.js';
 import { SessionListSchema, SessionSummarySchema, SessionsRevokedSchema } from './sessions.js';
@@ -64,7 +67,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.7.0';
+export const OPENAPI_INFO_VERSION = '0.9.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -112,6 +115,9 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   InitializeVaultRequestSchema,
   VaultInitializedSchema,
   UnsealVaultRequestSchema,
+  ChangeVaultPassphraseRequestSchema,
+  ConfirmPassphraseRequestSchema,
+  VaultRotatedSchema,
   SecretViewSchema,
   SessionSummarySchema,
   SessionListSchema,

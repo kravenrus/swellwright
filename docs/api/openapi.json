@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.7.0",
+    "version": "0.9.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -1279,6 +1279,192 @@
         "x-sw-step-up": true
       }
     },
+    "/vault/passphrase": {
+      "post": {
+        "operationId": "changeVaultPassphrase",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Change the passphrase of the vault",
+        "responses": {
+          "200": {
+            "description": "The vault.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Needs the current passphrase. The key that encrypts the secrets does not change, only the way the passphrase wraps it: nothing is re-encrypted, the recovery key stays valid, and the new passphrase is hardened with the current cost settings. Works while the vault is sealed. A wrong current passphrase answers 401 and counts towards the unseal limit.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeVaultPassphraseRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/vault/recovery-key/rotate": {
+      "post": {
+        "operationId": "rotateRecoveryKey",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Issue a new recovery key",
+        "responses": {
+          "200": {
+            "description": "The new recovery key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultInitialized"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Needs the passphrase. The old recovery key stops working at once; the new one is in the answer and nowhere else, so keep it away from this server. Nothing is re-encrypted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPassphraseRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/vault/rotate-kek": {
+      "post": {
+        "operationId": "rotateKek",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Replace the key that wraps every data key",
+        "responses": {
+          "200": {
+            "description": "The new recovery key and the vault.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultInitialized"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Needs the vault open and the passphrase. A new key-encryption key wraps every data key (the values are not re-encrypted), the key version moves forward, and a new recovery key is issued because the old one opened the old key. All or nothing: a failure leaves the vault as it was.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPassphraseRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/vault/rotate-data-keys": {
+      "post": {
+        "operationId": "rotateDataKeys",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Encrypt every secret under a fresh data key",
+        "responses": {
+          "200": {
+            "description": "How many secrets were re-encrypted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultRotated"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Needs the vault open. Every current value is decrypted in memory and encrypted again under a new data key wrapped by the current key. Versions and values do not change. All or nothing.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
     "/roles": {
       "get": {
         "operationId": "getRoles",
@@ -2204,6 +2390,10 @@
           "vault.unsealed",
           "vault.unseal.failed",
           "vault.sealed",
+          "vault.passphrase.changed",
+          "vault.recovery_key.rotated",
+          "vault.kek.rotated",
+          "vault.data_keys.rotated",
           "secret.created",
           "secret.updated",
           "secret.deleted",
@@ -2807,13 +2997,66 @@
                 "type": "null"
               }
             ]
+          },
+          "passphraseChangedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null: never changed since the vault was set up."
+          },
+          "recoveryKeyRotatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kekRotatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dataKeysRotatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "state",
           "secretCount",
           "kekVersion",
-          "createdAt"
+          "createdAt",
+          "passphraseChangedAt",
+          "recoveryKeyRotatedAt",
+          "kekRotatedAt",
+          "dataKeysRotatedAt"
         ],
         "additionalProperties": false
       },
@@ -2862,6 +3105,59 @@
             "maxLength": 128
           }
         },
+        "additionalProperties": false
+      },
+      "ChangeVaultPassphraseRequest": {
+        "type": "object",
+        "properties": {
+          "currentPassphrase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "newPassphrase": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "currentPassphrase",
+          "newPassphrase"
+        ],
+        "additionalProperties": false
+      },
+      "ConfirmPassphraseRequest": {
+        "type": "object",
+        "properties": {
+          "passphrase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "passphrase"
+        ],
+        "additionalProperties": false
+      },
+      "VaultRotated": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/VaultStatus"
+          },
+          "rotated": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How many secrets were re-encrypted."
+          }
+        },
+        "required": [
+          "status",
+          "rotated"
+        ],
         "additionalProperties": false
       },
       "SecretView": {

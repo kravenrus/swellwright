@@ -24,6 +24,16 @@ export class WindowLimiter {
     return current.count <= this.limit;
   }
 
+  /** Whether the key has used up its limit in the current window. Counts nothing. */
+  blocked(key: string): boolean {
+    const current = this.windows.get(key);
+    return (
+      current !== undefined &&
+      this.now() - current.start < this.windowMs &&
+      current.count >= this.limit
+    );
+  }
+
   private prune(now: number): void {
     if (this.windows.size < 1024) {
       return;

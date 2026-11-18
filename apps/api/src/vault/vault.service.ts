@@ -1,6 +1,7 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -11,6 +12,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type {
+  ChangeVaultPassphraseRequest,
+  ConfirmPassphraseRequest,
   CreateSecretRequest,
   RevealedSecret,
   SecretList,
@@ -18,9 +21,10 @@ import type {
   UnsealVaultRequest,
   UpdateSecretRequest,
   VaultInitialized,
+  VaultRotated,
   VaultStatus,
 } from '@swellwright/contracts';
-import { type Database, Prisma, type Secret } from '@swellwright/db';
+import { type Database, Prisma, type Secret, type VaultMeta } from '@swellwright/db';
 
 import { AuditService } from '../audit/audit.service.js';
 import { type RequestMeta, requireDatabase } from '../auth/context.js';
@@ -35,14 +39,19 @@ import {
   newKek,
   newRecoveryKey,
   parseRecoveryKey,
+  rewrapDek,
   unwrapKekWithPassphraseKey,
   unwrapKekWithRecoveryKey,
   wrapKekUnderPassphraseKey,
   wrapKekUnderRecoveryKey,
 } from './keys.js';
+import { Serial } from './serial.js';
 
 /** An arbitrary constant: one transaction at a time may set the vault up. */
 const VAULT_LOCK_KEY = 7_761_237;
+/** Rotations run one at a time with the database too, in case a second process ever shares the vault. */
+const ROTATION_TX = { timeout: 60_000, maxWait: 10_000 } as const;
+/** Ten failed tries in fifteen minutes block every further try (a success does not count). */
 const UNSEAL_ATTEMPTS = 10;
 const UNSEAL_WINDOW_MS = 15 * 60_000;
 
@@ -78,6 +87,7 @@ export class VaultService implements OnApplicationShutdown {
   private readonly logger = new Logger('Vault');
   private readonly attempts = new WindowLimiter(UNSEAL_ATTEMPTS, UNSEAL_WINDOW_MS);
   private kek: Buffer | null = null;
+  private readonly serial = new Serial();
 
   constructor(
     @Inject(DATABASE) private readonly database: Database | undefined,
@@ -116,11 +126,23 @@ export class VaultService implements OnApplicationShutdown {
       secretCount,
       kekVersion: meta?.kekVersion ?? null,
       createdAt: meta?.createdAt.toISOString() ?? null,
+      passphraseChangedAt: meta?.passphraseChangedAt?.toISOString() ?? null,
+      recoveryKeyRotatedAt: meta?.recoveryKeyRotatedAt?.toISOString() ?? null,
+      kekRotatedAt: meta?.kekRotatedAt?.toISOString() ?? null,
+      dataKeysRotatedAt: meta?.dataKeysRotatedAt?.toISOString() ?? null,
     };
   }
 
   /** Sets the vault up once and leaves it open. The recovery key is returned here and never stored. */
-  async initialize(actor: Actor, passphrase: string, meta: RequestMeta): Promise<VaultInitialized> {
+  initialize(actor: Actor, passphrase: string, meta: RequestMeta): Promise<VaultInitialized> {
+    return this.serial.run(() => this.initializeNow(actor, passphrase, meta));
+  }
+
+  private async initializeNow(
+    actor: Actor,
+    passphrase: string,
+    meta: RequestMeta,
+  ): Promise<VaultInitialized> {
     const kek = newKek();
     const recoveryKey = newRecoveryKey();
     const salt = randomBytes(KDF_SALT_BYTES);
@@ -168,8 +190,16 @@ export class VaultService implements OnApplicationShutdown {
   }
 
   /** Opens the vault with the passphrase or the recovery key. Failures are recorded and rate-limited. */
-  async unseal(actor: Actor, request: UnsealVaultRequest, meta: RequestMeta): Promise<VaultStatus> {
-    if (!this.attempts.hit('vault')) {
+  unseal(actor: Actor, request: UnsealVaultRequest, meta: RequestMeta): Promise<VaultStatus> {
+    return this.serial.run(() => this.unsealNow(actor, request, meta));
+  }
+
+  private async unsealNow(
+    actor: Actor,
+    request: UnsealVaultRequest,
+    meta: RequestMeta,
+  ): Promise<VaultStatus> {
+    if (this.attempts.blocked('vault')) {
       throw new RateLimitedException(Math.ceil(UNSEAL_WINDOW_MS / 1000));
     }
     const stored = await this.db.vaultMeta.findUnique({ where: { id: 1 } });
@@ -192,6 +222,7 @@ export class VaultService implements OnApplicationShutdown {
       key?.fill(0);
     }
     if (!kek) {
+      this.attempts.hit('vault');
       await this.audit.note({
         action: 'vault.unseal.failed',
         outcome: 'failure',
@@ -218,7 +249,11 @@ export class VaultService implements OnApplicationShutdown {
     return this.status();
   }
 
-  async seal(actor: Actor, meta: RequestMeta): Promise<VaultStatus> {
+  seal(actor: Actor, meta: RequestMeta): Promise<VaultStatus> {
+    return this.serial.run(() => this.sealNow(actor, meta));
+  }
+
+  private async sealNow(actor: Actor, meta: RequestMeta): Promise<VaultStatus> {
     if (!(await this.db.vaultMeta.findUnique({ where: { id: 1 } }))) {
       throw new ConflictException('There is no vault yet.');
     }
@@ -233,7 +268,15 @@ export class VaultService implements OnApplicationShutdown {
   }
 
   /** Needs the vault open. The value is encrypted before it reaches the database and is not returned again. */
-  async create(actor: Actor, request: CreateSecretRequest, meta: RequestMeta): Promise<SecretView> {
+  create(actor: Actor, request: CreateSecretRequest, meta: RequestMeta): Promise<SecretView> {
+    return this.serial.run(() => this.createNow(actor, request, meta));
+  }
+
+  private async createNow(
+    actor: Actor,
+    request: CreateSecretRequest,
+    meta: RequestMeta,
+  ): Promise<SecretView> {
     const kek = this.openKey();
     const id = randomUUID();
     const blobs = encryptSecret(kek, { id, version: 1, type: request.type }, request.value);
@@ -274,7 +317,16 @@ export class VaultService implements OnApplicationShutdown {
   }
 
   /** Renames, changes the details or replaces the value (a new version under a new data key). */
-  async update(
+  update(
+    actor: Actor,
+    id: string,
+    body: UpdateSecretRequest,
+    meta: RequestMeta,
+  ): Promise<SecretView> {
+    return this.serial.run(() => this.updateNow(actor, id, body, meta));
+  }
+
+  private async updateNow(
     actor: Actor,
     id: string,
     body: UpdateSecretRequest,
@@ -370,7 +422,11 @@ export class VaultService implements OnApplicationShutdown {
   }
 
   /** The only way a value leaves. Recorded first: no record, no value. */
-  async reveal(actor: Actor, id: string, meta: RequestMeta): Promise<RevealedSecret> {
+  reveal(actor: Actor, id: string, meta: RequestMeta): Promise<RevealedSecret> {
+    return this.serial.run(() => this.revealNow(actor, id, meta));
+  }
+
+  private async revealNow(actor: Actor, id: string, meta: RequestMeta): Promise<RevealedSecret> {
     const kek = this.openKey();
     const row = await this.db.secret.findUnique({ where: { id } });
     if (!row) {
@@ -395,5 +451,318 @@ export class VaultService implements OnApplicationShutdown {
       meta,
     });
     return { id, name: row.name, type: row.type, version: row.version, value };
+  }
+
+  private async storedMeta(): Promise<VaultMeta> {
+    const stored = await this.db.vaultMeta.findUnique({ where: { id: 1 } });
+    if (!stored) {
+      throw new ConflictException('There is no vault yet.');
+    }
+    return stored;
+  }
+
+  /**
+   * The key-encryption key behind the stored passphrase wrap, when the passphrase is right. A wrong one is
+   * recorded and counts towards the unseal limit: a stolen session must not be able to guess it here.
+   */
+  private async confirmPassphrase(
+    actor: Actor,
+    passphrase: string,
+    stored: VaultMeta,
+    meta: RequestMeta,
+    purpose: string,
+  ): Promise<Buffer> {
+    if (this.attempts.blocked('vault')) {
+      throw new RateLimitedException(Math.ceil(UNSEAL_WINDOW_MS / 1000));
+    }
+    const key = await deriveKey(passphrase, Buffer.from(stored.kdfSalt), {
+      memoryKib: stored.kdfMemoryKib,
+      passes: stored.kdfPasses,
+      parallelism: stored.kdfParallelism,
+    });
+    const kek = unwrapKekWithPassphraseKey(stored.passphraseWrappedKek, key);
+    key.fill(0);
+    if (!kek) {
+      this.attempts.hit('vault');
+      await this.audit.note({
+        action: 'vault.unseal.failed',
+        outcome: 'failure',
+        actor,
+        details: { method: 'passphrase', purpose },
+        meta,
+      });
+      throw new UnauthorizedException('Invalid passphrase.');
+    }
+    return kek;
+  }
+
+  /** Re-wraps the key under a new passphrase. Nothing is encrypted again; works while the vault is sealed. */
+  changePassphrase(
+    actor: Actor,
+    request: ChangeVaultPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultStatus> {
+    return this.serial.run(() => this.changePassphraseNow(actor, request, meta));
+  }
+
+  private async changePassphraseNow(
+    actor: Actor,
+    request: ChangeVaultPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultStatus> {
+    const stored = await this.storedMeta();
+    if (request.currentPassphrase === request.newPassphrase) {
+      throw new BadRequestException('The new passphrase is the same as the current one.');
+    }
+    const kek = await this.confirmPassphrase(
+      actor,
+      request.currentPassphrase,
+      stored,
+      meta,
+      'change_passphrase',
+    );
+    const salt = randomBytes(KDF_SALT_BYTES);
+    const key = await deriveKey(request.newPassphrase, salt, this.kdf);
+    try {
+      await this.db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${VAULT_LOCK_KEY})`;
+        const written = await tx.vaultMeta.updateMany({
+          where: { id: 1, kekVersion: stored.kekVersion },
+          data: {
+            kdfSalt: new Uint8Array(salt),
+            kdfMemoryKib: this.kdf.memoryKib,
+            kdfPasses: this.kdf.passes,
+            kdfParallelism: this.kdf.parallelism,
+            passphraseWrappedKek: new Uint8Array(wrapKekUnderPassphraseKey(kek, key)),
+            passphraseChangedAt: new Date(),
+          },
+        });
+        if (written.count !== 1) {
+          throw new ConflictException('The vault was changed meanwhile. Try again.');
+        }
+        await this.audit.record(
+          {
+            action: 'vault.passphrase.changed',
+            outcome: 'success',
+            actor,
+            details: { kek_version: stored.kekVersion },
+            meta,
+          },
+          tx,
+        );
+      }, ROTATION_TX);
+    } finally {
+      kek.fill(0);
+      key.fill(0);
+    }
+    return this.status();
+  }
+
+  /** Issues a new recovery key; the old one stops working. Nothing is encrypted again. */
+  rotateRecoveryKey(
+    actor: Actor,
+    request: ConfirmPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultInitialized> {
+    return this.serial.run(() => this.rotateRecoveryKeyNow(actor, request, meta));
+  }
+
+  private async rotateRecoveryKeyNow(
+    actor: Actor,
+    request: ConfirmPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultInitialized> {
+    const stored = await this.storedMeta();
+    const kek = await this.confirmPassphrase(
+      actor,
+      request.passphrase,
+      stored,
+      meta,
+      'rotate_recovery_key',
+    );
+    const recoveryKey = newRecoveryKey();
+    try {
+      await this.db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${VAULT_LOCK_KEY})`;
+        const written = await tx.vaultMeta.updateMany({
+          where: { id: 1, kekVersion: stored.kekVersion },
+          data: {
+            recoveryWrappedKek: new Uint8Array(wrapKekUnderRecoveryKey(kek, recoveryKey)),
+            recoveryKeyRotatedAt: new Date(),
+          },
+        });
+        if (written.count !== 1) {
+          throw new ConflictException('The vault was changed meanwhile. Try again.');
+        }
+        await this.audit.record(
+          {
+            action: 'vault.recovery_key.rotated',
+            outcome: 'success',
+            actor,
+            details: { kek_version: stored.kekVersion },
+            meta,
+          },
+          tx,
+        );
+      }, ROTATION_TX);
+      return { status: await this.status(), recoveryKey: formatRecoveryKey(recoveryKey) };
+    } finally {
+      kek.fill(0);
+      recoveryKey.fill(0);
+    }
+  }
+
+  /**
+   * Replaces the key that wraps every data key. The values are not touched. The passphrase and the recovery key
+   * both wrap the new key, so a new recovery key is issued (the old one opened the old key). All or nothing.
+   */
+  rotateKek(
+    actor: Actor,
+    request: ConfirmPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultInitialized> {
+    return this.serial.run(() => this.rotateKekNow(actor, request, meta));
+  }
+
+  private async rotateKekNow(
+    actor: Actor,
+    request: ConfirmPassphraseRequest,
+    meta: RequestMeta,
+  ): Promise<VaultInitialized> {
+    const current = this.openKey();
+    const stored = await this.storedMeta();
+    const confirmed = await this.confirmPassphrase(
+      actor,
+      request.passphrase,
+      stored,
+      meta,
+      'rotate_kek',
+    );
+    const same = confirmed.length === current.length && timingSafeEqual(confirmed, current);
+    confirmed.fill(0);
+    if (!same) {
+      throw new ConflictException('The vault was changed meanwhile. Seal it and open it again.');
+    }
+    const kek = newKek();
+    const recoveryKey = newRecoveryKey();
+    const salt = randomBytes(KDF_SALT_BYTES);
+    const key = await deriveKey(request.passphrase, salt, this.kdf);
+    try {
+      await this.db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${VAULT_LOCK_KEY})`;
+        const rows = await tx.secret.findMany({
+          select: { id: true, version: true, wrappedDek: true },
+        });
+        for (const row of rows) {
+          let wrapped: Buffer;
+          try {
+            wrapped = rewrapDek(current, kek, row, row.wrappedDek);
+          } catch {
+            this.logger.error(`secret ${row.id}: its data key did not open under the current key`);
+            throw new InternalServerErrorException(
+              'A secret could not be re-wrapped, so nothing was changed.',
+            );
+          }
+          const written = await tx.secret.updateMany({
+            where: { id: row.id, version: row.version },
+            data: { wrappedDek: new Uint8Array(wrapped) },
+          });
+          if (written.count !== 1) {
+            throw new ConflictException('A secret was changed meanwhile. Try again.');
+          }
+        }
+        const now = new Date();
+        const written = await tx.vaultMeta.updateMany({
+          where: { id: 1, kekVersion: stored.kekVersion },
+          data: {
+            kdfSalt: new Uint8Array(salt),
+            kdfMemoryKib: this.kdf.memoryKib,
+            kdfPasses: this.kdf.passes,
+            kdfParallelism: this.kdf.parallelism,
+            passphraseWrappedKek: new Uint8Array(wrapKekUnderPassphraseKey(kek, key)),
+            recoveryWrappedKek: new Uint8Array(wrapKekUnderRecoveryKey(kek, recoveryKey)),
+            kekVersion: stored.kekVersion + 1,
+            kekRotatedAt: now,
+            recoveryKeyRotatedAt: now,
+          },
+        });
+        if (written.count !== 1) {
+          throw new ConflictException('The vault was changed meanwhile. Try again.');
+        }
+        await this.audit.record(
+          {
+            action: 'vault.kek.rotated',
+            outcome: 'success',
+            actor,
+            details: { kek_version: stored.kekVersion + 1, secrets: rows.length },
+            meta,
+          },
+          tx,
+        );
+        return rows.length;
+      }, ROTATION_TX);
+    } catch (error) {
+      kek.fill(0);
+      recoveryKey.fill(0);
+      key.fill(0);
+      throw error;
+    }
+    key.fill(0);
+    this.wipe();
+    this.kek = kek;
+    const formatted = formatRecoveryKey(recoveryKey);
+    recoveryKey.fill(0);
+    return { status: await this.status(), recoveryKey: formatted };
+  }
+
+  /** Encrypts every secret again under a fresh data key. Values and versions stay as they are. All or nothing. */
+  rotateDataKeys(actor: Actor, meta: RequestMeta): Promise<VaultRotated> {
+    return this.serial.run(() => this.rotateDataKeysNow(actor, meta));
+  }
+
+  private async rotateDataKeysNow(actor: Actor, meta: RequestMeta): Promise<VaultRotated> {
+    const kek = this.openKey();
+    const rotated = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${VAULT_LOCK_KEY})`;
+      const rows = await tx.secret.findMany();
+      for (const row of rows) {
+        const identity = { id: row.id, version: row.version, type: row.type };
+        let value: string;
+        try {
+          value = decryptSecret(kek, identity, row);
+        } catch {
+          this.logger.error(
+            `secret ${row.id} did not decrypt: the stored blobs do not match their context`,
+          );
+          throw new InternalServerErrorException(
+            'A secret could not be decrypted, so nothing was changed.',
+          );
+        }
+        const blobs = encryptSecret(kek, identity, value);
+        const written = await tx.secret.updateMany({
+          where: { id: row.id, version: row.version },
+          data: {
+            ciphertext: new Uint8Array(blobs.ciphertext),
+            wrappedDek: new Uint8Array(blobs.wrappedDek),
+          },
+        });
+        if (written.count !== 1) {
+          throw new ConflictException('A secret was changed meanwhile. Try again.');
+        }
+      }
+      await tx.vaultMeta.update({ where: { id: 1 }, data: { dataKeysRotatedAt: new Date() } });
+      await this.audit.record(
+        {
+          action: 'vault.data_keys.rotated',
+          outcome: 'success',
+          actor,
+          details: { secrets: rows.length },
+          meta,
+        },
+        tx,
+      );
+      return rows.length;
+    }, ROTATION_TX);
+    return { status: await this.status(), rotated };
   }
 }

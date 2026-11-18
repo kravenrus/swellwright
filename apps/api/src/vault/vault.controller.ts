@@ -1,5 +1,8 @@
 import { Body, Controller, Inject, Req } from '@nestjs/common';
 import {
+  changeVaultPassphraseRoute,
+  type ChangeVaultPassphraseRequest,
+  type ConfirmPassphraseRequest,
   createSecretRoute,
   type CreateSecretRequest,
   deleteSecretRoute,
@@ -8,6 +11,9 @@ import {
   listSecretsRoute,
   type RevealedSecret,
   revealSecretRoute,
+  rotateDataKeysRoute,
+  rotateKekRoute,
+  rotateRecoveryKeyRoute,
   SecretIdParamsSchema,
   type SecretList,
   type SecretView,
@@ -17,6 +23,7 @@ import {
   updateSecretRoute,
   type UpdateSecretRequest,
   type VaultInitialized,
+  type VaultRotated,
   vaultStatusRoute,
   type VaultStatus,
 } from '@swellwright/contracts';
@@ -55,6 +62,35 @@ export class VaultController {
   @ContractRoute(sealVaultRoute)
   seal(@Req() req: AuthedRequest): Promise<VaultStatus> {
     return this.vault.seal(actorOf(req), requestMeta(req));
+  }
+
+  @ContractRoute(changeVaultPassphraseRoute)
+  changePassphrase(
+    @Body() body: ChangeVaultPassphraseRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<VaultStatus> {
+    return this.vault.changePassphrase(actorOf(req), body, requestMeta(req));
+  }
+
+  @ContractRoute(rotateRecoveryKeyRoute)
+  rotateRecoveryKey(
+    @Body() body: ConfirmPassphraseRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<VaultInitialized> {
+    return this.vault.rotateRecoveryKey(actorOf(req), body, requestMeta(req));
+  }
+
+  @ContractRoute(rotateKekRoute)
+  rotateKek(
+    @Body() body: ConfirmPassphraseRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<VaultInitialized> {
+    return this.vault.rotateKek(actorOf(req), body, requestMeta(req));
+  }
+
+  @ContractRoute(rotateDataKeysRoute)
+  rotateDataKeys(@Req() req: AuthedRequest): Promise<VaultRotated> {
+    return this.vault.rotateDataKeys(actorOf(req), requestMeta(req));
   }
 
   @ContractRoute(listSecretsRoute)

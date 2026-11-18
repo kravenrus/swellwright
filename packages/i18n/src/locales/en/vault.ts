@@ -140,4 +140,71 @@ export const vault = {
       'The secret and its value are gone for good. Anything that still uses it will stop working.',
     forbidden: 'Your role may not delete secrets.',
   },
+
+  /** The key-rotation card and the dialogs it opens. */
+  rotation: {
+    title: 'Key rotation',
+    description:
+      'Replace the passphrase and the keys that protect the secrets. None of this changes what a secret says.',
+    lastDone: 'Last done: {{date}}',
+    never: 'Not done since the vault was set up',
+    needsOpen: 'Unseal the vault first.',
+    passphraseLabel: 'Vault passphrase',
+    wrongPassphrase:
+      'That passphrase is not right. Wrong attempts count towards the same limit as unsealing.',
+
+    passphrase: {
+      title: 'Passphrase',
+      description:
+        'Change the passphrase that unseals the vault. Nothing is re-encrypted and the recovery key stays valid.',
+      action: 'Change passphrase',
+      intro:
+        'Enter the current passphrase and choose a new one. The new one unseals the vault from now on. This works while the vault is sealed too.',
+      currentLabel: 'Current passphrase',
+      newLabel: 'New passphrase',
+      repeatLabel: 'Repeat the new passphrase',
+      submit: 'Change passphrase',
+      forbidden: 'Your role may not change the passphrase.',
+      done: 'The passphrase was changed. Use the new one to unseal the vault from now on.',
+    },
+
+    recoveryKey: {
+      title: 'Recovery key',
+      description: 'Issue a new recovery key. The old one stops working at once.',
+      action: 'Rotate recovery key',
+      intro:
+        'Enter the passphrase to issue a new recovery key. The old one stops working at once, so replace the copy you keep outside this server. No secret is re-encrypted.',
+      submit: 'Issue a new key',
+      forbidden: 'Your role may not rotate the recovery key.',
+    },
+
+    kek: {
+      title: 'Key-encryption key (KEK)',
+      description: 'Replace the key that wraps every data key. The secrets stay readable.',
+      action: 'Rotate KEK',
+      intro:
+        'Replaces the key that wraps every data key. All secrets stay readable and the key version goes up. A new recovery key is issued, and the old one stops working at once. Either everything changes or nothing does.',
+      submit: 'Rotate KEK',
+      forbidden: 'Your role may not rotate the key-encryption key.',
+    },
+
+    dataKeys: {
+      title: 'Data keys',
+      description: 'Encrypt every secret again under a fresh data key.',
+      action: 'Rotate data keys',
+      intro:
+        'Every secret is decrypted in memory and encrypted again under a fresh data key. Values and versions do not change.',
+      submit: 'Rotate data keys',
+      forbidden: 'Your role may not rotate the data keys.',
+      done_one: '{{count}} secret re-encrypted under a fresh data key.',
+      done_other: '{{count}} secrets re-encrypted, each under a fresh data key.',
+    },
+
+    /** Shown once, right after a rotation issued a new recovery key. */
+    newKey: {
+      title: 'Save the new recovery key now',
+      warning:
+        'The old recovery key no longer works. The new one is shown once and kept nowhere on this server. Write it down or put it in a password manager, away from this machine, and replace the old copy.',
+    },
+  },
 } as const;
