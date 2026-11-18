@@ -1,5 +1,5 @@
 import { ActionIcon, Group, Loader, Menu, Text } from '@mantine/core';
-import { IconBrandGithub, IconLanguage, IconStar, IconUser } from '@tabler/icons-react';
+import { IconBook, IconBrandGithub, IconLanguage, IconStar, IconUser } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { PiSignOut } from 'react-icons/pi';
 
@@ -84,6 +84,24 @@ export function GithubControl({
           </Group>
         ) : null}
       </Group>
+    </HeaderControl>
+  );
+}
+
+/**
+ * A link to the documentation, in the place of the panel's Support control (the panel's is a red heart that leads to
+ * its donation page; ours leads to the docs). The glyph is lime, as the panel colours its documentation links.
+ */
+export function DocsControl({ href, label }: { href: string; label: string }) {
+  return (
+    <HeaderControl
+      aria-label={label}
+      component="a"
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <IconBook aria-hidden color="var(--mantine-color-lime-4)" size={22} />
     </HeaderControl>
   );
 }

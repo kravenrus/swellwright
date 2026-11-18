@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { LANGUAGES, LANGUAGE_NAMES, isLanguage } from '@swellwright/i18n';
 import {
   AccountControl,
+  DocsControl,
   GithubControl,
   LanguageControl,
   LogoutControl,
@@ -36,6 +37,18 @@ export function GithubLink() {
       isLoading={updates.isLoading}
       label={t('githubLabel')}
       stars={updates.data?.stars ?? undefined}
+    />
+  );
+}
+
+/** The documentation control: the docs folder of the repository the server reports. */
+export function DocsLink() {
+  const { t } = useTranslation('shell');
+  const updates = useUpdateInfo();
+  return (
+    <DocsControl
+      href={`${updates.data?.repositoryUrl ?? DEFAULT_REPOSITORY_URL}/tree/main/docs`}
+      label={t('docsLabel')}
     />
   );
 }
@@ -94,6 +107,7 @@ export function HeaderControls({ mobile = false }: { mobile?: boolean }) {
         opened={changing}
       />
       <Group gap="xs" wrap="nowrap">
+        {mobile ? null : <DocsLink />}
         <VersionButton />
         {mobile ? null : <GithubLink />}
         <LanguageControl

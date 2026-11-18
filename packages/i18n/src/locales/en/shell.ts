@@ -2,6 +2,7 @@
 export const shell = {
   versionLabel: 'Version and build information',
   githubLabel: 'Swellwright on GitHub',
+  docsLabel: 'Swellwright documentation',
   openMenu: 'Open the menu',
   buildInfo: {
     title: 'Build information',

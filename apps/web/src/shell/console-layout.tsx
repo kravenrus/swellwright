@@ -10,7 +10,7 @@ import { navFor } from '../nav.js';
 import { ROUTES } from '../routes.js';
 import { useConsole } from './console-context.js';
 import { DesktopNavigation } from './desktop-navigation.js';
-import { GithubLink, HeaderControls } from './header-controls.js';
+import { DocsLink, GithubLink, HeaderControls } from './header-controls.js';
 import { MobileNavigation } from './mobile-navigation.js';
 import { useIsHiResDesktop, useIsMobile } from './use-is-mobile.js';
 
@@ -129,6 +129,7 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
         </AppShell.Section>
         <AppShell.Section className="sw-drawer-footer">
           <Group justify="center" mt="md" style={{ flexShrink: 0 }}>
+            <DocsLink />
             <GithubLink />
           </Group>
         </AppShell.Section>

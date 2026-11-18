@@ -13,7 +13,7 @@ ADR 0011 says the UI is built on the panel's code, components and theme. The fir
 - **Page-level patterns come from the panel's components** (page header with icon-only actions, section and settings cards, metric cards, entity cards, tables in a titled card, dialogs with a header and a sticky footer, confirmation dialogs, toasts); they live in `packages/ui` as ports. The project skill `swellwright-ui` and the pinned analysis of the panel in it describe the workflow.
 
 What deliberately differs from the panel:
-- **The brand** is ours (mark and name); the panel's logo, name and links are never copied. The Telegram, Support, Prime and Recap controls have no counterpart.
+- **The brand** is ours (mark and name); the panel's logo, name and links are never copied. The Telegram, Prime and Recap controls have no counterpart; the Support control (a red heart to the panel's donation page) is replaced by a Documentation control with the same recipe, which leads to the docs of the repository.
 - **An account control** sits before Sign out: here people have accounts (change password, role), the panel has one administrator.
 - **Planned pages are shown in the menu, disabled**; the panel has only built pages.
 - **Accessibility**: our header controls have labels, the custom controls show a keyboard focus ring (the panel theme sets `focusRing: 'never'`), `user-scalable=no` is not copied, and `prefers-reduced-motion` switches the entrance animations off.
