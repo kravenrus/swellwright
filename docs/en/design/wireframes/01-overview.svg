@@ -1,429 +1,374 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">Overview wireframe</title><desc id="d">Fleet health, active runs, pending approvals, alerts and the availability matrix.</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="0" y="0" width="220" height="800" fill="#0a101c"/>
-<line x1="220" y1="0" x2="220" y2="800" stroke="#27385a"/>
-<polygon points="34,17 45.3,23.5 45.3,36.5 34,43 22.7,36.5 22.7,23.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M25 27 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M25 33.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="58" y="35" font-size="16" fill="#e6edf7" font-weight="700">Swellwright</text>
-<rect x="10" y="58" width="200" height="30" rx="7" fill="#16223a"/>
-<rect x="10" y="58" width="3" height="30" rx="1.5" fill="#22d3ee"/>
-<circle cx="30" cy="73" r="4" fill="none" stroke="#22d3ee" stroke-width="1.4"/>
-<text x="46" y="77" font-size="13.5" fill="#e6edf7" font-weight="600">Overview</text>
-<circle cx="30" cy="105" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="109" font-size="13.5" fill="#9fb0c8">Servers</text>
-<circle cx="30" cy="137" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="141" font-size="13.5" fill="#9fb0c8">Nodes</text>
-<circle cx="30" cy="169" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="173" font-size="13.5" fill="#9fb0c8">Runs</text>
-<circle cx="30" cy="201" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="205" font-size="13.5" fill="#9fb0c8">Scenarios</text>
-<circle cx="30" cy="233" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="237" font-size="13.5" fill="#9fb0c8">Panel</text>
-<circle cx="30" cy="265" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="269" font-size="13.5" fill="#9fb0c8">Chains</text>
-<circle cx="30" cy="297" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="301" font-size="13.5" fill="#9fb0c8">DNS</text>
-<circle cx="30" cy="329" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="333" font-size="13.5" fill="#9fb0c8">Certificates</text>
-<circle cx="30" cy="361" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="365" font-size="13.5" fill="#9fb0c8">Probes</text>
-<circle cx="30" cy="393" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="397" font-size="13.5" fill="#9fb0c8">Alerts</text>
-<circle cx="30" cy="425" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="429" font-size="13.5" fill="#9fb0c8">Schedules</text>
-<circle cx="30" cy="457" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="461" font-size="13.5" fill="#9fb0c8">Reports</text>
-<circle cx="30" cy="489" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="493" font-size="13.5" fill="#9fb0c8">Security</text>
-<circle cx="30" cy="521" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="525" font-size="13.5" fill="#9fb0c8">API console</text>
-<circle cx="30" cy="553" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="557" font-size="13.5" fill="#9fb0c8">Settings</text>
-<circle cx="30" cy="585" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="589" font-size="13.5" fill="#9fb0c8">Documentation</text>
-<line x1="0" y1="752" x2="220" y2="752" stroke="#27385a"/>
-<circle cx="22" cy="772" r="5" fill="#34d399"/>
-<path d="M19.9 772 L21.4 773.7 L24.4 770.1" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="36" y="776" font-size="12" fill="#9fb0c8">Vault unsealed</text>
-<text x="204" y="776" font-size="11.5" fill="#6b7d99" text-anchor="end">v0.1</text>
-<rect x="221" y="0" width="1059" height="56" fill="#0a101c"/>
-<line x1="221" y1="56" x2="1280" y2="56" stroke="#27385a"/>
-<text x="244" y="34" font-size="13.5" fill="#9fb0c8">Overview</text>
-<rect x="560" y="12" width="280" height="32" rx="8" fill="#0b1424" stroke="#27385a"/>
-<text x="576" y="33" font-size="12.5" fill="#6b7d99">Search  (Ctrl+K)</text>
-<rect x="858" y="16" width="178.4" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="868" y="32.2" font-size="12" fill="#9fb0c8">Panel: panel.example.com</text>
-<rect x="1088" y="14" width="92" height="28" rx="14" fill="#16223a" stroke="#60a5fa"/>
-<circle cx="1104" cy="28" r="6" fill="#60a5fa"/>
-<path d="M1102.5 25.4 L1106.7 28 L1102.5 30.6 Z" fill="#0b1220"/>
-<text x="1116" y="32" font-size="11.5" fill="#e6edf7" font-weight="600">2 running</text>
-<circle cx="1204" cy="28" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<path d="M1198 33 h12 M1200 33 v-5 a4 4 0 0 1 8 0 v5" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="1213" cy="19" r="8" fill="#f87171"/>
-<text x="1213" y="22.6" font-size="10" fill="#1b0707" font-weight="800" text-anchor="middle">3</text>
-<circle cx="1250" cy="28" r="14" fill="#16223a" stroke="#27385a"/>
-<text x="1250" y="32" font-size="11" fill="#e6edf7" font-weight="700" text-anchor="middle">OW</text>
-<text x="244" y="104" font-size="22" fill="#e6edf7" font-weight="700">Overview</text>
-<text x="1256" y="104" font-size="12" fill="#6b7d99" text-anchor="end">Updated 12 s ago</text>
-<rect x="244" y="120" width="241" height="88" rx="10" fill="#111b2e" stroke="#27385a"/>
-<circle cx="268" cy="146" r="8" fill="#f87171"/>
-<path d="M265 143 L271 149 M271 143 L265 149" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="284" y="150" font-size="12.5" fill="#9fb0c8" font-weight="600">Nodes online</text>
-<text x="262" y="186" font-size="26" fill="#e6edf7" font-weight="700">11 / 12</text>
-<text x="379.6" y="186" font-size="12" fill="#9fb0c8">AT-01 offline</text>
-<rect x="501" y="120" width="241" height="88" rx="10" fill="#111b2e" stroke="#27385a"/>
-<circle cx="525" cy="146" r="8" fill="#fbbf24"/>
-<path d="M525 142.3 L525 146.7" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="525" cy="149.4" r="1.1" fill="#0b1220"/>
-<text x="541" y="150" font-size="12.5" fill="#9fb0c8" font-weight="600">Configuration drift</text>
-<text x="519" y="186" font-size="26" fill="#e6edf7" font-weight="700">2 nodes</text>
-<text x="636.6" y="186" font-size="12" fill="#9fb0c8">PL-01, CH-01</text>
-<rect x="758" y="120" width="241" height="88" rx="10" fill="#111b2e" stroke="#27385a"/>
-<circle cx="782" cy="146" r="8" fill="#60a5fa"/>
-<path d="M779.9 142.6 L785.7 146 L779.9 149.4 Z" fill="#0b1220"/>
-<text x="798" y="150" font-size="12.5" fill="#9fb0c8" font-weight="600">Active runs</text>
-<text x="776" y="186" font-size="26" fill="#e6edf7" font-weight="700">2</text>
-<text x="803.1" y="186" font-size="12" fill="#9fb0c8">1 awaiting approval</text>
-<rect x="1015" y="120" width="241" height="88" rx="10" fill="#111b2e" stroke="#27385a"/>
-<circle cx="1039" cy="146" r="8" fill="#f87171"/>
-<path d="M1036 143 L1042 149 M1042 143 L1036 149" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1055" y="150" font-size="12.5" fill="#9fb0c8" font-weight="600">Alerts</text>
-<text x="1033" y="186" font-size="26" fill="#e6edf7" font-weight="700">3</text>
-<text x="1060.1" y="186" font-size="12" fill="#9fb0c8">1 critical, 2 warnings</text>
-<circle cx="244" cy="120" r="11" fill="#fbbf24"/>
-<text x="244" y="124.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
-<rect x="244" y="224" width="650" height="300" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="252" font-size="13.5" fill="#e6edf7" font-weight="700">Fleet health</text>
-<line x1="244" y1="266" x2="894" y2="266" stroke="#27385a"/>
-<text x="876" y="252" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">View all servers</text>
-<text x="244" y="287" font-size="1" fill="#e6edf7"></text>
-<text x="256" y="287" font-size="11.5" fill="#6b7d99" font-weight="700">Node</text>
-<text x="366" y="287" font-size="11.5" fill="#6b7d99" font-weight="700">State</text>
-<text x="532" y="287" font-size="11.5" fill="#6b7d99" font-weight="700" text-anchor="end">Users</text>
-<text x="556" y="287" font-size="11.5" fill="#6b7d99" font-weight="700">Xray</text>
-<text x="656" y="287" font-size="11.5" fill="#6b7d99" font-weight="700">Drift</text>
-<text x="776" y="287" font-size="11.5" fill="#6b7d99" font-weight="700">Certificate</text>
-<line x1="244" y1="296" x2="894" y2="296" stroke="#27385a"/>
-<text x="256" y="316.3" font-size="12.5" fill="#e6edf7">PL-01</text>
-<circle cx="372" cy="312" r="6" fill="#34d399"/>
-<path d="M369.4 312 L371.3 314.1 L374.9 309.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="384" y="316.3" font-size="12.5" fill="#e6edf7">Online</text>
-<text x="532" y="316.3" font-size="12.5" fill="#e6edf7" text-anchor="end">214</text>
-<text x="556" y="316.3" font-size="12.5" fill="#e6edf7">26.11.9</text>
-<circle cx="662" cy="312" r="6" fill="#fbbf24"/>
-<path d="M662 309.3 L662 312.5" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="662" cy="314.6" r="0.9" fill="#0b1220"/>
-<text x="674" y="316.3" font-size="12.5" fill="#e6edf7">1 check</text>
-<circle cx="782" cy="312" r="6" fill="#34d399"/>
-<path d="M779.4 312 L781.3 314.1 L784.9 309.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="794" y="316.3" font-size="12.5" fill="#e6edf7">61 days</text>
-<line x1="244" y1="328" x2="894" y2="328" stroke="#27385a"/>
-<text x="256" y="348.3" font-size="12.5" fill="#e6edf7">SE-01</text>
-<circle cx="372" cy="344" r="6" fill="#34d399"/>
-<path d="M369.4 344 L371.3 346.1 L374.9 341.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="384" y="348.3" font-size="12.5" fill="#e6edf7">Online</text>
-<text x="532" y="348.3" font-size="12.5" fill="#e6edf7" text-anchor="end">188</text>
-<text x="556" y="348.3" font-size="12.5" fill="#e6edf7">26.11.9</text>
-<circle cx="662" cy="344" r="6" fill="#34d399"/>
-<path d="M659.4 344 L661.3 346.1 L664.9 341.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="674" y="348.3" font-size="12.5" fill="#e6edf7">None</text>
-<circle cx="782" cy="344" r="6" fill="#34d399"/>
-<path d="M779.4 344 L781.3 346.1 L784.9 341.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="794" y="348.3" font-size="12.5" fill="#e6edf7">61 days</text>
-<line x1="244" y1="360" x2="894" y2="360" stroke="#27385a"/>
-<text x="256" y="380.3" font-size="12.5" fill="#e6edf7">CH-01</text>
-<circle cx="372" cy="376" r="6" fill="#34d399"/>
-<path d="M369.4 376 L371.3 378.1 L374.9 373.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="384" y="380.3" font-size="12.5" fill="#e6edf7">Online</text>
-<text x="532" y="380.3" font-size="12.5" fill="#e6edf7" text-anchor="end">97</text>
-<text x="556" y="380.3" font-size="12.5" fill="#e6edf7">26.11.9</text>
-<circle cx="662" cy="376" r="6" fill="#fbbf24"/>
-<path d="M662 373.3 L662 376.5" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="662" cy="378.6" r="0.9" fill="#0b1220"/>
-<text x="674" y="380.3" font-size="12.5" fill="#e6edf7">2 checks</text>
-<circle cx="782" cy="376" r="6" fill="#34d399"/>
-<path d="M779.4 376 L781.3 378.1 L784.9 373.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="794" y="380.3" font-size="12.5" fill="#e6edf7">58 days</text>
-<line x1="244" y1="392" x2="894" y2="392" stroke="#27385a"/>
-<text x="256" y="412.3" font-size="12.5" fill="#e6edf7">AT-01</text>
-<circle cx="372" cy="408" r="6" fill="#f87171"/>
-<path d="M369.8 405.8 L374.2 410.2 M374.2 405.8 L369.8 410.2" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="384" y="412.3" font-size="12.5" fill="#e6edf7">Offline</text>
-<text x="532" y="412.3" font-size="12.5" fill="#e6edf7" text-anchor="end">0</text>
-<text x="556" y="412.3" font-size="12.5" fill="#e6edf7">n/a</text>
-<circle cx="662" cy="408" r="5" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
-<text x="674" y="412.3" font-size="12.5" fill="#e6edf7">Unknown</text>
-<circle cx="782" cy="408" r="6" fill="#fbbf24"/>
-<path d="M782 405.3 L782 408.5" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="782" cy="410.6" r="0.9" fill="#0b1220"/>
-<text x="794" y="412.3" font-size="12.5" fill="#e6edf7">9 days</text>
-<line x1="244" y1="424" x2="894" y2="424" stroke="#27385a"/>
-<text x="256" y="444.3" font-size="12.5" fill="#e6edf7">JP-01</text>
-<circle cx="372" cy="440" r="6" fill="#34d399"/>
-<path d="M369.4 440 L371.3 442.1 L374.9 437.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="384" y="444.3" font-size="12.5" fill="#e6edf7">Online</text>
-<text x="532" y="444.3" font-size="12.5" fill="#e6edf7" text-anchor="end">143</text>
-<text x="556" y="444.3" font-size="12.5" fill="#e6edf7">26.11.9</text>
-<circle cx="662" cy="440" r="6" fill="#34d399"/>
-<path d="M659.4 440 L661.3 442.1 L664.9 437.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="674" y="444.3" font-size="12.5" fill="#e6edf7">None</text>
-<circle cx="782" cy="440" r="6" fill="#34d399"/>
-<path d="M779.4 440 L781.3 442.1 L784.9 437.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="794" y="444.3" font-size="12.5" fill="#e6edf7">61 days</text>
-<line x1="244" y1="456" x2="894" y2="456" stroke="#27385a"/>
-<text x="256" y="476.3" font-size="12.5" fill="#e6edf7">CA-01</text>
-<circle cx="372" cy="472" r="6" fill="#60a5fa"/>
-<path d="M370.5 469.4 L374.7 472 L370.5 474.6 Z" fill="#0b1220"/>
-<text x="384" y="476.3" font-size="12.5" fill="#e6edf7">Updating</text>
-<text x="532" y="476.3" font-size="12.5" fill="#e6edf7" text-anchor="end">120</text>
-<text x="556" y="476.3" font-size="12.5" fill="#e6edf7">26.11.9</text>
-<circle cx="662" cy="472" r="6" fill="#34d399"/>
-<path d="M659.4 472 L661.3 474.1 L664.9 469.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="674" y="476.3" font-size="12.5" fill="#e6edf7">None</text>
-<circle cx="782" cy="472" r="6" fill="#34d399"/>
-<path d="M779.4 472 L781.3 474.1 L784.9 469.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="794" y="476.3" font-size="12.5" fill="#e6edf7">61 days</text>
-<line x1="244" y1="488" x2="894" y2="488" stroke="#27385a"/>
-<circle cx="244" cy="224" r="11" fill="#fbbf24"/>
-<text x="244" y="228.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
-<rect x="910" y="224" width="346" height="300" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="928" y="252" font-size="13.5" fill="#e6edf7" font-weight="700">Needs your attention</text>
-<line x1="910" y1="266" x2="1256" y2="266" stroke="#27385a"/>
-<rect x="926" y="258" width="314" height="74" rx="8" fill="#16223a" stroke="#fbbf24"/>
-<circle cx="944" cy="278" r="7" fill="#fbbf24"/>
-<path d="M944 274.8 L944 278.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="944" cy="281" r="1" fill="#0b1220"/>
-<text x="960" y="282" font-size="12.5" fill="#e6edf7" font-weight="700">Approval pending</text>
-<text x="944" y="302" font-size="12" fill="#9fb0c8">Edit profile “Foreign”: restarts 12 nodes</text>
-<rect x="944" y="308" width="70" height="20" rx="7" fill="#22d3ee"/>
-<text x="979" y="322.5" font-size="11.5" fill="#06202a" font-weight="600" text-anchor="middle">Review</text>
-<text x="1226" y="324" font-size="11" fill="#6b7d99" text-anchor="end">run #482</text>
-<rect x="926" y="344" width="314" height="62" rx="8" fill="#16223a" stroke="#27385a"/>
-<circle cx="944" cy="364" r="7" fill="#60a5fa"/>
-<path d="M942.2 361 L947.2 364 L942.2 367 Z" fill="#0b1220"/>
-<text x="960" y="368" font-size="12.5" fill="#e6edf7" font-weight="700">Running: rename PL-01 to PL-05</text>
-<text x="944" y="388" font-size="12" fill="#9fb0c8">Stage 3 of 7, about 2 min left</text>
-<rect x="926" y="418" width="314" height="62" rx="8" fill="#16223a" stroke="#27385a"/>
-<circle cx="944" cy="438" r="7" fill="#22d3ee"/>
-<circle cx="944" cy="435" r="1" fill="#0b1220"/>
-<path d="M944 437.4 L944 441.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="960" y="442" font-size="12.5" fill="#e6edf7" font-weight="700">Xray security release available</text>
-<text x="944" y="462" font-size="12" fill="#9fb0c8">Plan the rolling update (canary first)</text>
-<circle cx="910" cy="224" r="11" fill="#fbbf24"/>
-<text x="910" y="228.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text>
-<rect x="244" y="540" width="650" height="236" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="568" font-size="13.5" fill="#e6edf7" font-weight="700">Availability, last 24 hours</text>
-<line x1="244" y1="582" x2="894" y2="582" stroke="#27385a"/>
-<text x="876" y="568" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">Open probes</text>
-<text x="262" y="600" font-size="11" fill="#6b7d99" font-weight="700">Node</text>
-<text x="340" y="600" font-size="11" fill="#6b7d99" font-weight="700">Carrier A</text>
-<text x="516" y="600" font-size="11" fill="#6b7d99" font-weight="700">Carrier B</text>
-<text x="692" y="600" font-size="11" fill="#6b7d99" font-weight="700">Carrier C</text>
-<text x="262" y="624" font-size="12" fill="#e6edf7" font-weight="600">PL-01</text>
-<rect x="340" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M347 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="367" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M374 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="394" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M401 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="421" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M428 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="448" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M455 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="475" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M482 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="516" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M523 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="543" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M550 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="570" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M577 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="597" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M604 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="624" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M631 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="651" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M658 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="692" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M699 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="719" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M726 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="746" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M753 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="773" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M780 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="800" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M807 620.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="827" y="610" width="23" height="20" rx="4" fill="#16223a" stroke="#fbbf24" stroke-width="1.2"/>
-<path d="M834 620 h9" fill="none" stroke="#fbbf24" stroke-width="1.8"/>
-<text x="262" y="651" font-size="12" fill="#e6edf7" font-weight="600">SE-01</text>
-<rect x="340" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M347 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="367" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M374 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="394" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M401 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="421" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M428 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="448" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M455 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="475" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M482 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="516" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M523 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="543" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M550 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="570" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M577 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="597" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M604 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="624" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M631 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="651" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M658 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="692" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M699 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="719" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M726 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="746" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M753 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="773" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M780 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="800" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M807 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="827" y="637" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M834 647.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<text x="262" y="678" font-size="12" fill="#e6edf7" font-weight="600">CH-01</text>
-<rect x="340" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M347 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="367" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M374 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="394" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M401 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="421" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M428 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="448" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M455 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="475" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M482 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="516" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M523 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="543" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M550 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="570" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#fbbf24" stroke-width="1.2"/>
-<path d="M577 674 h9" fill="none" stroke="#fbbf24" stroke-width="1.8"/>
-<rect x="597" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#fbbf24" stroke-width="1.2"/>
-<path d="M604 674 h9" fill="none" stroke="#fbbf24" stroke-width="1.8"/>
-<rect x="624" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M631 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="651" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M658 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="692" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M699 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="719" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M726 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="746" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M753 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="773" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M780 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="800" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M807 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="827" y="664" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M834 674.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<text x="262" y="705" font-size="12" fill="#e6edf7" font-weight="600">AT-01</text>
-<rect x="340" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M347 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="367" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M374 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="394" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M402 697 l7 8 M409 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="421" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M429 697 l7 8 M436 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="448" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M456 697 l7 8 M463 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="475" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M483 697 l7 8 M490 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="516" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M523 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="543" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M550 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="570" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M578 697 l7 8 M585 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="597" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M605 697 l7 8 M612 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="624" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M632 697 l7 8 M639 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="651" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M659 697 l7 8 M666 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="692" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M699 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="719" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M726 701.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="746" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M754 697 l7 8 M761 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="773" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M781 697 l7 8 M788 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="800" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M808 697 l7 8 M815 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<rect x="827" y="691" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M835 697 l7 8 M842 697 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<text x="262" y="732" font-size="12" fill="#e6edf7" font-weight="600">JP-01</text>
-<rect x="340" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M347 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="367" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M374 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="394" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M401 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="421" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M428 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="448" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M455 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="475" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M482 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="516" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M523 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="543" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M550 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="570" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M577 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="597" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M604 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="624" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M631 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="651" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M658 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="692" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M699 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="719" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M726 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="746" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M753 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="773" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M780 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="800" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#34d399" stroke-width="1.2"/>
-<path d="M807 728.5 l3 3 l6 -6.5" fill="none" stroke="#34d399" stroke-width="1.6"/>
-<rect x="827" y="718" width="23" height="20" rx="4" fill="#16223a" stroke="#f87171" stroke-width="1.2"/>
-<path d="M835 724 l7 8 M842 724 l-7 8" fill="none" stroke="#f87171" stroke-width="1.8"/>
-<text x="262" y="764" font-size="11" fill="#6b7d99">Each cell is 4 hours.  check = reachable,  dash = degraded,  cross = blocked.</text>
-<circle cx="244" cy="540" r="11" fill="#fbbf24"/>
-<text x="244" y="544.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">4</text>
-<rect x="910" y="540" width="346" height="236" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="928" y="568" font-size="13.5" fill="#e6edf7" font-weight="700">Alerts</text>
-<line x1="910" y1="582" x2="1256" y2="582" stroke="#27385a"/>
-<text x="1238" y="568" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">All alerts</text>
-<circle cx="932" cy="594" r="7" fill="#f87171"/>
-<path d="M929.4 591.4 L934.6 596.6 M934.6 591.4 L929.4 596.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="948" y="598" font-size="12.5" fill="#e6edf7" font-weight="600">AT-01 unreachable on 3 of 3 carriers</text>
-<text x="948" y="618" font-size="11.5" fill="#6b7d99">12 min ago</text>
-<line x1="926" y1="630" x2="1240" y2="630" stroke="#27385a"/>
-<circle cx="932" cy="650" r="7" fill="#fbbf24"/>
-<path d="M932 646.8 L932 650.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="932" cy="653" r="1" fill="#0b1220"/>
-<text x="948" y="654" font-size="12.5" fill="#e6edf7" font-weight="600">CH-01 Xray uptime reset</text>
-<text x="948" y="674" font-size="11.5" fill="#6b7d99">1 h ago</text>
-<line x1="926" y1="686" x2="1240" y2="686" stroke="#27385a"/>
-<circle cx="932" cy="706" r="7" fill="#fbbf24"/>
-<path d="M932 702.8 L932 706.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="932" cy="709" r="1" fill="#0b1220"/>
-<text x="948" y="710" font-size="12.5" fill="#e6edf7" font-weight="600">AT-01 certificate expires in 9 days</text>
-<text x="948" y="730" font-size="11.5" fill="#6b7d99">3 h ago</text>
-<line x1="926" y1="742" x2="1240" y2="742" stroke="#27385a"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="t d"><title id="t">Overview wireframe</title><desc id="d">Fleet health, active runs, pending approvals, alerts and the availability matrix, in the panel&#x27;s compact layout.</desc><style>text{font-family:Montserrat,Vazirmatn,'Noto Sans SC',sans-serif}.mo{font-family:'Fira Mono',monospace}use{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}path{stroke-linecap:round;stroke-linejoin:round}</style><defs><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></symbol><symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></symbol><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></symbol><symbol id="i-server" viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-2" /> <path d="M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -2" /> <path d="M7 8l0 .01" /> <path d="M7 16l0 .01" /></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /> <path d="M11 6l9 0" /> <path d="M11 12l9 0" /> <path d="M11 18l9 0" /></symbol><symbol id="i-radar-2" viewBox="0 0 24 24"><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M15.51 15.56a5 5 0 1 0 -3.51 1.44" /> <path d="M18.832 17.86a9 9 0 1 0 -6.832 3.14" /> <path d="M12 12v9" /></symbol><symbol id="i-hexagon" viewBox="0 0 24 24"><path d="M19.875 6.27a2.225 2.225 0 0 1 1.125 1.948v7.284c0 .809 -.443 1.555 -1.158 1.948l-6.75 4.27a2.269 2.269 0 0 1 -2.184 0l-6.75 -4.27a2.225 2.225 0 0 1 -1.158 -1.948v-7.285c0 -.809 .443 -1.554 1.158 -1.947l6.75 -3.98a2.33 2.33 0 0 1 2.25 0l6.75 3.98h-.033" /></symbol><symbol id="i-shield-lock" viewBox="0 0 24 24"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" /> <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12l0 2.5" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /> <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M9 12l2 2l4 -4" /></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M10 10l4 4m0 -4l-4 4" /></symbol><symbol id="i-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></symbol><symbol id="i-info-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M12 9h.01" /> <path d="M11 12h1v4h1" /></symbol></defs><rect width="1280" height="900" fill="#161b22"/><line x1="0" y1="115.5" x2="1280" y2="115.5" stroke="#484f58"/>
+<polygon points="52,18 64.1,25 64.1,39 52,46 39.9,39 39.9,25" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M43 29 q4.5 -4 9 0 t9 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M43 35.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="78" y="38" font-size="18" fill="#ffffff" font-weight="700">Swellwright</text>
+<rect x="1212.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-user" x="1221" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="1168.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="1177" y="23" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="1199" cy="19" r="4.5" fill="#ff8787"/>
+<rect x="1124.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-search" x="1133" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="996.7" y="20.5" width="115.8" height="22" rx="8" fill="none" stroke="#3bc9db"/>
+<use href="#i-player-play" x="1004.2" y="25.5" width="12" height="12" stroke="#3bc9db"/>
+<text x="1024.2" y="35.5" font-size="11" fill="#3bc9db" font-weight="700" letter-spacing="0.3">2 RUNNING</text>
+<rect x="722.7" y="14.5" width="261" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="736.2" y="37" font-size="13" fill="#b1bac4" font-weight="500">Panel: panel.example.com</text>
+<use href="#i-chevron-down" x="959.2" y="25" width="14" height="14" stroke="#8b949e"/>
+<line x1="0" y1="64.5" x2="1280" y2="64.5" stroke="#24292f"/>
+<use href="#i-layout-dashboard" x="44" y="81" width="18" height="18" stroke="#3bc9db"/>
+<text x="70" y="95.5" font-size="15" fill="#3bc9db" font-weight="600">Overview</text>
+<rect x="40" y="113.5" width="105.6" height="2" rx="1" fill="#3bc9db"/>
+<use href="#i-server" x="169.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="195.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Fleet</text>
+<use href="#i-chevron-down" x="241.8" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-list-check" x="281.8" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="307.8" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Operations</text>
+<use href="#i-chevron-down" x="400.6" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-radar-2" x="440.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="466.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Monitoring</text>
+<use href="#i-chevron-down" x="559.5" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-hexagon" x="599.5" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="625.5" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Panel</text>
+<use href="#i-chevron-down" x="676.9" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-shield-lock" x="716.9" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="742.9" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Security</text>
+<use href="#i-chevron-down" x="813" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-settings" x="853" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="879" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Settings</text>
+<use href="#i-chevron-down" x="950.2" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<rect x="32.5" y="132.5" width="1215" height="75" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="148.5" width="43" height="43" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-layout-dashboard" x="59" y="159" width="22" height="22" stroke="#3bc9db"/>
+<text x="108" y="168" font-size="18" fill="#ffffff" font-weight="600">Overview</text>
+<text x="108" y="188" font-size="14" fill="#8b949e">Fleet health, runs and approvals at a glance</text>
+<text x="1196" y="176" font-size="13" fill="#8b949e" text-anchor="end">Updated 12 s ago</text>
+<rect x="1204.5" y="150.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-refresh" x="1213" y="159" width="18" height="18" stroke="#b1bac4"/>
+<rect x="32.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-server" x="58" y="246" width="20" height="20" stroke="#ff8787"/>
+<text x="100" y="250" font-size="13" fill="#8b949e" font-weight="500">Nodes online</text>
+<text x="100" y="286" font-size="24" fill="#ffffff" font-weight="600">11 / 12</text>
+<text x="173.6" y="286" font-size="12" fill="#8b949e">AT-01 offline</text>
+<rect x="340.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="356.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-alert-triangle" x="366" y="246" width="20" height="20" stroke="#ffd43b"/>
+<text x="408" y="250" font-size="13" fill="#8b949e" font-weight="500">Configuration drift</text>
+<text x="408" y="286" font-size="24" fill="#ffffff" font-weight="600">2 nodes</text>
+<text x="514.3" y="286" font-size="12" fill="#8b949e">PL-01, CH-01</text>
+<rect x="648.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="664.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-player-play" x="674" y="246" width="20" height="20" stroke="#3bc9db"/>
+<text x="716" y="250" font-size="13" fill="#8b949e" font-weight="500">Active runs</text>
+<text x="716" y="286" font-size="24" fill="#ffffff" font-weight="600">2</text>
+<text x="740" y="286" font-size="12" fill="#8b949e">1 awaiting approval</text>
+<rect x="956.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="972.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-bell" x="982" y="246" width="20" height="20" stroke="#ff8787"/>
+<text x="1024" y="250" font-size="13" fill="#8b949e" font-weight="500">Alerts</text>
+<text x="1024" y="286" font-size="24" fill="#ffffff" font-weight="600">3</text>
+<text x="1048" y="286" font-size="12" fill="#8b949e">1 critical, 2 warnings</text>
+<circle cx="32" cy="220" r="11" fill="#ffa94d"/>
+<text x="32" y="224.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">1</text>
+<rect x="32.5" y="328.5" width="799" height="315" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="48" y="358" font-size="15" fill="#ffffff" font-weight="600">Fleet health</text>
+<text x="816" y="358" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">View all servers</text>
+<text x="48" y="387" font-size="12" fill="#8b949e" font-weight="600">Node</text>
+<text x="168" y="387" font-size="12" fill="#8b949e" font-weight="600">State</text>
+<text x="376" y="387" font-size="12" fill="#8b949e" font-weight="600" text-anchor="end">Users</text>
+<text x="408" y="387" font-size="12" fill="#8b949e" font-weight="600">Xray</text>
+<text x="528" y="387" font-size="12" fill="#8b949e" font-weight="600">Drift</text>
+<text x="688" y="387" font-size="12" fill="#8b949e" font-weight="600">Certificate</text>
+<line x1="32" y1="395.5" x2="832" y2="395.5" stroke="#24292f"/>
+<text x="48" y="421" font-size="14" fill="#ffffff" font-weight="500">PL-01</text>
+<use href="#i-circle-check" x="169" y="408" width="16" height="16" stroke="#38d9a9"/>
+<text x="192" y="421" font-size="14" fill="#c9d1d9">Online</text>
+<text x="376" y="421" font-size="14" fill="#c9d1d9" text-anchor="end">214</text>
+<text x="408" y="421" font-size="14" fill="#c9d1d9">26.11.9</text>
+<use href="#i-alert-triangle" x="529" y="408" width="16" height="16" stroke="#ffd43b"/>
+<text x="552" y="421" font-size="14" fill="#c9d1d9">1 check</text>
+<use href="#i-circle-check" x="689" y="408" width="16" height="16" stroke="#38d9a9"/>
+<text x="712" y="421" font-size="14" fill="#c9d1d9">61 days</text>
+<line x1="32" y1="435.5" x2="832" y2="435.5" stroke="#24292f"/>
+<text x="48" y="461" font-size="14" fill="#ffffff" font-weight="500">SE-01</text>
+<use href="#i-circle-check" x="169" y="448" width="16" height="16" stroke="#38d9a9"/>
+<text x="192" y="461" font-size="14" fill="#c9d1d9">Online</text>
+<text x="376" y="461" font-size="14" fill="#c9d1d9" text-anchor="end">188</text>
+<text x="408" y="461" font-size="14" fill="#c9d1d9">26.11.9</text>
+<use href="#i-circle-check" x="529" y="448" width="16" height="16" stroke="#38d9a9"/>
+<text x="552" y="461" font-size="14" fill="#c9d1d9">None</text>
+<use href="#i-circle-check" x="689" y="448" width="16" height="16" stroke="#38d9a9"/>
+<text x="712" y="461" font-size="14" fill="#c9d1d9">61 days</text>
+<line x1="32" y1="475.5" x2="832" y2="475.5" stroke="#24292f"/>
+<text x="48" y="501" font-size="14" fill="#ffffff" font-weight="500">CH-01</text>
+<use href="#i-circle-check" x="169" y="488" width="16" height="16" stroke="#38d9a9"/>
+<text x="192" y="501" font-size="14" fill="#c9d1d9">Online</text>
+<text x="376" y="501" font-size="14" fill="#c9d1d9" text-anchor="end">97</text>
+<text x="408" y="501" font-size="14" fill="#c9d1d9">26.11.9</text>
+<use href="#i-alert-triangle" x="529" y="488" width="16" height="16" stroke="#ffd43b"/>
+<text x="552" y="501" font-size="14" fill="#c9d1d9">2 checks</text>
+<use href="#i-circle-check" x="689" y="488" width="16" height="16" stroke="#38d9a9"/>
+<text x="712" y="501" font-size="14" fill="#c9d1d9">58 days</text>
+<line x1="32" y1="515.5" x2="832" y2="515.5" stroke="#24292f"/>
+<text x="48" y="541" font-size="14" fill="#ffffff" font-weight="500">AT-01</text>
+<use href="#i-circle-x" x="169" y="528" width="16" height="16" stroke="#ff8787"/>
+<text x="192" y="541" font-size="14" fill="#c9d1d9">Offline</text>
+<text x="376" y="541" font-size="14" fill="#c9d1d9" text-anchor="end">0</text>
+<text x="408" y="541" font-size="14" fill="#c9d1d9">n/a</text>
+<use href="#i-circle" x="529" y="528" width="16" height="16" stroke="#6e7681"/>
+<text x="552" y="541" font-size="14" fill="#c9d1d9">Unknown</text>
+<use href="#i-alert-triangle" x="689" y="528" width="16" height="16" stroke="#ffd43b"/>
+<text x="712" y="541" font-size="14" fill="#c9d1d9">9 days</text>
+<line x1="32" y1="555.5" x2="832" y2="555.5" stroke="#24292f"/>
+<text x="48" y="581" font-size="14" fill="#ffffff" font-weight="500">JP-01</text>
+<use href="#i-circle-check" x="169" y="568" width="16" height="16" stroke="#38d9a9"/>
+<text x="192" y="581" font-size="14" fill="#c9d1d9">Online</text>
+<text x="376" y="581" font-size="14" fill="#c9d1d9" text-anchor="end">143</text>
+<text x="408" y="581" font-size="14" fill="#c9d1d9">26.11.9</text>
+<use href="#i-circle-check" x="529" y="568" width="16" height="16" stroke="#38d9a9"/>
+<text x="552" y="581" font-size="14" fill="#c9d1d9">None</text>
+<use href="#i-circle-check" x="689" y="568" width="16" height="16" stroke="#38d9a9"/>
+<text x="712" y="581" font-size="14" fill="#c9d1d9">61 days</text>
+<line x1="32" y1="595.5" x2="832" y2="595.5" stroke="#24292f"/>
+<text x="48" y="621" font-size="14" fill="#ffffff" font-weight="500">CA-01</text>
+<use href="#i-player-play" x="169" y="608" width="16" height="16" stroke="#3bc9db"/>
+<text x="192" y="621" font-size="14" fill="#c9d1d9">Updating</text>
+<text x="376" y="621" font-size="14" fill="#c9d1d9" text-anchor="end">120</text>
+<text x="408" y="621" font-size="14" fill="#c9d1d9">26.11.9</text>
+<use href="#i-circle-check" x="529" y="608" width="16" height="16" stroke="#38d9a9"/>
+<text x="552" y="621" font-size="14" fill="#c9d1d9">None</text>
+<use href="#i-circle-check" x="689" y="608" width="16" height="16" stroke="#38d9a9"/>
+<text x="712" y="621" font-size="14" fill="#c9d1d9">61 days</text>
+<line x1="32" y1="635.5" x2="832" y2="635.5" stroke="#24292f"/>
+<circle cx="32" cy="328" r="11" fill="#ffa94d"/>
+<text x="32" y="332.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">2</text>
+<rect x="848.5" y="328.5" width="399" height="315" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="864" y="358" font-size="15" fill="#ffffff" font-weight="600">Needs your attention</text>
+<rect x="865" y="366.5" width="366" height="82" rx="8" fill="#201c10" stroke="#6b5a14"/>
+<use href="#i-alert-triangle" x="877" y="380" width="16" height="16" stroke="#ffd43b"/>
+<text x="902" y="393" font-size="14" fill="#ffffff" font-weight="600">Approval pending</text>
+<text x="885" y="414" font-size="13" fill="#b1bac4">Edit profile “Foreign”: restarts 12 nodes</text>
+<rect x="885" y="422" width="76" height="20" rx="8" fill="#063943"/>
+<text x="900.4" y="436.3" font-size="12" fill="#e3fafc" font-weight="600">Review</text>
+<text x="1215" y="436" font-size="12" fill="#6e7681" text-anchor="end">run #482</text>
+<rect x="865" y="460.5" width="366" height="66" rx="8" fill="#1b2026" stroke="#292d34"/>
+<use href="#i-player-play" x="877" y="474" width="16" height="16" stroke="#3bc9db"/>
+<text x="902" y="487" font-size="14" fill="#ffffff" font-weight="600">Running: rename PL-01 to PL-05</text>
+<text x="885" y="509" font-size="13" fill="#8b949e">Stage 3 of 7, about 2 min left</text>
+<rect x="865" y="538.5" width="366" height="66" rx="8" fill="#1b2026" stroke="#292d34"/>
+<use href="#i-info-circle" x="877" y="552" width="16" height="16" stroke="#4dabf7"/>
+<text x="902" y="565" font-size="14" fill="#ffffff" font-weight="600">Xray security release available</text>
+<text x="885" y="587" font-size="13" fill="#8b949e">Plan the rolling update, canary first</text>
+<circle cx="848" cy="328" r="11" fill="#ffa94d"/>
+<text x="848" y="332.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">3</text>
+<rect x="32.5" y="660.5" width="799" height="215" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="48" y="690" font-size="15" fill="#ffffff" font-weight="600">Availability, last 24 hours</text>
+<text x="816" y="690" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Open probes</text>
+<text x="48" y="712" font-size="12" fill="#8b949e" font-weight="600">Node</text>
+<text x="150" y="712" font-size="12" fill="#8b949e" font-weight="600">Carrier A</text>
+<text x="374" y="712" font-size="12" fill="#8b949e" font-weight="600">Carrier B</text>
+<text x="598" y="712" font-size="12" fill="#8b949e" font-weight="600">Carrier C</text>
+<text x="48" y="736" font-size="13" fill="#ffffff" font-weight="500">PL-01</text>
+<rect x="150.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M159 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="183.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M192 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="216.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M225 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="249.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M258 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="282.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M291 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="315.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M324 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="374.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M383 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="407.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M416 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="440.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M449 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="473.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M482 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="506.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M515 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="539.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M548 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="598.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M607 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="631.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M640 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="664.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M673 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="697.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M706 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="730.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M739 733 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="763.5" y="722.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ffd43b"/>
+<path d="M772 733 h11" fill="none" stroke="#ffd43b" stroke-width="1.8"/>
+<text x="48" y="762" font-size="13" fill="#ffffff" font-weight="500">SE-01</text>
+<rect x="150.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M159 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="183.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M192 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="216.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M225 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="249.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M258 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="282.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M291 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="315.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M324 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="374.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M383 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="407.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M416 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="440.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M449 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="473.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M482 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="506.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M515 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="539.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M548 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="598.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M607 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="631.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M640 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="664.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M673 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="697.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M706 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="730.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M739 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="763.5" y="748.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M772 759 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<text x="48" y="788" font-size="13" fill="#ffffff" font-weight="500">CH-01</text>
+<rect x="150.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M159 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="183.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M192 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="216.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M225 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="249.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M258 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="282.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M291 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="315.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M324 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="374.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M383 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="407.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M416 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="440.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ffd43b"/>
+<path d="M449 785 h11" fill="none" stroke="#ffd43b" stroke-width="1.8"/>
+<rect x="473.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ffd43b"/>
+<path d="M482 785 h11" fill="none" stroke="#ffd43b" stroke-width="1.8"/>
+<rect x="506.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M515 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="539.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M548 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="598.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M607 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="631.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M640 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="664.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M673 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="697.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M706 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="730.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M739 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="763.5" y="774.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M772 785 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<text x="48" y="814" font-size="13" fill="#ffffff" font-weight="500">AT-01</text>
+<rect x="150.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M159 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="183.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M192 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="216.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M226 806 l9 9 M235 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="249.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M259 806 l9 9 M268 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="282.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M292 806 l9 9 M301 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="315.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M325 806 l9 9 M334 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="374.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M383 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="407.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M416 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="440.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M450 806 l9 9 M459 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="473.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M483 806 l9 9 M492 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="506.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M516 806 l9 9 M525 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="539.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M549 806 l9 9 M558 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="598.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M607 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="631.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M640 811 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="664.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M674 806 l9 9 M683 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="697.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M707 806 l9 9 M716 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="730.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M740 806 l9 9 M749 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<rect x="763.5" y="800.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M773 806 l9 9 M782 806 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<text x="48" y="840" font-size="13" fill="#ffffff" font-weight="500">JP-01</text>
+<rect x="150.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M159 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="183.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M192 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="216.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M225 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="249.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M258 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="282.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M291 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="315.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M324 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="374.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M383 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="407.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M416 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="440.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M449 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="473.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M482 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="506.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M515 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="539.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M548 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="598.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M607 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="631.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M640 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="664.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M673 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="697.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M706 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="730.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#38d9a9"/>
+<path d="M739 837 l4 4 l7 -8" fill="none" stroke="#38d9a9" stroke-width="1.8"/>
+<rect x="763.5" y="826.5" width="28" height="20" rx="4" fill="#1b2026" stroke="#ff8787"/>
+<path d="M773 832 l9 9 M782 832 l-9 9" fill="none" stroke="#ff8787" stroke-width="1.8"/>
+<text x="48" y="866" font-size="12" fill="#6e7681">Each cell is 4 hours: check = reachable, dash = degraded, cross = blocked.</text>
+<circle cx="32" cy="660" r="11" fill="#ffa94d"/>
+<text x="32" y="664.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">4</text>
+<rect x="848.5" y="660.5" width="399" height="215" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="864" y="690" font-size="15" fill="#ffffff" font-weight="600">Alerts</text>
+<text x="1232" y="690" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">All alerts</text>
+<use href="#i-circle-x" x="860" y="703" width="16" height="16" stroke="#ff8787"/>
+<text x="886" y="716" font-size="14" fill="#ffffff" font-weight="500">AT-01 unreachable on 3 of 3 carriers</text>
+<text x="886" y="736" font-size="12" fill="#8b949e">12 min ago</text>
+<line x1="864" y1="748" x2="1232" y2="748" stroke="#24292f"/>
+<use href="#i-alert-triangle" x="860" y="759" width="16" height="16" stroke="#ffd43b"/>
+<text x="886" y="772" font-size="14" fill="#ffffff" font-weight="500">CH-01 Xray uptime reset</text>
+<text x="886" y="792" font-size="12" fill="#8b949e">1 h ago</text>
+<line x1="864" y1="804" x2="1232" y2="804" stroke="#24292f"/>
+<use href="#i-alert-triangle" x="860" y="815" width="16" height="16" stroke="#ffd43b"/>
+<text x="886" y="828" font-size="14" fill="#ffffff" font-weight="500">AT-01 certificate expires in 9 days</text>
+<text x="886" y="848" font-size="12" fill="#8b949e">3 h ago</text></svg>
