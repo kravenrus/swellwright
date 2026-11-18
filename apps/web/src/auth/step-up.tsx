@@ -1,5 +1,5 @@
-import { Alert, Anchor, Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle, IconShieldLock } from '@tabler/icons-react';
+import { Anchor, Button, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { IconShieldLock } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import {
   createContext,
@@ -13,8 +13,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ModalFooter, OverlayHeader } from '@swellwright/ui';
+
 import { ApiRequestError, StepUpCancelledError, stepUp } from '../api.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
+import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 
 interface StepUp {
@@ -122,7 +125,13 @@ function StepUpDialog({
   };
 
   return (
-    <Modal centered onClose={cancel} opened={opened} title={t('stepUp.title')} zIndex={400}>
+    <Modal
+      centered
+      onClose={cancel}
+      opened={opened}
+      title={<OverlayHeader icon={IconShieldLock} iconColor="blue" title={t('stepUp.title')} />}
+      zIndex={400}
+    >
       <form onSubmit={submit}>
         <Stack gap="md">
           <Text c="dimmed" fz="sm">
@@ -148,38 +157,46 @@ function StepUpDialog({
               <CodeInput busy={isPending} onChange={setCode} value={code} />
             </Stack>
           )}
-          {mutation.error ? (
-            <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-              {describeError(
-                t,
-                mutation.error,
-                recovery ? t('totp.recoveryInvalid') : t('stepUp.codeWrong'),
-              )}
-            </Alert>
-          ) : null}
-          <Group justify="space-between">
-            <Anchor
-              component="button"
-              fz="sm"
-              onClick={() => {
-                setRecovery(!recovery);
-                setCode('');
-                reset();
-              }}
-              type="button"
-            >
-              {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
-            </Anchor>
-            <Group>
-              <Button onClick={cancel} variant="default">
-                {t('common:cancel')}
-              </Button>
-              <Button leftSection={<IconShieldLock size={16} />} loading={isPending} type="submit">
-                {t('common:confirm')}
-              </Button>
-            </Group>
-          </Group>
+          <FormError
+            message={
+              mutation.error
+                ? describeError(
+                    t,
+                    mutation.error,
+                    recovery ? t('totp.recoveryInvalid') : t('stepUp.codeWrong'),
+                  )
+                : undefined
+            }
+          />
+          <Anchor
+            c="dimmed"
+            component="button"
+            fz="xs"
+            onClick={() => {
+              setRecovery(!recovery);
+              setCode('');
+              reset();
+            }}
+            type="button"
+          >
+            {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
+          </Anchor>
         </Stack>
+        <ModalFooter>
+          <Button onClick={cancel} variant="subtle">
+            {t('common:cancel')}
+          </Button>
+          <Button
+            color="teal"
+            leftSection={<IconShieldLock size={16} />}
+            loading={isPending}
+            size="md"
+            type="submit"
+            variant="soft"
+          >
+            {t('common:confirm')}
+          </Button>
+        </ModalFooter>
       </form>
     </Modal>
   );

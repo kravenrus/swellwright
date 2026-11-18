@@ -1,24 +1,21 @@
+import { Button, Checkbox, CopyButton, Group, Paper, SimpleGrid, Stack, Text } from '@mantine/core';
 import {
-  Alert,
-  Button,
-  Checkbox,
-  Code,
-  CopyButton,
-  Group,
-  Loader,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@mantine/core';
-import { IconAlertCircle, IconCheck, IconCopy, IconDownload } from '@tabler/icons-react';
+  IconArrowRight,
+  IconCheck,
+  IconCopy,
+  IconDownload,
+  IconShieldCheck,
+} from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { TotpConfirmed } from '@swellwright/contracts';
+import { CopyableCodeBlock, LoadingScreen } from '@swellwright/ui';
 
 import { confirmTotpEnrollment, startTotpEnrollment } from '../api.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
+import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 import { QrCode } from './qr.js';
 
@@ -50,18 +47,10 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
   }, [code, isPending, mutate]);
 
   if (enrollment.isPending) {
-    return (
-      <Group justify="center" py="xl">
-        <Loader size="sm" />
-      </Group>
-    );
+    return <LoadingScreen height="40vh" />;
   }
   if (enrollment.isError) {
-    return (
-      <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-        {describeError(t, enrollment.error, t('shared.signInAgain'))}
-      </Alert>
-    );
+    return <FormError message={describeError(t, enrollment.error, t('shared.signInAgain'))} />;
   }
   const { secret, otpauthUri } = enrollment.data;
   return (
@@ -79,21 +68,12 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
             <Text c="dimmed" fz="xs">
               {t('enrollment.keyLabel')}
             </Text>
-            <Code block fz="sm" style={{ wordBreak: 'break-all' }}>
-              {secret.match(/.{1,4}/gu)?.join(' ') ?? secret}
-            </Code>
-            <CopyButton timeout={2000} value={secret}>
-              {({ copied, copy }) => (
-                <Button
-                  leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                  onClick={copy}
-                  size="xs"
-                  variant="default"
-                >
-                  {copied ? t('common:copied') : t('enrollment.copyKey')}
-                </Button>
-              )}
-            </CopyButton>
+            <CopyableCodeBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('enrollment.copyKey')}
+              size="small"
+              value={secret}
+            />
           </Stack>
         </Group>
       </Stack>
@@ -102,18 +82,19 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
           {t('enrollment.enterTitle')}
         </Text>
         <CodeInput busy={isPending} onChange={setCode} value={code} />
-        {confirm.error ? (
-          <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-            {describeError(t, confirm.error, t('totp.codeWrong'))}
-          </Alert>
-        ) : null}
+        <FormError
+          message={confirm.error ? describeError(t, confirm.error, t('totp.codeWrong')) : undefined}
+        />
       </Stack>
       <Button
         disabled={code.length !== CODE_LENGTH}
+        fullWidth
+        leftSection={<IconShieldCheck size={16} />}
         loading={confirm.isPending}
         onClick={() => {
           confirm.mutate(code);
         }}
+        variant="soft"
       >
         {t('enrollment.submit')}
       </Button>
@@ -139,32 +120,42 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
       <Text c="dimmed" fz="sm">
         {t('recoveryCodes.intro')}
       </Text>
-      <SimpleGrid cols={2} spacing="xs">
-        {codes.map((code) => (
-          <Code fz="sm" key={code} ta="center">
-            {code}
-          </Code>
+      <SimpleGrid cols={{ base: 2, sm: 3 }} spacing={8}>
+        {codes.map((code, index) => (
+          <Paper
+            key={code}
+            px="sm"
+            py={6}
+            radius="md"
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <Group gap={6} wrap="nowrap">
+              <Text c="dimmed" ff="monospace" fz="xs">
+                {index + 1}
+              </Text>
+              <Text ff="monospace" fz="sm">
+                {code}
+              </Text>
+            </Group>
+          </Paper>
         ))}
       </SimpleGrid>
-      <Group gap="xs">
+      <Group gap="xs" grow>
         <CopyButton timeout={2000} value={text}>
           {({ copied, copy }) => (
             <Button
-              leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+              leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
               onClick={copy}
-              size="xs"
-              variant="default"
+              variant="subtle"
             >
               {copied ? t('common:copied') : t('recoveryCodes.copyAll')}
             </Button>
           )}
         </CopyButton>
-        <Button
-          leftSection={<IconDownload size={14} />}
-          onClick={download}
-          size="xs"
-          variant="default"
-        >
+        <Button leftSection={<IconDownload size={16} />} onClick={download} variant="subtle">
           {t('common:download')}
         </Button>
       </Group>
@@ -175,7 +166,13 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
           setSaved(e.currentTarget.checked);
         }}
       />
-      <Button disabled={!saved} onClick={onDone}>
+      <Button
+        disabled={!saved}
+        fullWidth
+        leftSection={<IconArrowRight size={16} />}
+        onClick={onDone}
+        variant="soft"
+      >
         {t('recoveryCodes.continue')}
       </Button>
     </Stack>

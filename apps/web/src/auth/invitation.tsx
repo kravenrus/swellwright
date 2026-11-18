@@ -1,5 +1,5 @@
-import { Alert, Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
+import { IconUserPlus } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 
 import { acceptInvitation } from '../api.js';
+import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 
 const HASH_PREFIX = '#invite=';
@@ -110,18 +111,24 @@ export function AcceptInvitationForm({
           required
           value={repeat}
         />
-        {mutation.error ? (
-          <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-            {describeError(t, mutation.error, t('invitation.invalid'))}
-          </Alert>
-        ) : null}
-        <Button fullWidth loading={mutation.isPending} type="submit">
+        <FormError
+          message={
+            mutation.error ? describeError(t, mutation.error, t('invitation.invalid')) : undefined
+          }
+        />
+        <Button
+          fullWidth
+          leftSection={<IconUserPlus size={16} />}
+          loading={mutation.isPending}
+          type="submit"
+          variant="soft"
+        >
           {t('invitation.submit')}
         </Button>
-        <Text c="dimmed" fz="sm" ta="center">
+        <Text c="dimmed" fz="xs" ta="center">
           {t('invitation.next')}
         </Text>
-        <Anchor c="dimmed" component="button" fz="sm" onClick={onBack} type="button">
+        <Anchor c="dimmed" component="button" fz="xs" onClick={onBack} type="button">
           {t('invitation.backToSignIn')}
         </Anchor>
       </Stack>

@@ -1,5 +1,5 @@
-import { Alert, Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle, IconKey, IconShieldLock } from '@tabler/icons-react';
+import { Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
+import { IconLogin, IconShieldLock, IconUserPlus } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,18 +14,8 @@ import {
 
 import { createOwner, login, verifyTotp } from '../api.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
+import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
-
-function ErrorNote({ message }: { message: string | undefined }) {
-  if (!message) {
-    return null;
-  }
-  return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {message}
-    </Alert>
-  );
-}
 
 export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) => void }) {
   const { t } = useTranslation(['auth', 'common']);
@@ -64,7 +54,7 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
           required
           value={password}
         />
-        <ErrorNote
+        <FormError
           message={
             mutation.error
               ? describeError(t, mutation.error, t('login.wrongCredentials'))
@@ -73,11 +63,13 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
         />
         <Button
           fullWidth
-          leftSection={<IconKey size={16} />}
+          leftSection={<IconLogin size={16} />}
           loading={mutation.isPending}
+          mt="xl"
           type="submit"
+          variant="default"
         >
-          {t('common:continue')}
+          {t('login.submit')}
         </Button>
       </Stack>
     </form>
@@ -138,7 +130,7 @@ export function TotpForm({
             <CodeInput busy={isPending} onChange={setCode} value={code} />
           </Stack>
         )}
-        <ErrorNote
+        <FormError
           message={
             mutation.error
               ? describeError(
@@ -154,13 +146,15 @@ export function TotpForm({
           leftSection={<IconShieldLock size={16} />}
           loading={mutation.isPending}
           type="submit"
+          variant="soft"
         >
           {t('totp.submit')}
         </Button>
         <Stack align="center" gap={4}>
           <Anchor
+            c="dimmed"
             component="button"
-            fz="sm"
+            fz="xs"
             onClick={() => {
               setRecovery(!recovery);
               setCode('');
@@ -170,7 +164,7 @@ export function TotpForm({
           >
             {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
           </Anchor>
-          <Anchor c="dimmed" component="button" fz="sm" onClick={onBack} type="button">
+          <Anchor c="dimmed" component="button" fz="xs" onClick={onBack} type="button">
             {t('totp.backToPassword')}
           </Anchor>
         </Stack>
@@ -254,14 +248,20 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
           required
           value={repeat}
         />
-        <ErrorNote
+        <FormError
           message={
             mutation.error
               ? describeError(t, mutation.error, t('shared.signInAgain'), t('setup.tokenWrong'))
               : undefined
           }
         />
-        <Button fullWidth loading={mutation.isPending} type="submit">
+        <Button
+          fullWidth
+          leftSection={<IconUserPlus size={16} />}
+          loading={mutation.isPending}
+          type="submit"
+          variant="soft"
+        >
           {t('setup.submit')}
         </Button>
       </Stack>

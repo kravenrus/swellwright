@@ -45,6 +45,7 @@ export const auth = {
   login: {
     title: 'Sign in',
     description: 'Sign in to the Swellwright console.',
+    submit: 'Sign in',
     wrongCredentials: 'Wrong login name or password.',
   },
 
