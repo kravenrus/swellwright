@@ -7,12 +7,13 @@ Goal: the UI looks and behaves like the Remnawave panel (it is immediately famil
 ## 1. Foundation
 - The same libraries as the panel (versions checked against the frontend of the Remnawave 3.4.x panel): React 19, Vite, **Mantine 9** (core, notifications, modals, spotlight, code-highlight, form, dates, dropzone, charts), TanStack Query 5, Zustand 5, React Router 7, Zod 4, i18next, Tabler icons, Monaco, `@xterm/xterm` (+ fit, webgl, unicode11, web-links).
 - Theme: dark by default, light as an option; colors, radii, sizes and fonts are **taken from the panel theme** (the code, components and theme of the panel's open-source frontend are used as a base: AGPL-3.0, keeping copyright notices and marking changes, see ADR 0011; the Remnawave name and mark are not copied); own tokens live in `packages/ui`.
+- **Visual language (verified against the panel frontend 3.4.11):** the panel's dark palette (body `#161b22`, text `#c9d1d9`), primary color cyan (shade 8), Montserrat for text and Fira Mono for code and terminals (self-hosted, not loaded from a CDN), Tabler icons, radius `md`, translucent cards, tinted "light" buttons, outline badges and pill tabs. The token table and the panel source files are in [wireframes/README.md](wireframes/README.md#visual-language).
 - Tables: Mantine DataTable/Mantine React Table as in the panel (the panel's `@kastov/*` forks serve as a reference, regular packages where necessary), virtualization for large lists.
 - Charts: Mantine Charts (Recharts); probe heatmaps and time series are built on top of them (Highcharts in the panel has its own license and is not used).
 
 ## 2. Shell
-- **AppShell:** left menu (collapsible), top bar (Spotlight search Ctrl+K, Remnawave panel switcher, alerts, tray of active runs, user), main area with breadcrumbs.
-- Menu sections: Overview, Servers, Nodes (panel), Runs, Scenarios, Panel (Profiles, Hosts, Squads, Templates, Subscriptions, Plugins, Billing, Users), Chains, DNS, Certificates, Probes, Alerts, Schedules, Reports, Security, API console, Settings, Documentation.
+- **AppShell:** the panel's default compact layout: a header with a brand row (64 px: logo, panel switcher, tray of active runs, Spotlight search Ctrl+K, alerts, user) and a navigation row (52 px) with grouped sections and dropdowns; a floating left sidebar is an option; every page opens with a header card (icon, title, description, actions) as in the panel.
+- Navigation sections: Overview; **Fleet** (Servers, Nodes, Chains, DNS, Certificates); **Operations** (Runs, Scenarios, Schedules); **Monitoring** (Probes, Alerts, Reports); **Panel** (Profiles, Hosts, Squads, Templates, Subscriptions, Plugins, Billing, Users, API console); **Security** (Vault, Users and roles, Tokens, Sessions, Audit); **Settings** (General, Conventions, Baselines, Policies, Integrations, Notifications). Documentation is a header button.
 - Responsiveness: works on a phone (the emergency use case "look and roll back").
 
 ## 3. Pages

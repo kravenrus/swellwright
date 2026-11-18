@@ -31,6 +31,7 @@
 | R24 | Core universality breaks provider- and scheme-specific behavior | medium | medium | provider- and scheme-specific behavior is attached through plugins (including the official `node-selfsteal`, `certs-cron-script`, `dns-rucenter`), examples of conventions and policies, end-to-end scenario (golden) tests of behavior |
 | R25 | Shared host with the panel: compromise of one system affects the other | medium | high | isolation measures (`09` section 5), separate databases and network, no `docker.sock`, a separate server as the recommended option |
 | R26 | Container plugins without `docker.sock` complicate operations | medium | medium | sidecars as compose services, fragment generation, documentation, plugin template |
+| R27 | The panel (3.4.11) now ships its own browser SSH terminal with a client-side vault, so a terminal alone is no longer a differentiator | high | low | keep the Swellwright terminal focused on what the panel lacks (step-up, policy, recording, audit, certificates, working next to runs); reuse the panel's UX patterns; re-check the panel's terminal on every supported minor version |
 
 ## 2. Assumptions
 1. The project is open (GitHub, AGPL-3.0-only) for Remnawave administrators; there is no public SaaS; all code is public, instance data is not.
