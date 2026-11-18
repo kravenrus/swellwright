@@ -256,7 +256,7 @@ function TokenViewDialog({
           iconColor="teal"
           subtitle={
             shown ? (
-              <Text ff="monospace" inherit>
+              <Text component="span" ff="monospace" inherit>
                 {shown.prefix}…
               </Text>
             ) : undefined
