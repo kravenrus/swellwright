@@ -1,23 +1,73 @@
 import { Alert, Badge, Card, Group, Skeleton, Stack, Table, Text } from '@mantine/core';
 import { IconCheck, IconMinus, IconUserShield } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
-import type { UserRole } from '@swellwright/contracts';
+import type { Permission, UserRole } from '@swellwright/contracts';
+import type { resources } from '@swellwright/i18n';
 import { PageHeader } from '@swellwright/ui';
 
 import { getRoles } from '../api.js';
 import { describeError } from '../auth/messages.js';
 
-/** The built-in roles and what each may do, as a matrix. Read-only: the sets are fixed in code (ADR 0015). */
+type PermissionKey = keyof (typeof resources)['en']['roles']['permissionDescriptions'];
+
+/**
+ * The key of the text of each permission. A colon cannot be part of a key, so `servers:read` is `serversRead`.
+ * Typed against both sides: a permission added to the contracts without a text here fails the build.
+ */
+const PERMISSION_KEY = {
+  'servers:read': 'serversRead',
+  'servers:write': 'serversWrite',
+  'panel:read': 'panelRead',
+  'panel:write': 'panelWrite',
+  'runs:read': 'runsRead',
+  'runs:execute': 'runsExecute',
+  'vault:read': 'vaultRead',
+  'vault:manage': 'vaultManage',
+  'vault:reveal': 'vaultReveal',
+  'terminal:use': 'terminalUse',
+  'users:read': 'usersRead',
+  'users:write': 'usersWrite',
+  'roles:read': 'rolesRead',
+  'audit:read': 'auditRead',
+  'audit:verify': 'auditVerify',
+} as const satisfies Record<Permission, PermissionKey>;
+
+/**
+ * The texts the console has for a role or a permission, by id. The id is typed, so a wrong key fails the build
+ * (a `defaultValue` would switch that check off, hence `exists`). An id the console does not know yet, because
+ * the server is newer, shows the text the API sent.
+ */
+function useCatalogText() {
+  const { t, i18n } = useTranslation('roles');
+  return {
+    roleName: (id: UserRole): string => (i18n.exists(`roles:names.${id}`) ? t(`names.${id}`) : id),
+    roleDescription: (id: UserRole, sent: string): string =>
+      i18n.exists(`roles:roleDescriptions.${id}`) ? t(`roleDescriptions.${id}`) : sent,
+    permissionDescription: (id: Permission, sent: string): string => {
+      const key = PERMISSION_KEY[id];
+      return i18n.exists(`roles:permissionDescriptions.${key}`)
+        ? t(`permissionDescriptions.${key}`)
+        : sent;
+    },
+  };
+}
+
+/**
+ * The built-in roles and what each may do, as a matrix. Read-only: the sets are fixed in code (ADR 0015).
+ */
 export function RolesPage({ currentRole }: { currentRole: UserRole }) {
+  const { t } = useTranslation('roles');
+  const text = useCatalogText();
   const catalog = useQuery({ queryKey: ['roles'], queryFn: getRoles, retry: false });
 
   return (
     <>
       <PageHeader
-        description="Built-in roles and the permissions each one holds"
+        description={t('header.description')}
         icon={<IconUserShield size={22} />}
-        title="Roles"
+        title={t('header.title')}
       />
 
       {catalog.isPending ? (
@@ -28,11 +78,7 @@ export function RolesPage({ currentRole }: { currentRole: UserRole }) {
         </Stack>
       ) : catalog.isError ? (
         <Alert color="red" variant="light">
-          {describeError(
-            catalog.error,
-            'Sign in again to continue.',
-            'Your role may not see this page.',
-          )}
+          {describeError(t, catalog.error, t('signInAgain'), t('forbidden'))}
         </Alert>
       ) : (
         <Stack gap="md">
@@ -41,12 +87,12 @@ export function RolesPage({ currentRole }: { currentRole: UserRole }) {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th pl="md">Permission</Table.Th>
+                    <Table.Th pl="md">{t('permissionColumn')}</Table.Th>
                     {catalog.data.roles.map((role) => (
                       <Table.Th key={role.id} ta="center">
                         <Group gap={6} justify="center" wrap="nowrap">
-                          {role.id}
-                          {role.id === currentRole ? <Badge size="xs">you</Badge> : null}
+                          {text.roleName(role.id)}
+                          {role.id === currentRole ? <Badge size="xs">{t('you')}</Badge> : null}
                         </Group>
                       </Table.Th>
                     ))}
@@ -60,22 +106,26 @@ export function RolesPage({ currentRole }: { currentRole: UserRole }) {
                           {permission.id}
                         </Text>
                         <Text c="dimmed" fz="xs">
-                          {permission.description}
+                          {text.permissionDescription(permission.id, permission.description)}
                         </Text>
                       </Table.Td>
                       {catalog.data.roles.map((role) => {
                         const held = role.permissions.includes(permission.id);
+                        const names = {
+                          role: text.roleName(role.id),
+                          permission: permission.id,
+                        };
                         return (
                           <Table.Td key={role.id} ta="center">
                             {held ? (
                               <IconCheck
-                                aria-label={`${role.id} has ${permission.id}`}
+                                aria-label={t('held', names)}
                                 color="var(--mantine-color-teal-4)"
                                 size={18}
                               />
                             ) : (
                               <IconMinus
-                                aria-label={`${role.id} does not have ${permission.id}`}
+                                aria-label={t('notHeld', names)}
                                 color="var(--mantine-color-dark-3)"
                                 size={16}
                               />
@@ -95,16 +145,15 @@ export function RolesPage({ currentRole }: { currentRole: UserRole }) {
               {catalog.data.roles.map((role) => (
                 <div key={role.id}>
                   <Text fw={600} fz="sm">
-                    {role.id}
+                    {text.roleName(role.id)}
                   </Text>
                   <Text c="dimmed" fz="sm">
-                    {role.description}
+                    {text.roleDescription(role.id, role.description)}
                   </Text>
                 </div>
               ))}
               <Text c="dimmed" fz="xs">
-                The roles are fixed. Custom roles come with user management. Permissions of pages
-                that are not built yet are listed so the roles stay stable.
+                {t('note')}
               </Text>
             </Stack>
           </Card>

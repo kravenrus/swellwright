@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { theme } from '@swellwright/ui';
 
 import { App } from './app.js';
+import './i18n.js';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

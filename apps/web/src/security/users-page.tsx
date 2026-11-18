@@ -29,6 +29,7 @@ import {
 } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   CreateUserRequestSchema,
@@ -46,35 +47,41 @@ import { createUser, listUsers, resetCredentials, updateUser } from '../api.js';
 import { invitationLink } from '../auth/invitation.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
+import { useDateTime } from '../format.js';
 
 const PAGE_SIZE = 100;
 
-const STATE: Record<UserView['state'], { kind: StatusKind; label: string }> = {
-  active: { kind: 'ok', label: 'Active' },
-  invited: { kind: 'info', label: 'Invited' },
-  disabled: { kind: 'wait', label: 'Disabled' },
+const STATE_KIND: Record<UserView['state'], StatusKind> = {
+  active: 'ok',
+  invited: 'info',
+  disabled: 'wait',
 };
 
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+/** The roles for a select, named in the language of the console. */
+function useRoleOptions() {
+  const { t } = useTranslation('roles');
+  return USER_ROLES.map((value) => ({ value, label: t(`names.${value}`) }));
+}
 
-const roleOptions = USER_ROLES.map((value) => ({ value, label: value }));
-const statusOptions = USER_STATUSES.map((value) => ({
-  value,
-  label: value === 'active' ? 'Active' : 'Disabled',
-}));
+function useStatusOptions() {
+  const { t } = useTranslation('users');
+  return USER_STATUSES.map((value) => ({ value, label: t(`states.${value}`) }));
+}
 
 const asRole = (value: string | null): UserRole | null =>
   USER_ROLES.find((known) => known === value) ?? null;
 const asStatus = (value: string | null): UserStatus | null =>
   USER_STATUSES.find((known) => known === value) ?? null;
 
+/** `fallback` is what a refusal for lack of permission says, already translated. */
 function ErrorNote({ error, fallback }: { error: unknown; fallback: string }) {
+  const { t } = useTranslation('users');
   if (!error) {
     return null;
   }
   return (
     <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(error, 'Sign in again to continue.', fallback)}
+      {describeError(t, error, t('signInAgain'), fallback)}
     </Alert>
   );
 }
@@ -89,19 +96,20 @@ function InvitationNotice({
   invitation: Invitation;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['users', 'common']);
+  const formatDate = useDateTime('short');
   const link = invitationLink(invitation.token);
+  const values = { user, expires: formatDate(invitation.expiresAt) };
   return (
     <Stack gap="md">
       <Text fz="sm">
         {invitation.purpose === 'reset'
-          ? `The password and authenticator of ${user} are gone and every session of theirs has ended.`
-          : `${user} has an account but no password yet.`}{' '}
-        Give them this link. It is shown once, works once, and expires{' '}
-        {when.format(new Date(invitation.expiresAt))}.
+          ? t('invitation.introReset', values)
+          : t('invitation.introNew', values)}
       </Text>
       <Stack gap={4}>
         <Text c="dimmed" fz="xs">
-          Link
+          {t('invitation.link')}
         </Text>
         <Code block style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
           {link}
@@ -115,11 +123,11 @@ function InvitationNotice({
               onClick={copy}
               variant="default"
             >
-              {copied ? 'Copied' : 'Copy the link'}
+              {copied ? t('common:copied') : t('invitation.copyLink')}
             </Button>
           )}
         </CopyButton>
-        <Button onClick={onClose}>Done</Button>
+        <Button onClick={onClose}>{t('invitation.done')}</Button>
       </Group>
     </Stack>
   );
@@ -140,6 +148,8 @@ function InviteDialog({
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
 
+  const { t } = useTranslation(['users', 'common']);
+  const roleOptions = useRoleOptions();
   const step = useStepUp();
   const request = {
     username,
@@ -175,7 +185,7 @@ function InviteDialog({
       centered
       onClose={close}
       opened={opened}
-      title={mutation.data ? 'Invitation' : 'Invite a user'}
+      title={mutation.data ? t('invitation.title') : t('invite.title')}
     >
       {mutation.data ? (
         <InvitationNotice
@@ -189,15 +199,15 @@ function InviteDialog({
             <TextInput
               autoComplete="off"
               data-autofocus
-              description="Lower-case letters, digits, dot, dash or underscore. 2 to 32 characters."
+              description={t('invite.loginNameDescription')}
               error={
                 touched &&
                 username.length > 0 &&
                 !CreateUserRequestSchema.shape.username.safeParse(username).success
-                  ? 'This login name is not allowed.'
+                  ? t('invite.loginNameError')
                   : undefined
               }
-              label="Login name"
+              label={t('fields.loginName')}
               onChange={(e) => {
                 setUsername(e.currentTarget.value);
               }}
@@ -207,8 +217,8 @@ function InviteDialog({
             <Select
               allowDeselect={false}
               data={roleOptions}
-              description="What they may do. See the Roles page."
-              label="Role"
+              description={t('invite.roleDescription')}
+              label={t('fields.role')}
               onChange={(value) => {
                 setRole(asRole(value) ?? 'observer');
               }}
@@ -216,7 +226,7 @@ function InviteDialog({
             />
             <TextInput
               autoComplete="off"
-              label="Display name"
+              label={t('fields.displayName')}
               onChange={(e) => {
                 setDisplayName(e.currentTarget.value);
               }}
@@ -224,28 +234,24 @@ function InviteDialog({
             />
             <TextInput
               autoComplete="off"
-              error={
-                touched && email.trim() && !check.success
-                  ? 'This is not an e-mail address.'
-                  : undefined
-              }
-              label="E-mail address"
+              error={touched && email.trim() && !check.success ? t('invite.emailError') : undefined}
+              label={t('fields.email')}
               onChange={(e) => {
                 setEmail(e.currentTarget.value);
               }}
               value={email}
             />
-            <ErrorNote error={mutation.error} fallback="Your role may not invite users." />
+            <ErrorNote error={mutation.error} fallback={t('invite.forbidden')} />
             <Group justify="flex-end">
               <Button onClick={close} variant="default">
-                Cancel
+                {t('common:cancel')}
               </Button>
               <Button
                 leftSection={<IconUserPlus size={16} />}
                 loading={mutation.isPending}
                 type="submit"
               >
-                Create and invite
+                {t('invite.submit')}
               </Button>
             </Group>
           </Stack>
@@ -266,12 +272,13 @@ function EditDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation('users');
   return (
     <Modal
       centered
       onClose={onClose}
       opened={user !== undefined}
-      title={`Change ${user?.username ?? ''}`}
+      title={t('edit.title', { username: user?.username ?? '' })}
     >
       {user ? (
         <EditForm key={user.id} onClose={onClose} onDone={onDone} self={self} user={user} />
@@ -298,6 +305,9 @@ function EditForm({
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [email, setEmail] = useState(user.email ?? '');
 
+  const { t } = useTranslation(['users', 'common']);
+  const roleOptions = useRoleOptions();
+  const statusOptions = useStatusOptions();
   const step = useStepUp();
   const mutation = useMutation({
     mutationFn: () =>
@@ -325,9 +335,9 @@ function EditForm({
         <Select
           allowDeselect={false}
           data={roleOptions}
-          description={self ? 'You cannot change your own role.' : undefined}
+          description={self ? t('edit.roleSelf') : undefined}
           disabled={self}
-          label="Role"
+          label={t('fields.role')}
           onChange={(value) => {
             setRole(asRole(value) ?? user.role);
           }}
@@ -336,39 +346,35 @@ function EditForm({
         <Select
           allowDeselect={false}
           data={statusOptions}
-          description={
-            self
-              ? 'You cannot disable yourself.'
-              : 'A disabled user is signed out at once and cannot sign in.'
-          }
+          description={self ? t('edit.statusSelf') : t('edit.statusHint')}
           disabled={self}
-          label="Status"
+          label={t('fields.status')}
           onChange={(value) => {
             setStatus(asStatus(value) ?? 'active');
           }}
           value={status}
         />
         <TextInput
-          label="Display name"
+          label={t('fields.displayName')}
           onChange={(e) => {
             setDisplayName(e.currentTarget.value);
           }}
           value={displayName}
         />
         <TextInput
-          label="E-mail address"
+          label={t('fields.email')}
           onChange={(e) => {
             setEmail(e.currentTarget.value);
           }}
           value={email}
         />
-        <ErrorNote error={mutation.error} fallback="Your role may not change users." />
+        <ErrorNote error={mutation.error} fallback={t('edit.forbidden')} />
         <Group justify="flex-end">
           <Button onClick={onClose} variant="default">
-            Cancel
+            {t('common:cancel')}
           </Button>
           <Button loading={mutation.isPending} type="submit">
-            Save
+            {t('common:save')}
           </Button>
         </Group>
       </Stack>
@@ -385,6 +391,7 @@ function ResetDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['users', 'common']);
   const step = useStepUp();
   const mutation = useMutation({
     mutationFn: (id: string) => step.run(() => resetCredentials(id)),
@@ -399,7 +406,9 @@ function ResetDialog({
       centered
       onClose={close}
       opened={user !== undefined}
-      title={mutation.data ? 'Invitation' : `Reset the credentials of ${user?.username ?? ''}`}
+      title={
+        mutation.data ? t('invitation.title') : t('reset.title', { username: user?.username ?? '' })
+      }
     >
       {mutation.data ? (
         <InvitationNotice
@@ -409,14 +418,11 @@ function ResetDialog({
         />
       ) : (
         <Stack gap="md">
-          <Text fz="sm">
-            This deletes their password, authenticator and recovery codes and signs them out
-            everywhere, now. They cannot sign in until they accept the new invitation you will get.
-          </Text>
-          <ErrorNote error={mutation.error} fallback="Your role may not reset credentials." />
+          <Text fz="sm">{t('reset.warning')}</Text>
+          <ErrorNote error={mutation.error} fallback={t('reset.forbidden')} />
           <Group justify="flex-end">
             <Button onClick={close} variant="default">
-              Cancel
+              {t('common:cancel')}
             </Button>
             <Button
               color="red"
@@ -428,7 +434,7 @@ function ResetDialog({
                 }
               }}
             >
-              Reset credentials
+              {t('reset.submit')}
             </Button>
           </Group>
         </Stack>
@@ -445,6 +451,8 @@ export function UsersPage({
   permissions: readonly Permission[];
   currentUserId: string;
 }) {
+  const { t } = useTranslation(['users', 'common', 'roles']);
+  const formatDate = useDateTime('short');
   const queryClient = useQueryClient();
   const canWrite = permissions.includes('users:write');
   const [inviting, setInviting] = useState(false);
@@ -473,7 +481,7 @@ export function UsersPage({
               onClick={() => void list.refetch()}
               variant="default"
             >
-              Refresh
+              {t('common:refresh')}
             </Button>
             {canWrite ? (
               <Button
@@ -482,14 +490,14 @@ export function UsersPage({
                   setInviting(true);
                 }}
               >
-                Invite a user
+                {t('header.invite')}
               </Button>
             ) : null}
           </>
         }
-        description="Who can sign in to this instance, and what they may do"
+        description={t('header.description')}
         icon={<IconUsers size={22} />}
-        title="Users"
+        title={t('header.title')}
       />
 
       <Card padding={0}>
@@ -500,21 +508,17 @@ export function UsersPage({
           </Stack>
         ) : list.isError ? (
           <Alert color="red" m="md" variant="light">
-            {describeError(
-              list.error,
-              'Sign in again to continue.',
-              'Your role may not see the users.',
-            )}
+            {describeError(t, list.error, t('signInAgain'), t('table.loadFailed'))}
           </Alert>
         ) : (
           <Table.ScrollContainer minWidth={680}>
             <Table>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th pl="md">Login name</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>State</Table.Th>
-                  <Table.Th>Last sign-in</Table.Th>
+                  <Table.Th pl="md">{t('fields.loginName')}</Table.Th>
+                  <Table.Th>{t('fields.role')}</Table.Th>
+                  <Table.Th>{t('table.state')}</Table.Th>
+                  <Table.Th>{t('table.lastSignIn')}</Table.Th>
                   <Table.Th pr="md" w={48} />
                 </Table.Tr>
               </Table.Thead>
@@ -526,7 +530,9 @@ export function UsersPage({
                         <Text fw={500} fz="sm">
                           {user.username}
                         </Text>
-                        {user.id === currentUserId ? <Badge size="xs">you</Badge> : null}
+                        {user.id === currentUserId ? (
+                          <Badge size="xs">{t('table.you')}</Badge>
+                        ) : null}
                       </Group>
                       {user.displayName ? (
                         <Text c="dimmed" fz="xs">
@@ -536,28 +542,30 @@ export function UsersPage({
                     </Table.Td>
                     <Table.Td>
                       <Badge color="gray" variant="light">
-                        {user.role}
+                        {t(`roles:names.${user.role}`)}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <StatusText kind={STATE[user.state].kind}>
-                        {STATE[user.state].label}
+                      <StatusText kind={STATE_KIND[user.state]}>
+                        {t(`states.${user.state}`)}
                       </StatusText>
                       {user.invitationExpiresAt ? (
                         <Text c="dimmed" fz="xs">
-                          invitation until {when.format(new Date(user.invitationExpiresAt))}
+                          {t('table.invitationUntil', {
+                            when: formatDate(user.invitationExpiresAt),
+                          })}
                         </Text>
                       ) : null}
                     </Table.Td>
                     <Table.Td c="dimmed" fz="sm">
-                      {user.lastLoginAt ? when.format(new Date(user.lastLoginAt)) : 'never'}
+                      {user.lastLoginAt ? formatDate(user.lastLoginAt) : t('common:never')}
                     </Table.Td>
                     <Table.Td pr="md">
                       {canWrite ? (
                         <Menu position="bottom-end" shadow="md" withinPortal>
                           <Menu.Target>
                             <ActionIcon
-                              aria-label={`Actions for ${user.username}`}
+                              aria-label={t('table.actionsFor', { username: user.username })}
                               color="gray"
                               variant="subtle"
                             >
@@ -571,7 +579,7 @@ export function UsersPage({
                                 setEditing(user);
                               }}
                             >
-                              Change
+                              {t('menu.change')}
                             </Menu.Item>
                             <Menu.Item
                               color="red"
@@ -581,7 +589,7 @@ export function UsersPage({
                                 setResetting(user);
                               }}
                             >
-                              Reset credentials
+                              {t('menu.resetCredentials')}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -600,7 +608,7 @@ export function UsersPage({
               onClick={() => void list.fetchNextPage()}
               variant="default"
             >
-              Load more
+              {t('table.loadMore')}
             </Button>
           </Group>
         ) : null}

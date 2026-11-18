@@ -11,6 +11,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ApiRequestError, StepUpCancelledError, stepUp } from '../api.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
@@ -85,6 +86,7 @@ function StepUpDialog({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [code, setCode] = useState('');
   const [recovery, setRecovery] = useState(false);
   const mutation = useMutation({
@@ -120,19 +122,18 @@ function StepUpDialog({
   };
 
   return (
-    <Modal centered onClose={cancel} opened={opened} title="Confirm it is you" zIndex={400}>
+    <Modal centered onClose={cancel} opened={opened} title={t('stepUp.title')} zIndex={400}>
       <form onSubmit={submit}>
         <Stack gap="md">
           <Text c="dimmed" fz="sm">
-            This action needs a fresh code from your authenticator. It stays confirmed for a few
-            minutes.
+            {t('stepUp.intro')}
           </Text>
           {recovery ? (
             <TextInput
               autoComplete="off"
               autoFocus
-              description="A recovery code looks like ABCD-EFGH-JKLM. It works once."
-              label="Recovery code"
+              description={t('totp.recoveryHint')}
+              label={t('totp.recoveryLabel')}
               onChange={(e) => {
                 setCode(e.currentTarget.value);
               }}
@@ -142,7 +143,7 @@ function StepUpDialog({
           ) : (
             <Stack gap={6}>
               <Text fw={500} fz="sm">
-                Code from your authenticator
+                {t('totp.codeLabel')}
               </Text>
               <CodeInput busy={isPending} onChange={setCode} value={code} />
             </Stack>
@@ -150,10 +151,9 @@ function StepUpDialog({
           {mutation.error ? (
             <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
               {describeError(
+                t,
                 mutation.error,
-                recovery
-                  ? 'That recovery code is not valid, or was used already.'
-                  : 'That code is not right, or was used already. Wait for the next one.',
+                recovery ? t('totp.recoveryInvalid') : t('stepUp.codeWrong'),
               )}
             </Alert>
           ) : null}
@@ -168,14 +168,14 @@ function StepUpDialog({
               }}
               type="button"
             >
-              {recovery ? 'Use the authenticator instead' : 'Use a recovery code'}
+              {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
             </Anchor>
             <Group>
               <Button onClick={cancel} variant="default">
-                Cancel
+                {t('common:cancel')}
               </Button>
               <Button leftSection={<IconShieldLock size={16} />} loading={isPending} type="submit">
-                Confirm
+                {t('common:confirm')}
               </Button>
             </Group>
           </Group>

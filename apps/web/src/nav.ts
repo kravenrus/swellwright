@@ -20,8 +20,10 @@ import {
   IconUsers,
   IconWorldWww,
 } from '@tabler/icons-react';
+import type { TFunction } from 'i18next';
 
 import type { Permission } from '@swellwright/contracts';
+import type { Namespace } from '@swellwright/i18n';
 import type { NavLink, NavSection } from '@swellwright/ui';
 
 /** A page and the permission that opens it. Without one, every signed-in user sees it. */
@@ -34,39 +36,46 @@ type GatedSection = Omit<NavSection, 'links'> & {
 /**
  * The navigation planned in docs/en/design/07-ui-ux.md. Pages that are not built yet are shown and disabled,
  * so the structure is visible from the first slice. A page the role cannot open is not shown at all.
+ * The labels are in the language of the console, so the list is made for the current `t`.
  */
-const NAV: readonly GatedSection[] = [
-  { id: 'overview', label: 'Overview', icon: IconLayoutDashboard },
+const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
+  { id: 'overview', label: t('nav:overview'), icon: IconLayoutDashboard },
   {
     id: 'fleet',
-    label: 'Fleet',
+    label: t('nav:fleet'),
     icon: IconServer,
     links: [
       {
         id: 'servers',
-        label: 'Servers',
+        label: t('nav:servers'),
         icon: IconServer,
         disabled: true,
         permission: 'servers:read',
       },
       {
         id: 'nodes',
-        label: 'Nodes',
+        label: t('nav:nodes'),
         icon: IconHexagon,
         disabled: true,
         permission: 'servers:read',
       },
       {
         id: 'chains',
-        label: 'Chains',
+        label: t('nav:chains'),
         icon: IconCirclesRelation,
         disabled: true,
         permission: 'servers:read',
       },
-      { id: 'dns', label: 'DNS', icon: IconWorldWww, disabled: true, permission: 'servers:read' },
+      {
+        id: 'dns',
+        label: t('nav:dns'),
+        icon: IconWorldWww,
+        disabled: true,
+        permission: 'servers:read',
+      },
       {
         id: 'certificates',
-        label: 'Certificates',
+        label: t('nav:certificates'),
         icon: IconCertificate,
         disabled: true,
         permission: 'servers:read',
@@ -75,20 +84,26 @@ const NAV: readonly GatedSection[] = [
   },
   {
     id: 'operations',
-    label: 'Operations',
+    label: t('nav:operations'),
     icon: IconListCheck,
     links: [
-      { id: 'runs', label: 'Runs', icon: IconPlayerPlay, disabled: true, permission: 'runs:read' },
+      {
+        id: 'runs',
+        label: t('nav:runs'),
+        icon: IconPlayerPlay,
+        disabled: true,
+        permission: 'runs:read',
+      },
       {
         id: 'scenarios',
-        label: 'Scenarios',
+        label: t('nav:scenarios'),
         icon: IconRoute,
         disabled: true,
         permission: 'runs:read',
       },
       {
         id: 'schedules',
-        label: 'Schedules',
+        label: t('nav:schedules'),
         icon: IconCalendarTime,
         disabled: true,
         permission: 'runs:read',
@@ -97,29 +112,29 @@ const NAV: readonly GatedSection[] = [
   },
   {
     id: 'monitoring',
-    label: 'Monitoring',
+    label: t('nav:monitoring'),
     icon: IconRadar2,
     links: [
-      { id: 'probes', label: 'Probes', icon: IconRadar2, disabled: true },
-      { id: 'alerts', label: 'Alerts', icon: IconBell, disabled: true },
-      { id: 'reports', label: 'Reports', icon: IconReportAnalytics, disabled: true },
+      { id: 'probes', label: t('nav:probes'), icon: IconRadar2, disabled: true },
+      { id: 'alerts', label: t('nav:alerts'), icon: IconBell, disabled: true },
+      { id: 'reports', label: t('nav:reports'), icon: IconReportAnalytics, disabled: true },
     ],
   },
   {
     id: 'panel',
-    label: 'Panel',
+    label: t('nav:panel'),
     icon: IconHexagon,
     links: [
       {
         id: 'profiles',
-        label: 'Profiles',
+        label: t('nav:profiles'),
         icon: IconHexagon,
         disabled: true,
         permission: 'panel:read',
       },
       {
         id: 'api-console',
-        label: 'API console',
+        label: t('nav:apiConsole'),
         icon: IconApi,
         disabled: true,
         permission: 'panel:read',
@@ -128,16 +143,22 @@ const NAV: readonly GatedSection[] = [
   },
   {
     id: 'security',
-    label: 'Security',
+    label: t('nav:security'),
     icon: IconShieldLock,
     links: [
-      { id: 'vault', label: 'Vault', icon: IconKey, disabled: true, permission: 'vault:read' },
-      { id: 'users', label: 'Users', icon: IconUsers, permission: 'users:read' },
-      { id: 'roles', label: 'Roles', icon: IconUserShield, permission: 'roles:read' },
-      { id: 'audit', label: 'Audit', icon: IconBook, permission: 'audit:read' },
+      {
+        id: 'vault',
+        label: t('nav:vault'),
+        icon: IconKey,
+        disabled: true,
+        permission: 'vault:read',
+      },
+      { id: 'users', label: t('nav:users'), icon: IconUsers, permission: 'users:read' },
+      { id: 'roles', label: t('nav:roles'), icon: IconUserShield, permission: 'roles:read' },
+      { id: 'audit', label: t('nav:audit'), icon: IconBook, permission: 'audit:read' },
     ],
   },
-  { id: 'settings', label: 'Settings', icon: IconSettings, disabled: true },
+  { id: 'settings', label: t('nav:settings'), icon: IconSettings, disabled: true },
 ];
 
 const pageOf = (link: GatedLink): NavLink => ({
@@ -148,11 +169,14 @@ const pageOf = (link: GatedLink): NavLink => ({
 });
 
 /** The navigation for a user: only what their permissions open. A section left without pages is dropped. */
-export function navFor(permissions: readonly Permission[]): NavSection[] {
+export function navFor(
+  permissions: readonly Permission[],
+  t: TFunction<Namespace[]>,
+): NavSection[] {
   const allowed = (permission: Permission | undefined): boolean =>
     permission === undefined || permissions.includes(permission);
   const sections: NavSection[] = [];
-  for (const { permission, links, ...section } of NAV) {
+  for (const { permission, links, ...section } of navigation(t)) {
     if (!allowed(permission)) {
       continue;
     }

@@ -48,6 +48,7 @@ packages/vault           encryption, sealing, rotation
 packages/policy          rules and evaluation
 packages/node-assets     install.sh, node-engine (py), baseline checks, versions and hashes
 packages/ui              shared components and theme (visually matching the panel)
+packages/i18n            the texts of the console in English and Russian, the language choice (ADR 0020)
 packages/testing         fake panel, fake SSH, lab
 packages/plugin-api      extension contracts (DnsProvider, NodeFlavor, AuthProvider, ...)
 plugins/official/        official plugins (DNS drivers: rucenter, cloudflare, rfc2136, and others; hosting provider drivers; login; notifications; the selfsteal node flavor; certificate distribution)

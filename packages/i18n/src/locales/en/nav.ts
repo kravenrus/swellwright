@@ -1,0 +1,33 @@
+/** The navigation: sections and pages, by their ids (apps/web/src/nav.ts). Pages that are not built yet are listed too. */
+export const nav = {
+  overview: 'Overview',
+
+  fleet: 'Fleet',
+  servers: 'Servers',
+  nodes: 'Nodes',
+  chains: 'Chains',
+  dns: 'DNS',
+  certificates: 'Certificates',
+
+  operations: 'Operations',
+  runs: 'Runs',
+  scenarios: 'Scenarios',
+  schedules: 'Schedules',
+
+  monitoring: 'Monitoring',
+  probes: 'Probes',
+  alerts: 'Alerts',
+  reports: 'Reports',
+
+  panel: 'Panel',
+  profiles: 'Profiles',
+  apiConsole: 'API console',
+
+  security: 'Security',
+  vault: 'Vault',
+  users: 'Users',
+  roles: 'Roles',
+  audit: 'Audit',
+
+  settings: 'Settings',
+} as const;
