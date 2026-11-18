@@ -4,7 +4,7 @@
 
 | Layer | Choice |
 |---|---|
-| Backend | NestJS 11, TypeScript 5.9, Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, Terminus, Prometheus |
+| Backend | NestJS 11, TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, Terminus, Prometheus |
 | Database | PostgreSQL with Prisma 6 (and Kysely for heavy queries) |
 | Queues and locks | BullMQ on a Redis-compatible store (Valkey); Redlock and PostgreSQL advisory locks |
 | SSH | `ssh2`: pooling, detached steps, sudo, PTY terminal, SFTP, certificates |
