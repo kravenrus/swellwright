@@ -129,6 +129,6 @@ export class AuthController {
   @ContractRoute(meRoute)
   me(@Req() req: AuthedRequest): SessionInfo {
     const auth = requireAuth(req);
-    return toSessionInfo(auth.user, auth.expiresAt);
+    return toSessionInfo(auth.user, auth.expiresAt, auth.grants);
   }
 }

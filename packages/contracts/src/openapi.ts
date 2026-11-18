@@ -60,6 +60,13 @@ import {
 } from './vault.js';
 import { SessionListSchema, SessionSummarySchema, SessionsRevokedSchema } from './sessions.js';
 import {
+  CreatedTokenSchema,
+  CreateTokenRequestSchema,
+  TokenListSchema,
+  TokenStateSchema,
+  TokenViewSchema,
+} from './tokens.js';
+import {
   CheckResultSchema,
   HealthResponseSchema,
   ReadyResponseSchema,
@@ -67,7 +74,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.9.0';
+export const OPENAPI_INFO_VERSION = '0.10.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -122,6 +129,11 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   SessionSummarySchema,
   SessionListSchema,
   SessionsRevokedSchema,
+  TokenStateSchema,
+  TokenViewSchema,
+  TokenListSchema,
+  CreateTokenRequestSchema,
+  CreatedTokenSchema,
   SecretListSchema,
   CreateSecretRequestSchema,
   UpdateSecretRequestSchema,
@@ -213,7 +225,13 @@ function operation(route: RouteDef): Json {
     };
   }
   op['security'] =
-    route.auth === 'none' ? [] : route.auth === 'token' ? [{ bearer: [] }] : [{ session: [] }];
+    route.auth === 'none'
+      ? []
+      : route.auth === 'token'
+        ? [{ bearer: [] }]
+        : route.auth === 'any'
+          ? [{ session: [] }, { bearer: [] }]
+          : [{ session: [] }];
   if (route.permission) {
     // Not part of OpenAPI: tells a reader and a generated client which role may call the operation.
     op['x-sw-permission'] = route.permission;
@@ -265,6 +283,7 @@ export function buildOpenApi(): Json {
       { name: 'roles', description: 'Built-in roles and the permission catalogue.' },
       { name: 'audit', description: 'The append-only audit log and its integrity check.' },
       { name: 'sessions', description: 'Signed-in browser sessions and how to end them.' },
+      { name: 'tokens', description: 'API tokens for the CLI and integrations.' },
     ],
     paths,
     components: {
@@ -277,7 +296,12 @@ export function buildOpenApi(): Json {
           description:
             'Set by the sign-in routes. Routes marked as needing a session accept a signed-in one; the second sign-in step accepts one whose password was accepted.',
         },
-        bearer: { type: 'http', scheme: 'bearer' },
+        bearer: {
+          type: 'http',
+          scheme: 'bearer',
+          description:
+            'An API token (`swt_...`) created in the console. It carries a subset of the permissions of its owner, expires, and is refused on every route that needs a fresh second factor.',
+        },
       },
     },
   };

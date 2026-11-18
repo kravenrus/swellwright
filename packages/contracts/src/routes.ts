@@ -24,6 +24,13 @@ import {
 } from './sessions.js';
 import { HealthResponseSchema, ReadyResponseSchema, VersionResponseSchema } from './system.js';
 import {
+  CreatedTokenSchema,
+  CreateTokenRequestSchema,
+  TokenIdParamsSchema,
+  TokenListQuerySchema,
+  TokenListSchema,
+} from './tokens.js';
+import {
   CreateUserRequestSchema,
   UpdateUserRequestSchema,
   UserIdParamsSchema,
@@ -55,9 +62,10 @@ export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
  * - `none`: anyone (probes, the API description, the sign-in entry points).
  * - `pending`: a session whose password was accepted and whose second step is still open.
  * - `session`: a fully signed-in session.
- * - `token`: a Swellwright API token.
+ * - `token`: a Swellwright API token (`Authorization: Bearer`), nothing else.
+ * - `any`: a signed-in session or an API token. Never a route that needs a step-up: a token has no second factor.
  */
-export type RouteAuth = 'none' | 'pending' | 'session' | 'token';
+export type RouteAuth = 'none' | 'pending' | 'session' | 'token' | 'any';
 
 export interface ResponseDef {
   readonly description: string;
@@ -245,7 +253,7 @@ export const meRoute = defineRoute({
   path: '/auth/me',
   tags: ['auth'],
   summary: 'The signed-in user',
-  auth: 'session',
+  auth: 'any',
   responses: { 200: { description: 'The current session.', schema: SessionInfoSchema } },
 });
 
@@ -297,7 +305,7 @@ export const listUsersRoute = defineRoute({
   path: '/users',
   tags: ['users'],
   summary: 'List the users',
-  auth: 'session',
+  auth: 'any',
   permission: 'users:read',
   request: { query: UserListQuerySchema },
   responses: { 200: { description: 'One page of users.', schema: UserListSchema } },
@@ -357,7 +365,7 @@ export const vaultStatusRoute = defineRoute({
   tags: ['vault'],
   summary: 'Whether the vault exists and is open',
   description: 'Also the number of secrets. Works while the vault is sealed.',
-  auth: 'session',
+  auth: 'any',
   permission: 'vault:read',
   responses: { 200: { description: 'The status.', schema: VaultStatusSchema } },
 });
@@ -415,7 +423,7 @@ export const listSecretsRoute = defineRoute({
   tags: ['vault'],
   summary: 'List the secrets, without their values',
   description: 'Works while the vault is sealed: names, types and dates are not secret.',
-  auth: 'session',
+  auth: 'any',
   permission: 'vault:read',
   responses: { 200: { description: 'The secrets.', schema: SecretListSchema } },
 });
@@ -550,7 +558,7 @@ export const rolesRoute = defineRoute({
   summary: 'The roles and the permission catalogue',
   description:
     'The built-in roles with the permissions each holds, and every permission with its meaning.',
-  auth: 'session',
+  auth: 'any',
   permission: 'roles:read',
   responses: { 200: { description: 'The catalogue.', schema: RoleCatalogSchema } },
 });
@@ -562,7 +570,7 @@ export const listAuditRoute = defineRoute({
   tags: ['audit'],
   summary: 'Read the audit log',
   description: 'Newest first. Page back with `cursor`. Filters combine.',
-  auth: 'session',
+  auth: 'any',
   permission: 'audit:read',
   request: { query: AuditQuerySchema },
   responses: { 200: { description: 'One page of events.', schema: AuditPageSchema } },
@@ -576,7 +584,7 @@ export const verifyAuditChainRoute = defineRoute({
   summary: 'Verify the integrity of the audit chain',
   description:
     'Reads the whole log and checks the numbering, every link and every hash. The run is itself recorded. A broken chain is a normal answer (`ok: false`), not an error.',
-  auth: 'session',
+  auth: 'any',
   permission: 'audit:verify',
   responses: { 200: { description: 'The result.', schema: ChainVerificationSchema } },
 });
@@ -623,7 +631,7 @@ export const listSessionsRoute = defineRoute({
   tags: ['sessions'],
   summary: 'The signed-in sessions of every user',
   description: 'Active sessions, most recently used first. Filter by user with `userId`.',
-  auth: 'session',
+  auth: 'any',
   permission: 'sessions:read',
   request: { query: SessionListQuerySchema },
   responses: { 200: { description: 'The sessions.', schema: SessionListSchema } },
@@ -659,6 +667,73 @@ export const revokeUserSessionsRoute = defineRoute({
   responses: { 200: { description: 'How many were ended.', schema: SessionsRevokedSchema } },
 });
 
+export const listMyTokensRoute = defineRoute({
+  operationId: 'listMyTokens',
+  method: 'get',
+  path: '/auth/tokens',
+  tags: ['tokens'],
+  summary: 'Your API tokens',
+  description:
+    'The tokens issued in your name, active, expired and revoked ones, never their values.',
+  auth: 'session',
+  responses: { 200: { description: 'Your tokens.', schema: TokenListSchema } },
+});
+
+export const revokeMyTokenRoute = defineRoute({
+  operationId: 'revokeMyToken',
+  method: 'delete',
+  path: '/auth/tokens/{id}',
+  tags: ['tokens'],
+  summary: 'Revoke one of your tokens',
+  description:
+    'Stops the token at once. Revoking a token that is already revoked succeeds. A token of someone else is reported as not found.',
+  auth: 'session',
+  request: { params: TokenIdParamsSchema },
+  responses: { 204: { description: 'The token is revoked.', schema: z.undefined(), empty: true } },
+});
+
+export const createTokenRoute = defineRoute({
+  operationId: 'createToken',
+  method: 'post',
+  path: '/tokens',
+  tags: ['tokens'],
+  summary: 'Create an API token in your own name',
+  description:
+    'The token carries a subset of your permissions (never one that needs a fresh second factor), expires after at most a year, and may be limited to addresses. The value is in the answer and nowhere else: it is not stored and cannot be shown again.',
+  auth: 'session',
+  permission: 'tokens:create',
+  stepUp: true,
+  request: { body: CreateTokenRequestSchema },
+  responses: { 201: { description: 'The token and its record.', schema: CreatedTokenSchema } },
+});
+
+export const listTokensRoute = defineRoute({
+  operationId: 'listTokens',
+  method: 'get',
+  path: '/tokens',
+  tags: ['tokens'],
+  summary: 'The API tokens of every user',
+  description: 'Newest first. Filter by user with `userId`. Never the values.',
+  auth: 'any',
+  permission: 'tokens:read',
+  request: { query: TokenListQuerySchema },
+  responses: { 200: { description: 'The tokens.', schema: TokenListSchema } },
+});
+
+export const revokeTokenRoute = defineRoute({
+  operationId: 'revokeToken',
+  method: 'delete',
+  path: '/tokens/{id}',
+  tags: ['tokens'],
+  summary: 'Revoke the token of any user',
+  description: 'Stops the token at once and records it.',
+  auth: 'session',
+  permission: 'tokens:revoke',
+  stepUp: true,
+  request: { params: TokenIdParamsSchema },
+  responses: { 204: { description: 'The token is revoked.', schema: z.undefined(), empty: true } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -667,6 +742,8 @@ export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'listMySessions',
   'revokeMySession',
   'revokeOtherSessions',
+  'listMyTokens',
+  'revokeMyToken',
 ];
 
 /** Every route of the public API. The server binds its handlers to these definitions. */
@@ -712,6 +789,11 @@ export const routes = [
   listSessionsRoute,
   revokeSessionRoute,
   revokeUserSessionsRoute,
+  listMyTokensRoute,
+  revokeMyTokenRoute,
+  createTokenRoute,
+  listTokensRoute,
+  revokeTokenRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

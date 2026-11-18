@@ -103,6 +103,9 @@ export class SessionService {
       user: row.user,
       expiresAt,
       elevatedUntil: row.elevatedUntil,
+      via: 'session',
+      tokenId: null,
+      grants: null,
     };
   }
 

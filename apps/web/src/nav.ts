@@ -1,5 +1,6 @@
 import {
   IconApi,
+  IconApiApp,
   IconBell,
   IconBook,
   IconCalendarTime,
@@ -151,6 +152,7 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
       { id: 'users', label: t('nav:users'), icon: IconUsers, permission: 'users:read' },
       { id: 'roles', label: t('nav:roles'), icon: IconUserShield, permission: 'roles:read' },
       { id: 'sessions', label: t('nav:sessions'), icon: IconDevices },
+      { id: 'tokens', label: t('nav:tokens'), icon: IconApiApp },
       { id: 'audit', label: t('nav:audit'), icon: IconBook, permission: 'audit:read' },
     ],
   },

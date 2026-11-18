@@ -11,6 +11,8 @@ import { DEFAULT_PASSWORD_PARAMS, PasswordHasher, type PasswordParams } from './
 import { SecretBox } from './auth/secret-box.js';
 import { SessionManagementService } from './auth/session-management.service.js';
 import { SessionService } from './auth/session.service.js';
+import { TokenService } from './auth/token.service.js';
+import { TokensController } from './auth/tokens.controller.js';
 import { SessionsController } from './auth/sessions.controller.js';
 import { SetupController } from './auth/setup.controller.js';
 import { SetupService } from './auth/setup.service.js';
@@ -72,6 +74,7 @@ export class AppModule implements OnApplicationShutdown {
         SystemController,
         SetupController,
         AuthController,
+        TokensController,
         SessionsController,
         RolesController,
         AuditController,
@@ -92,6 +95,7 @@ export class AppModule implements OnApplicationShutdown {
         },
         { provide: SECRET_BOX, useValue: new SecretBox(config.authKey) },
         SessionService,
+        TokenService,
         SessionManagementService,
         AuditService,
         AuthService,
