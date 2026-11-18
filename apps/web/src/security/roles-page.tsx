@@ -32,6 +32,12 @@ const PERMISSION_KEY = {
   'roles:read': 'rolesRead',
   'audit:read': 'auditRead',
   'audit:verify': 'auditVerify',
+  'audit:export': 'auditExport',
+  'sessions:read': 'sessionsRead',
+  'sessions:revoke': 'sessionsRevoke',
+  'tokens:create': 'tokensCreate',
+  'tokens:read': 'tokensRead',
+  'tokens:revoke': 'tokensRevoke',
 } as const satisfies Record<Permission, PermissionKey>;
 
 /**

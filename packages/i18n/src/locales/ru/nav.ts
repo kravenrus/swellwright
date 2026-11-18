@@ -27,6 +27,7 @@ export const nav = {
   vault: 'Хранилище секретов',
   users: 'Пользователи',
   roles: 'Роли',
+  sessions: 'Сессии',
   audit: 'Аудит',
 
   settings: 'Настройки',

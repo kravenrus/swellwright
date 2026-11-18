@@ -22,6 +22,11 @@ import {
   RoleCatalogSchema,
   type SessionInfo,
   SessionInfoSchema,
+  type SessionList,
+  type SessionListQuery,
+  SessionListSchema,
+  type SessionsRevoked,
+  SessionsRevokedSchema,
   type SetupOwnerRequest,
   type SetupStatus,
   SetupStatusSchema,
@@ -236,6 +241,30 @@ export const resetCredentials = (id: string): Promise<UserInvitation> =>
 
 export const getRoles = (): Promise<RoleCatalog> =>
   send('GET', '/roles', undefined, RoleCatalogSchema);
+
+/** The signed-in sessions of your own account; `current` marks the one making the call. */
+export const listMySessions = (): Promise<SessionList> =>
+  send('GET', '/auth/sessions', undefined, SessionListSchema);
+
+/** Ends another session of your own account. Ending the one in use is refused (409). */
+export const revokeMySession = (id: string): Promise<void> =>
+  send('DELETE', `/auth/sessions/${id}`, undefined, undefined);
+
+/** Ends every session of your account except the one in use. */
+export const revokeOtherSessions = (): Promise<SessionsRevoked> =>
+  send('POST', '/auth/sessions/revoke-others', undefined, SessionsRevokedSchema);
+
+/** The signed-in sessions of every user, or of one (`sessions:read`). */
+export const listSessions = (query: SessionListQuery): Promise<SessionList> =>
+  send('GET', `/sessions${queryString(query)}`, undefined, SessionListSchema);
+
+/** Ends a session of any user (`sessions:revoke`, needs a fresh confirmation with a code). */
+export const revokeSession = (id: string): Promise<void> =>
+  send('DELETE', `/sessions/${id}`, undefined, undefined);
+
+/** Ends every session of a user (`sessions:revoke`, needs a fresh confirmation with a code). */
+export const revokeUserSessions = (id: string): Promise<SessionsRevoked> =>
+  send('POST', `/users/${id}/sessions/revoke`, undefined, SessionsRevokedSchema);
 
 /** `?a=1&b=2` from the values that are set, or nothing. */
 function queryString(query: Record<string, string | number | undefined>): string {

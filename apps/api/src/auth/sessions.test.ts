@@ -76,7 +76,10 @@ describe('sessions', { skip: !databaseUrl }, () => {
   it('never lists a session that is only half signed in, or one of someone else', async () => {
     const owner = await signInAs(instance, 'owner', ownerSecret);
     const half = instance.client();
-    assert.equal((await half.post('/auth/login', { username: 'owner', password: 'x' })).status, 401);
+    assert.equal(
+      (await half.post('/auth/login', { username: 'owner', password: 'x' })).status,
+      401,
+    );
     await signInAs(instance, 'alice', aliceSecret);
     const mine = await sessionsOf(owner);
     assert.ok(mine.every((s) => s.userId !== aliceId));
@@ -148,7 +151,9 @@ describe('sessions', { skip: !databaseUrl }, () => {
     assert.equal(event.details['scope'], 'others');
     assert.equal(event.details['count'], revoked);
     // Nothing left to end: no second record.
-    const count = (await auditEvents(instance)).filter((e) => e.action === 'session.revoked').length;
+    const count = (await auditEvents(instance)).filter(
+      (e) => e.action === 'session.revoked',
+    ).length;
     assert.equal((await keep.post('/auth/sessions/revoke-others')).status, 200);
     assert.equal(
       (await auditEvents(instance)).filter((e) => e.action === 'session.revoked').length,
