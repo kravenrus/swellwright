@@ -4,10 +4,14 @@ import {
   disablePluginRoute,
   enablePluginRoute,
   type EnablePluginRequest,
+  getPluginConfigRoute,
   listPluginsRoute,
   PluginIdParamsSchema,
+  type PluginConfigView,
   type PluginList,
   type PluginView,
+  updatePluginConfigRoute,
+  type UpdatePluginConfigRequest,
 } from '@swellwright/contracts';
 
 import { type AuthedRequest, requestMeta, requireAuth } from '../auth/context.js';
@@ -48,5 +52,20 @@ export class PluginsController {
   check(@Req() req: AuthedRequest): Promise<PluginView> {
     const { id } = PluginIdParamsSchema.parse(req.params);
     return this.host.check(actorOf(req), id, requestMeta(req));
+  }
+
+  @ContractRoute(getPluginConfigRoute)
+  config(@Req() req: AuthedRequest): Promise<PluginConfigView> {
+    const { id } = PluginIdParamsSchema.parse(req.params);
+    return this.plugins.getConfig(id);
+  }
+
+  @ContractRoute(updatePluginConfigRoute)
+  updateConfig(
+    @Body() body: UpdatePluginConfigRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<PluginConfigView> {
+    const { id } = PluginIdParamsSchema.parse(req.params);
+    return this.plugins.updateConfig(actorOf(req), id, body.values, requestMeta(req));
   }
 }

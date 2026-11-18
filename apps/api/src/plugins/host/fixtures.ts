@@ -1,6 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { ConfigValues } from '@swellwright/plugin-api';
+
+import { NetworkRefused, type PluginNetwork } from './network.js';
+import type { CoreServices } from './process.js';
+
 /** Shared by the tests of the plugin host: a plugin written to a temporary directory. Not part of the application. */
 
 /** A plugin's module as text: every method a test needs, written the way a plugin author would. */
@@ -8,6 +13,17 @@ export const FIXTURE_MODULE = `
 export default {
   methods: {
     echo: (params) => params,
+    config: (params, context) => context.config,
+    secret: (params, context) => context.secret(params.field),
+    secretRefused: async (params, context) => {
+      try { return await context.secret(params.field); } catch (error) { return 'refused: ' + error.message; }
+    },
+    store: async (params, context) => {
+      await context.storage.set(params.key, params.value);
+      return context.storage.get(params.key);
+    },
+    storedKeys: (params, context) => context.storage.keys(),
+    forget: async (params, context) => { await context.storage.delete(params.key); return context.storage.keys(); },
     pid: () => process.pid,
     throws: () => { throw new Error('nope'); },
     loop: () => { for (;;) { /* never returns */ } },
@@ -69,4 +85,51 @@ export async function writeFixture(
   );
   await writeFile(join(directory, 'dist', 'entry.js'), module);
   return directory;
+}
+
+/** The core's services for a plugin in the tests that run a process without the application: all in memory. */
+export function servicesFor(options: {
+  readonly gateway: PluginNetwork;
+  readonly network?: readonly string[];
+  readonly settings?: ConfigValues;
+  readonly secrets?: Readonly<Record<string, string>>;
+  readonly onRefused?: (host: string, reason: string) => void;
+}): CoreServices {
+  const store = new Map<string, unknown>();
+  return {
+    settings: () => Promise.resolve(options.settings ?? {}),
+    fetch: async (url, init) => {
+      try {
+        return await options.gateway.fetch(
+          'dns-example',
+          options.network ?? ['api.example.com:443'],
+          url,
+          init,
+        );
+      } catch (error) {
+        if (error instanceof NetworkRefused) {
+          options.onRefused?.(new URL(url).host, error.reason);
+        }
+        throw error;
+      }
+    },
+    secret: (field) => {
+      const value = options.secrets?.[field];
+      return value === undefined
+        ? Promise.reject(new Error(`no secret is chosen for ${field}`))
+        : Promise.resolve(value);
+    },
+    storage: {
+      get: (key) => Promise.resolve(store.get(String(key)) ?? null),
+      set: (key, value) => {
+        store.set(String(key), value);
+        return Promise.resolve();
+      },
+      delete: (key) => {
+        store.delete(String(key));
+        return Promise.resolve();
+      },
+      keys: () => Promise.resolve([...store.keys()].sort()),
+    },
+  };
 }

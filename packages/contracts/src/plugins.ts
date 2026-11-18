@@ -115,6 +115,7 @@ export const PluginViewSchema = z
       .boolean()
       .describe('The manifest carries a signature. It is not verified yet, so it proves nothing.'),
     hasSettings: z.boolean().describe('It brings a settings page of its own.'),
+    hasConfig: z.boolean().describe('It has settings of its own to fill in (a `config.schema`).'),
     approval: PluginApprovalSchema.nullable(),
     runtime: PluginRuntimeSchema,
     change: PluginPermissionChangeSchema.nullable().describe(
@@ -133,6 +134,56 @@ export const PluginListSchema = z
   })
   .meta({ id: 'PluginList' });
 export type PluginList = z.infer<typeof PluginListSchema>;
+
+const ConfigValueSchema = z.union([z.string().max(4096), z.number(), z.boolean(), z.null()]);
+
+/** One setting of a plugin, as the console draws it (ADR 0029). */
+export const PluginConfigFieldSchema = z
+  .object({
+    name: z.string(),
+    type: z.enum(['string', 'integer', 'number', 'boolean']),
+    title: z.string().nullable(),
+    description: z.string().nullable(),
+    required: z.boolean(),
+    default: ConfigValueSchema,
+    minLength: z.number().int().nullable(),
+    maxLength: z.number().int().nullable(),
+    minimum: z.number().nullable(),
+    maximum: z.number().nullable(),
+    choices: z.array(z.string()).nullable().describe('A closed list of values, if there is one.'),
+    secretKind: z
+      .string()
+      .nullable()
+      .describe(
+        'Set: the field holds the id of a vault secret of this kind (for example `dns-oauth`).',
+      ),
+  })
+  .meta({ id: 'PluginConfigField' });
+export type PluginConfigField = z.infer<typeof PluginConfigFieldSchema>;
+
+export const PluginConfigViewSchema = z
+  .object({
+    fields: z.array(PluginConfigFieldSchema),
+    values: z
+      .record(z.string(), ConfigValueSchema)
+      .describe(
+        'What is set now, defaults applied. A secret field holds the id of a secret, or null.',
+      ),
+    problems: z
+      .array(z.object({ field: z.string(), message: z.string() }))
+      .describe(
+        'What is wrong with the stored settings for the plugin as it is now (a field it added).',
+      ),
+    updatedAt: z.iso.datetime().nullable(),
+    updatedBy: z.string().nullable(),
+  })
+  .meta({ id: 'PluginConfigView' });
+export type PluginConfigView = z.infer<typeof PluginConfigViewSchema>;
+
+export const UpdatePluginConfigRequestSchema = z
+  .object({ values: z.record(z.string(), ConfigValueSchema) })
+  .meta({ id: 'UpdatePluginConfigRequest' });
+export type UpdatePluginConfigRequest = z.infer<typeof UpdatePluginConfigRequestSchema>;
 
 export const PluginIdParamsSchema = z.object({
   id: z

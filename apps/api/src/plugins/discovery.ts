@@ -1,10 +1,14 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import { join, sep } from 'node:path';
 
+import { SECRET_TYPES } from '@swellwright/contracts';
 import {
+  type ConfigSchemaFile,
+  ConfigSchemaFileSchema,
   MANIFEST_FILE,
   PluginManifestSchema,
   referencedFiles,
+  secretFields,
   type PluginManifest,
 } from '@swellwright/plugin-api';
 import semver from 'semver';
@@ -35,6 +39,8 @@ export interface DiscoveredPlugin {
   readonly manifest: PluginManifest | undefined;
   /** SHA-256 over every file of the plugin (see `digestPlugin`); undefined when the plugin is invalid. */
   readonly digest: string | undefined;
+  /** What its settings look like (the file named by `config.schema`), when it has any and it is sound. */
+  readonly configSchema: ConfigSchemaFile | undefined;
   readonly problems: readonly string[];
 }
 
@@ -122,6 +128,56 @@ async function installScriptProblems(directory: string): Promise<string[]> {
   );
 }
 
+/** A kind of secret the manifest asks for must be one the vault has: `dns-oauth` is the vault type `dns_oauth`. */
+function secretKindProblems(manifest: PluginManifest): string[] {
+  return manifest.permissions.secrets
+    .filter((kind) => !(SECRET_TYPES as readonly string[]).includes(kind.replaceAll('-', '_')))
+    .map(
+      (kind) =>
+        `asks for secrets of the kind "${kind}", which this version does not have (${SECRET_TYPES.join(', ')})`,
+    );
+}
+
+const MAX_SCHEMA_BYTES = 64 * 1024;
+
+/** The settings the plugin declares: read, checked, and tied to the secrets the manifest asks for. */
+async function readConfigSchema(
+  directory: string,
+  manifest: PluginManifest,
+): Promise<{ schema: ConfigSchemaFile | undefined; problems: string[] }> {
+  if (manifest.config === undefined) {
+    return { schema: undefined, problems: [] };
+  }
+  const file = manifest.config.schema.replace(/^\.\//u, '');
+  const raw = await readSmallFile(join(directory, file), MAX_SCHEMA_BYTES);
+  if (raw.kind !== 'text') {
+    // A missing or refused file is reported by the check of the files the manifest names.
+    return { schema: undefined, problems: [] };
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(raw.text);
+  } catch {
+    return { schema: undefined, problems: [`${file} is not valid JSON`] };
+  }
+  const parsed = ConfigSchemaFileSchema.safeParse(json);
+  if (!parsed.success) {
+    return {
+      schema: undefined,
+      problems: parsed.error.issues.map(
+        (i) => `${file}: ${i.path.join('.') || 'schema'}: ${i.message}`,
+      ),
+    };
+  }
+  const problems = secretFields(parsed.data)
+    .filter((f) => !manifest.permissions.secrets.includes(f.kind))
+    .map(
+      (f) =>
+        `${file}: the setting "${f.field}" holds a secret of the kind "${f.kind}", which the manifest does not ask for`,
+    );
+  return { schema: problems.length === 0 ? parsed.data : undefined, problems };
+}
+
 async function inspect(
   root: PluginRoot,
   folder: string,
@@ -133,6 +189,7 @@ async function inspect(
     problems: readonly string[],
     manifest?: PluginManifest,
     digest?: string,
+    configSchema?: ConfigSchemaFile,
   ): DiscoveredPlugin => ({
     folder,
     directory,
@@ -140,6 +197,7 @@ async function inspect(
     state,
     manifest,
     digest,
+    configSchema,
     problems,
   });
 
@@ -174,6 +232,9 @@ async function inspect(
   }
   problems.push(...(await checkFiles(directory, manifest)));
   problems.push(...(await installScriptProblems(directory)));
+  problems.push(...secretKindProblems(manifest));
+  const settings = await readConfigSchema(directory, manifest);
+  problems.push(...settings.problems);
   if (semver.validRange(manifest.engines.swellwright) === null) {
     problems.push(`engines.swellwright "${manifest.engines.swellwright}" is not a valid range`);
   }
@@ -190,9 +251,10 @@ async function inspect(
       [`needs Swellwright ${manifest.engines.swellwright}, this is ${coreVersion}`],
       manifest,
       digest.digest,
+      settings.schema,
     );
   }
-  return done('available', [], manifest, digest.digest);
+  return done('available', [], manifest, digest.digest, settings.schema);
 }
 
 /**

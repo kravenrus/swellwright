@@ -22,8 +22,31 @@ export interface PluginFetchResponse {
   json(): Promise<unknown>;
 }
 
+/**
+ * The plugin's own corner of storage (ADR 0029): keys of at most 128 characters, values that survive JSON, at most
+ * 64 KiB each, at most 1000 keys and 4 MiB in all. It is the plugin's alone; no other plugin and no part of the
+ * core reads it.
+ */
+export interface PluginStorage {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
+  keys(): Promise<string[]>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
+  /**
+   * What the administrator entered in the plugin's settings (its `config.schema`), defaults applied. Secret
+   * fields are not here: ask for them with `secret`.
+   */
+  readonly config: Readonly<Record<string, string | number | boolean | null>>;
+  /**
+   * The value of the vault secret bound to a settings field marked `x-sw-secret`. The core hands it over only if
+   * the administrator approved that kind of secret for this plugin and the vault is unsealed. Do not keep it.
+   */
+  secret(field: string): Promise<string>;
+  readonly storage: PluginStorage;
   /**
    * An HTTPS request through the core. Only `host:port` pairs listed in the manifest's `permissions.network`
    * are reachable, redirects are not followed, the answer is text of at most 4 MiB.
@@ -50,4 +73,8 @@ export const PLUGIN_LIMITS = {
   concurrentFetches: 4,
   /** Calls a plugin may have in flight. */
   concurrentCalls: 8,
+  storageKeyChars: 128,
+  storageValueBytes: 64 * 1024,
+  storageKeys: 1000,
+  storageBytes: 4 * 1024 * 1024,
 } as const;

@@ -177,6 +177,7 @@ describe('step-up authentication on routes', () => {
       'rotateRecoveryKey',
       'sealVault',
       'unsealVault',
+      'updatePluginConfig',
       'updateSecret',
       'updateUser',
     ]);

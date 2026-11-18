@@ -16,10 +16,11 @@ import { type AppConfig } from '../../config.js';
 import { CONFIG, PLUGIN_NETWORK } from '../../tokens.js';
 import { type Actor } from '../../users/users.service.js';
 import { type DiscoveredPlugin } from '../discovery.js';
+import { PluginBroker, type BrokerContext } from '../broker.js';
 import { PluginsService } from '../plugins.service.js';
 import { PluginRuntime } from '../runtime.js';
-import { PluginNetwork } from './network.js';
-import { PluginCallError, PluginProcess } from './process.js';
+import { NetworkRefused, PluginNetwork } from './network.js';
+import { type CoreServices, PluginCallError, PluginProcess } from './process.js';
 
 const RUNNER = fileURLToPath(new URL('./runner.js', import.meta.url));
 const START_TIMEOUT_MS = 10_000;
@@ -33,6 +34,7 @@ const NOTE_WINDOW_MS = 10 * 60_000;
 interface Runnable {
   readonly plugin: DiscoveredPlugin;
   readonly network: readonly string[];
+  readonly secretKinds: readonly string[];
 }
 
 /**
@@ -53,6 +55,7 @@ export class PluginHostService implements OnApplicationShutdown {
   constructor(
     @Inject(PluginsService) private readonly plugins: PluginsService,
     @Inject(PluginRuntime) private readonly runtime: PluginRuntime,
+    @Inject(PluginBroker) private readonly broker: PluginBroker,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(CONFIG) private readonly config: Pick<AppConfig, 'pluginLimits'>,
     @Inject(PLUGIN_NETWORK) private readonly gateway: PluginNetwork,
@@ -106,6 +109,55 @@ export class PluginHostService implements OnApplicationShutdown {
     this.idle.set(id, timer);
   }
 
+  /** What the plugin may ask of the core: each limited to this plugin and to what was approved. */
+  private servicesFor(id: string, runnable: Runnable): CoreServices {
+    const context: BrokerContext = {
+      id,
+      schema: runnable.plugin.configSchema,
+      secretKinds: runnable.secretKinds,
+    };
+    return {
+      settings: () => this.broker.settings(context),
+      fetch: async (url, init) => {
+        try {
+          return await this.gateway.fetch(id, runnable.network, url, init);
+        } catch (error) {
+          if (error instanceof NetworkRefused) {
+            this.noteDenied(id, url, error.reason);
+          }
+          throw error;
+        }
+      },
+      secret: (field) => this.broker.secret(context, field),
+      storage: {
+        get: (key) => this.broker.storageGet(id, key),
+        set: (key, value) => this.broker.storageSet(id, key, value),
+        delete: (key) => this.broker.storageDelete(id, key),
+        keys: () => this.broker.storageKeys(id),
+      },
+    };
+  }
+
+  private noteDenied(id: string, url: string, reason: string): void {
+    if (!this.mayNote(id)) {
+      return;
+    }
+    let host: string;
+    try {
+      host = new URL(url).host;
+    } catch {
+      host = '(not a URL)';
+    }
+    void this.audit.note({
+      action: 'plugin.network.denied',
+      outcome: 'denied',
+      actor: null,
+      object: { type: 'plugin', id },
+      details: { host: host.slice(0, 200), reason },
+      meta: { ip: undefined, requestId: undefined },
+    });
+  }
+
   /** The running process of a plugin, started if there is none. A plugin with only declarative parts has none. */
   private async ensure(
     id: string,
@@ -138,25 +190,12 @@ export class PluginHostService implements OnApplicationShutdown {
       pluginId: id,
       directory: runnable.plugin.directory,
       modules,
-      network: runnable.network,
-      gateway: this.gateway,
+      services: this.servicesFor(id, runnable),
       runnerPath: RUNNER,
       memoryMiB: this.config.pluginLimits.memoryMiB,
       startTimeoutMs: START_TIMEOUT_MS,
       onChange: (snapshot) => {
         this.runtime.report(id, snapshot);
-      },
-      onRefused: (host, reason) => {
-        if (this.mayNote(id)) {
-          void this.audit.note({
-            action: 'plugin.network.denied',
-            outcome: 'denied',
-            actor: null,
-            object: { type: 'plugin', id },
-            details: { host: host.slice(0, 200), reason },
-            meta: { ip: undefined, requestId: undefined },
-          });
-        }
       },
     });
     this.starting.set(id, start);

@@ -97,6 +97,37 @@ export const plugins = {
     note: 'Whatever is not listed is denied. Network calls go through the core, and a secret is handed to the plugin for a single call.',
   },
 
+  /** The settings a plugin declares (a form made from its `config.schema`); field names and server messages are data. */
+  settings: {
+    title: 'Settings',
+    loadFailed: 'Your role may not see the settings of this plugin.',
+    forbidden: 'Your role may not change the settings of plugins.',
+    readOnly: 'Your role may see these settings but not change them.',
+    problemsTitle: 'These settings need attention',
+    save: 'Save settings',
+    saved: 'Settings saved.',
+    lastChanged: 'Last changed by {{who}} on {{when}}.',
+    neverSaved: 'Nothing has been saved yet.',
+    notSet: 'Not set',
+    lengthMin_one: 'At least {{count}} character',
+    lengthMin_other: 'At least {{count}} characters',
+    lengthMax_one: 'At most {{count}} character',
+    lengthMax_other: 'At most {{count}} characters',
+    lengthExact_one: 'Exactly {{count}} character',
+    lengthExact_other: 'Exactly {{count}} characters',
+    lengthBoth_one: 'From {{min}} to {{count}} character',
+    lengthBoth_other: 'From {{min}} to {{count}} characters',
+    rangeMin: 'At least {{min}}',
+    rangeMax: 'At most {{max}}',
+    rangeBoth: 'From {{min}} to {{max}}',
+    secretHint: 'Secrets are kept in the vault. Choose one; its value is never shown here.',
+    secretCreate: 'Create it on the Vault page',
+    secretsUnavailable:
+      'The secrets could not be listed, so only the start of the chosen secret’s id is shown.',
+    secretMissing: 'Not in the list ({{id}})',
+    noSecrets: 'There is no secret of the type “{{type}}” in the vault yet.',
+  },
+
   signed: 'The manifest carries a signature. It is not verified yet, so it proves nothing.',
 
   local: {
