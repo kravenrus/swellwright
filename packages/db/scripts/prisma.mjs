@@ -100,6 +100,13 @@ const args = process.argv.slice(2);
 if (args.length === 0) {
   fail('usage: node scripts/prisma.mjs <prisma command and arguments>');
 }
+if (args[0] === '--verify-engine') {
+  // Fetches the engine if it is missing and checks it against the pinned checksum, without a database. The
+  // migration image runs this while it is built, so that the container never downloads anything (ADR 0019).
+  verifyEngine();
+  console.log('prisma wrapper: the schema engine matches the pinned checksum.');
+  process.exit(0);
+}
 if (!OFFLINE_COMMANDS.has(args[0])) {
   // Without a datasource Prisma 7 prints nothing and exits 0 for some commands, which would pass a check
   // that did not run.

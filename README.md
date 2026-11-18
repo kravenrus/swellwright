@@ -10,7 +10,7 @@
 [![Remnawave](https://img.shields.io/badge/Remnawave-3.4.x-22d3ee?style=flat-square)](https://docs.rw)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6ba539?style=flat-square&logo=openapiinitiative&logoColor=white)](docs/en/api.md)
 [![Stack](https://img.shields.io/badge/NestJS%20%C2%B7%20React%20%C2%B7%20PostgreSQL-stack%20of%20the%20panel-3178c6?style=flat-square&logo=typescript&logoColor=white)](docs/en/architecture.md)
-[![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.example.yml)
+[![Docker](https://img.shields.io/badge/Docker-first-2496ed?style=flat-square&logo=docker&logoColor=white)](deploy/compose/docker-compose.yml)
 [![DCO](https://img.shields.io/badge/DCO-signed--off-8b5cf6?style=flat-square)](CONTRIBUTING.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-22c55e?style=flat-square)](CONTRIBUTING.md)
 [![Stars](https://img.shields.io/github/stars/swellwright/swellwright?style=flat-square&logo=github&color=eab308)](https://github.com/swellwright/swellwright/stargazers)

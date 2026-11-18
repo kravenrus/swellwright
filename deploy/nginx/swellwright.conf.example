@@ -1,4 +1,4 @@
-# DRAFT reverse-proxy example (replace the domain and certificate paths).
+# Reverse-proxy example for the compose stack of deploy/compose (replace the domain and certificate paths).
 server {
     listen 443 ssl;
     http2 on;
