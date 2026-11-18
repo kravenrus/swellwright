@@ -1,9 +1,16 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
+  AUDIT_EXPORT_DEFAULT,
+  AUDIT_EXPORT_FORMAT,
+  AUDIT_EXPORT_VERSION,
   AUDIT_PAGE_DEFAULT,
   type AuditAction,
+  type AuditCheckpoint,
+  type AuditCheckpointVerification,
   type AuditDetails,
   type AuditEvent,
+  type AuditExport,
+  type AuditExportQuery,
   type AuditOutcome,
   type AuditPage,
   type AuditQuery,
@@ -12,7 +19,14 @@ import {
 import type { AuditEvent as AuditRow, Database, PrismaClient } from '@swellwright/db';
 
 import { type RequestMeta, requireDatabase } from '../auth/context.js';
-import { DATABASE } from '../tokens.js';
+import { type AppConfig } from '../config.js';
+import { CONFIG, DATABASE } from '../tokens.js';
+import {
+  checkpointKey,
+  checkpointSignatureValid,
+  makeCheckpoint,
+  parseCheckpoint,
+} from './checkpoint.js';
 import {
   canonicalDetails,
   chainHash,
@@ -77,7 +91,10 @@ export function toAuditEvent(row: AuditRow): AuditEvent {
 export class AuditService {
   private readonly logger = new Logger('Audit');
 
-  constructor(@Inject(DATABASE) private readonly database: Database | undefined) {}
+  constructor(
+    @Inject(DATABASE) private readonly database: Database | undefined,
+    @Optional() @Inject(CONFIG) private readonly config?: Pick<AppConfig, 'authKey'>,
+  ) {}
 
   private get db(): Database['client'] {
     return requireDatabase(this.database).client;
@@ -158,9 +175,12 @@ export class AuditService {
    * Walks the whole chain from the start up to the event that was last when the check began (events that
    * arrive meanwhile only extend the chain) and reports the first thing that does not check out.
    */
-  async verify(): Promise<ChainVerification> {
+  async verify(upTo?: bigint): Promise<ChainVerification> {
     const db = this.db;
-    const head = await db.auditEvent.findFirst({ orderBy: { seq: 'desc' } });
+    const head =
+      upTo === undefined
+        ? await db.auditEvent.findFirst({ orderBy: { seq: 'desc' } })
+        : await db.auditEvent.findUnique({ where: { seq: upTo } });
     if (!head) {
       return { ok: true, checked: 0, head: null, problem: null };
     }
@@ -197,5 +217,127 @@ export class AuditService {
       after = last.seq;
     }
     return { ok: true, checked, head: summary, problem: null };
+  }
+
+  /** One page of the log for checking elsewhere: oldest first, from `from`, with a note of where the log ends. */
+  async export(
+    query: AuditExportQuery,
+    actor: { readonly id: string; readonly name: string },
+    meta: Pick<RequestMeta, 'ip' | 'requestId'>,
+  ): Promise<AuditExport> {
+    const from = BigInt(query.from ?? 1);
+    const limit = query.limit ?? AUDIT_EXPORT_DEFAULT;
+    const [rows, headRow] = await Promise.all([
+      this.db.auditEvent.findMany({
+        where: { seq: { gte: from } },
+        orderBy: { seq: 'asc' },
+        take: limit + 1,
+      }),
+      this.db.auditEvent.findFirst({ orderBy: { seq: 'desc' }, select: { seq: true, hash: true } }),
+    ]);
+    const page = rows.slice(0, limit);
+    const next = rows.length > limit ? rows[limit] : undefined;
+    await this.record({
+      action: 'audit.exported',
+      outcome: 'success',
+      actor,
+      details: { from: seqNumber(from), count: page.length },
+      meta,
+    });
+    return {
+      format: AUDIT_EXPORT_FORMAT,
+      version: AUDIT_EXPORT_VERSION,
+      events: page.map(toAuditEvent),
+      nextFrom: next ? seqNumber(next.seq) : null,
+      head: headRow ? { seq: seqNumber(headRow.seq), hash: headRow.hash } : null,
+    };
+  }
+
+  private key(): Buffer {
+    if (!this.config) {
+      throw new Error('Checkpoints need the instance key, which this service was built without.');
+    }
+    return checkpointKey(this.config.authKey);
+  }
+
+  /** Notes the head of the chain with a signature that only this instance can make. Recorded after the head. */
+  async createCheckpoint(
+    actor: { readonly id: string; readonly name: string } | null,
+    meta: Pick<RequestMeta, 'ip' | 'requestId'>,
+  ): Promise<AuditCheckpoint> {
+    const head = await this.db.auditEvent.findFirst({
+      orderBy: { seq: 'desc' },
+      select: { seq: true, hash: true },
+    });
+    if (!head) {
+      throw new ConflictException('The audit log is empty: there is nothing to note.');
+    }
+    const issuedAt = new Date();
+    const summary = { seq: seqNumber(head.seq), hash: head.hash };
+    const checkpoint = makeCheckpoint(this.key(), summary, issuedAt);
+    await this.record({
+      action: 'audit.checkpoint.created',
+      outcome: 'success',
+      actor,
+      details: { seq: summary.seq },
+      meta,
+    });
+    return { checkpoint, ...summary, issuedAt: issuedAt.toISOString() };
+  }
+
+  /**
+   * Checks the log against a checkpoint made earlier: the signature, the event at that number, its hash, and
+   * the chain up to it. A failed check is an answer, not an error.
+   */
+  async verifyCheckpoint(
+    text: string,
+    actor: { readonly id: string; readonly name: string } | null,
+    meta: Pick<RequestMeta, 'ip' | 'requestId'>,
+  ): Promise<AuditCheckpointVerification> {
+    const result = await this.checkAgainst(text);
+    await this.record({
+      action: 'audit.checkpoint.verified',
+      outcome: result.ok ? 'success' : 'failure',
+      actor,
+      details: { result: result.result, seq: result.seq },
+      meta,
+    });
+    return result;
+  }
+
+  private async checkAgainst(text: string): Promise<AuditCheckpointVerification> {
+    const parsed = parseCheckpoint(text);
+    const answer = (
+      result: AuditCheckpointVerification['result'],
+      eventsSince: number | null = null,
+    ): AuditCheckpointVerification => ({
+      ok: result === 'ok',
+      result,
+      seq: parsed?.seq ?? null,
+      issuedAt: parsed?.issuedAt.toISOString() ?? null,
+      eventsSince,
+    });
+    if (!parsed) {
+      return answer('malformed');
+    }
+    if (!checkpointSignatureValid(this.key(), parsed)) {
+      return { ...answer('not_ours'), seq: null, issuedAt: null };
+    }
+    const event = await this.db.auditEvent.findUnique({ where: { seq: BigInt(parsed.seq) } });
+    if (!event) {
+      return answer('event_missing');
+    }
+    if (event.hash !== parsed.hash) {
+      return answer('hash_differs');
+    }
+    const chain = await this.verify(event.seq);
+    if (!chain.ok) {
+      return answer('chain_broken');
+    }
+    const head = await this.db.auditEvent.findFirst({
+      orderBy: { seq: 'desc' },
+      select: { seq: true },
+    });
+    return answer('ok', head ? Math.max(0, seqNumber(head.seq) - parsed.seq) : 0);
   }
 }

@@ -1,9 +1,17 @@
 import { Controller, Inject, Req } from '@nestjs/common';
+import { Body } from '@nestjs/common';
 import {
+  type AuditCheckpoint,
+  type AuditCheckpointVerification,
+  type AuditExport,
   type AuditPage,
   type ChainVerification,
+  createAuditCheckpointRoute,
+  exportAuditRoute,
   listAuditRoute,
+  type VerifyAuditCheckpointRequest,
   verifyAuditChainRoute,
+  verifyAuditCheckpointRoute,
 } from '@swellwright/contracts';
 import type { Request } from 'express';
 
@@ -34,5 +42,34 @@ export class AuditController {
       meta: requestMeta(req),
     });
     return result;
+  }
+
+  @ContractRoute(exportAuditRoute)
+  export(@Req() req: AuthedRequest): Promise<AuditExport> {
+    const { user } = requireAuth(req);
+    return this.audit.export(
+      exportAuditRoute.request.query.parse(req.query),
+      { id: user.id, name: user.username },
+      requestMeta(req),
+    );
+  }
+
+  @ContractRoute(createAuditCheckpointRoute)
+  createCheckpoint(@Req() req: AuthedRequest): Promise<AuditCheckpoint> {
+    const { user } = requireAuth(req);
+    return this.audit.createCheckpoint({ id: user.id, name: user.username }, requestMeta(req));
+  }
+
+  @ContractRoute(verifyAuditCheckpointRoute)
+  verifyCheckpoint(
+    @Body() body: VerifyAuditCheckpointRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<AuditCheckpointVerification> {
+    const { user } = requireAuth(req);
+    return this.audit.verifyCheckpoint(
+      body.checkpoint,
+      { id: user.id, name: user.username },
+      requestMeta(req),
+    );
   }
 }

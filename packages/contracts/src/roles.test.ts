@@ -162,6 +162,7 @@ describe('step-up authentication on routes', () => {
       'createUser',
       'deleteSecret',
       'deleteUser',
+      'exportAudit',
       'initializeVault',
       'resetCredentials',
       'revealSecret',

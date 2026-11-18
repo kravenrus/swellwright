@@ -1,5 +1,12 @@
 import {
   type AcceptInvitationRequest,
+  type AuditCheckpoint,
+  AuditCheckpointSchema,
+  type AuditCheckpointVerification,
+  AuditCheckpointVerificationSchema,
+  type AuditExport,
+  type AuditExportQuery,
+  AuditExportSchema,
   type AuditPage,
   AuditPageSchema,
   type AuditQuery,
@@ -342,6 +349,18 @@ export const listAudit = (query: AuditQuery): Promise<AuditPage> =>
 
 export const verifyAuditChain = (): Promise<ChainVerification> =>
   send('POST', '/audit/verify-chain', undefined, ChainVerificationSchema);
+
+/** One page of the log for the export file, oldest first (`audit:export`, needs a fresh confirmation with a code). */
+export const exportAudit = (query: AuditExportQuery): Promise<AuditExport> =>
+  send('GET', `/audit/export${queryString(query)}`, undefined, AuditExportSchema);
+
+/** The head of the chain as signed text, to be kept outside the database (`audit:verify`). */
+export const createAuditCheckpoint = (): Promise<AuditCheckpoint> =>
+  send('POST', '/audit/checkpoints', undefined, AuditCheckpointSchema);
+
+/** Checks the log against a checkpoint noted earlier. A failed check is an answer (`ok: false`), not an error. */
+export const verifyAuditCheckpoint = (checkpoint: string): Promise<AuditCheckpointVerification> =>
+  send('POST', '/audit/checkpoints/verify', { checkpoint }, AuditCheckpointVerificationSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

@@ -2,12 +2,16 @@ import { z } from 'zod';
 
 import {
   AuditActionSchema,
+  AuditCheckpointSchema,
+  AuditCheckpointVerificationSchema,
   AuditDetailsSchema,
   AuditEventSchema,
+  AuditExportSchema,
   AuditOutcomeSchema,
   AuditPageSchema,
   ChainProblemSchema,
   ChainVerificationSchema,
+  VerifyAuditCheckpointRequestSchema,
 } from './audit.js';
 import {
   UpdatePreferencesRequestSchema,
@@ -108,6 +112,10 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   AuditPageSchema,
   ChainProblemSchema,
   ChainVerificationSchema,
+  AuditExportSchema,
+  AuditCheckpointSchema,
+  VerifyAuditCheckpointRequestSchema,
+  AuditCheckpointVerificationSchema,
   AcceptInvitationRequestSchema,
   ChangePasswordRequestSchema,
   ElevationSchema,
