@@ -59,8 +59,35 @@ model User {
   credential    Credential?
   recoveryCodes RecoveryCode[]
   sessions      Session[]
+  invitation    Invitation?
 
   @@map("users")
+}
+
+/// Why an invitation was issued: a new user, or a reset of an existing one's credentials (ADR 0016).
+enum InvitationPurpose {
+  invite
+  reset
+
+  @@map("invitation_purpose")
+}
+
+/// The one open invitation of a user: a one-time token to choose a password. Only the SHA-256 of the token
+/// is stored; the row is deleted when the token is used, and a new invitation replaces the old one.
+model Invitation {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  userId      String            @unique @map("user_id") @db.Uuid
+  tokenHash   String            @unique @map("token_hash") @db.VarChar(64)
+  purpose     InvitationPurpose
+  expiresAt   DateTime          @map("expires_at") @db.Timestamptz(3)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// The owner who issued it; null when it came from the server command. No foreign key, like the audit chain.
+  createdById String?           @map("created_by_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("invitations")
 }
 
 /// Sign-in secrets of one user (docs/en/design/02-data-model.md, ADR 0014).

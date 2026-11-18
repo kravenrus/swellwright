@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { AuditPageSchema, AuditQuerySchema, ChainVerificationSchema } from './audit.js';
 import {
+  AcceptInvitationRequestSchema,
+  ChangePasswordRequestSchema,
   LoginRequestSchema,
   PendingSessionSchema,
   SessionInfoSchema,
@@ -14,6 +16,15 @@ import {
 import { ApiErrorSchema } from './errors.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
 import { HealthResponseSchema, ReadyResponseSchema, VersionResponseSchema } from './system.js';
+import {
+  CreateUserRequestSchema,
+  UpdateUserRequestSchema,
+  UserIdParamsSchema,
+  UserInvitationSchema,
+  UserListQuerySchema,
+  UserListSchema,
+  UserViewSchema,
+} from './users.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -211,6 +222,90 @@ export const meRoute = defineRoute({
   responses: { 200: { description: 'The current session.', schema: SessionInfoSchema } },
 });
 
+export const acceptInvitationRoute = defineRoute({
+  operationId: 'acceptInvitation',
+  method: 'post',
+  path: '/auth/invitations/accept',
+  tags: ['auth'],
+  summary: 'Choose a password with an invitation token',
+  description:
+    'For a new user or one whose credentials were reset. The token is used up. Starts a session that still needs the authenticator to be set up (`/auth/totp/enrollment`). An unknown, used or expired token answers 401.',
+  auth: 'none',
+  request: { body: AcceptInvitationRequestSchema },
+  responses: { 200: { description: 'The password was set.', schema: PendingSessionSchema } },
+});
+
+export const changePasswordRoute = defineRoute({
+  operationId: 'changePassword',
+  method: 'post',
+  path: '/auth/password',
+  tags: ['auth'],
+  summary: 'Change your own password',
+  description:
+    'Needs the current password. Ends your other sessions and keeps this one. A wrong current password counts towards the lockout.',
+  auth: 'session',
+  request: { body: ChangePasswordRequestSchema },
+  responses: {
+    204: { description: 'The password was changed.', schema: z.undefined(), empty: true },
+  },
+});
+
+export const listUsersRoute = defineRoute({
+  operationId: 'listUsers',
+  method: 'get',
+  path: '/users',
+  tags: ['users'],
+  summary: 'List the users',
+  auth: 'session',
+  permission: 'users:read',
+  request: { query: UserListQuerySchema },
+  responses: { 200: { description: 'One page of users.', schema: UserListSchema } },
+});
+
+export const createUserRoute = defineRoute({
+  operationId: 'createUser',
+  method: 'post',
+  path: '/users',
+  tags: ['users'],
+  summary: 'Invite a user',
+  description:
+    'Creates the account without a password and returns an invitation. The token is shown once. A taken login name or e-mail address answers 409.',
+  auth: 'session',
+  permission: 'users:write',
+  request: { body: CreateUserRequestSchema },
+  responses: { 201: { description: 'The user and the invitation.', schema: UserInvitationSchema } },
+});
+
+export const updateUserRoute = defineRoute({
+  operationId: 'updateUser',
+  method: 'patch',
+  path: '/users/{id}',
+  tags: ['users'],
+  summary: 'Change a user',
+  description:
+    'Role, status, display name and e-mail address. Refused with 409 when it would leave the instance without an active owner, or when you change your own role or status. Disabling a user ends their sessions.',
+  auth: 'session',
+  permission: 'users:write',
+  request: { params: UserIdParamsSchema, body: UpdateUserRequestSchema },
+  responses: { 200: { description: 'The user after the change.', schema: UserViewSchema } },
+});
+
+export const resetCredentialsRoute = defineRoute({
+  operationId: 'resetCredentials',
+  method: 'post',
+  path: '/users/{id}/reset-credentials',
+  tags: ['users'],
+  summary: 'Reset the password and the authenticator of a user',
+  description:
+    'Deletes the password, the authenticator and the recovery codes, ends every session of the user at once, and returns a new invitation. The user cannot sign in until it is accepted. Refused with 409 when you reset your own account (change your password instead).',
+  auth: 'session',
+  permission: 'users:write',
+  request: { params: UserIdParamsSchema },
+  responses: {
+    200: { description: 'The user and a new invitation.', schema: UserInvitationSchema },
+  },
+});
+
 export const rolesRoute = defineRoute({
   operationId: 'getRoles',
   method: 'get',
@@ -251,7 +346,7 @@ export const verifyAuditChainRoute = defineRoute({
 });
 
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
-export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe'];
+export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe', 'changePassword'];
 
 /** Every route of the public API. The server binds its handlers to these definitions. */
 export const routes = [
@@ -267,6 +362,12 @@ export const routes = [
   totpConfirmRoute,
   logoutRoute,
   meRoute,
+  acceptInvitationRoute,
+  changePasswordRoute,
+  listUsersRoute,
+  createUserRoute,
+  updateUserRoute,
+  resetCredentialsRoute,
   rolesRoute,
   listAuditRoute,
   verifyAuditChainRoute,

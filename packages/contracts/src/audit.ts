@@ -14,6 +14,11 @@ export const AUDIT_ACTIONS = [
   'auth.recovery_code.used',
   'auth.account.locked',
   'auth.logout',
+  'auth.invitation.accepted',
+  'auth.password.changed',
+  'user.created',
+  'user.updated',
+  'user.credentials.reset',
   'authz.denied',
   'audit.chain.verified',
 ] as const;

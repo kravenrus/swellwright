@@ -23,8 +23,8 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | Группа | Эндпоинты (суть) |
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (только первый запуск, нужен токен установки) |
-| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
-| users, roles | CRUD пользователей и ролей Swellwright. Реализовано: `GET /roles` (встроенные роли с наборами разрешений и каталог разрешений одним документом) |
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me`; реализовано с ADR 0016: `POST /auth/invitations/accept` (выбрать пароль по токену приглашения), `POST /auth/password` (сменить свой) |
+| users, roles | CRUD пользователей и ролей Swellwright. Реализовано (ADR 0015, 0016): `GET /roles` (встроенные роли с наборами разрешений и каталог разрешений одним документом); `GET /users`, `POST /users` (приглашение: без пароля, одноразовое приглашение), `PATCH /users/{id}` (роль, статус, имя, e-mail), `POST /users/{id}/reset-credentials`; удаления пока нет |
 | tokens | `POST/GET/DELETE /tokens` (токены Swellwright), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (значения только на запись), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |
 | servers | CRUD, `POST /servers/{id}/facts/refresh`, `GET /servers/{id}/facts`, `/events`, `/snapshots`, `/baseline-results` |

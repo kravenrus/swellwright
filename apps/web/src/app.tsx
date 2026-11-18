@@ -1,15 +1,17 @@
 import { ActionIcon, Badge, Group, Menu, Text } from '@mantine/core';
-import { IconBell, IconLogout, IconSearch, IconUser } from '@tabler/icons-react';
+import { IconBell, IconKey, IconLogout, IconSearch, IconUser } from '@tabler/icons-react';
 import { useState } from 'react';
 
 import type { SessionInfo } from '@swellwright/contracts';
 import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
+import { ChangePasswordDialog } from './auth/change-password.js';
 import { AuthGate } from './auth/gate.js';
 import { navFor } from './nav.js';
 import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
 import { RolesPage } from './security/roles-page.js';
+import { UsersPage } from './security/users-page.js';
 
 function AccountMenu({
   session,
@@ -17,6 +19,35 @@ function AccountMenu({
 }: {
   session: SessionInfo;
   onSignOut: () => Promise<void>;
+}) {
+  const [changing, setChanging] = useState(false);
+  return (
+    <>
+      <ChangePasswordDialog
+        onClose={() => {
+          setChanging(false);
+        }}
+        opened={changing}
+      />
+      <AccountDropdown
+        onChangePassword={() => {
+          setChanging(true);
+        }}
+        onSignOut={onSignOut}
+        session={session}
+      />
+    </>
+  );
+}
+
+function AccountDropdown({
+  session,
+  onSignOut,
+  onChangePassword,
+}: {
+  session: SessionInfo;
+  onSignOut: () => Promise<void>;
+  onChangePassword: () => void;
 }) {
   return (
     <Menu position="bottom-end" shadow="md" withinPortal>
@@ -34,6 +65,9 @@ function AccountMenu({
             <Badge size="xs">{session.user.role}</Badge>
           </Group>
         </Menu.Label>
+        <Menu.Item leftSection={<IconKey size={16} />} onClick={onChangePassword}>
+          Change password
+        </Menu.Item>
         <Menu.Item
           leftSection={<IconLogout size={16} />}
           onClick={() => {
@@ -66,6 +100,9 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
       />
       <main className="sw-page">
         {activeId === 'overview' ? <Overview /> : null}
+        {activeId === 'users' && permissions.includes('users:read') ? (
+          <UsersPage currentUserId={session.user.id} permissions={permissions} />
+        ) : null}
         {activeId === 'roles' && permissions.includes('roles:read') ? (
           <RolesPage currentRole={session.user.role} />
         ) : null}

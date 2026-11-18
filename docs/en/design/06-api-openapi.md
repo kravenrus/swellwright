@@ -25,8 +25,8 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 | Group | Endpoints (in brief) |
 |---|---|
 | setup | `GET /setup/status`, `POST /setup/owner` (first run only, needs the setup token) |
-| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
-| users, roles | CRUD for Swellwright users and roles. Built: `GET /roles` (the built-in roles with their permission sets, and the permission catalogue, in one document) |
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me`; built with ADR 0016: `POST /auth/invitations/accept` (choose a password with an invitation token), `POST /auth/password` (change your own) |
+| users, roles | CRUD for Swellwright users and roles. Built (ADR 0015, 0016): `GET /roles` (the built-in roles with their permission sets, and the permission catalogue, in one document); `GET /users`, `POST /users` (invite: no password, a one-time invitation), `PATCH /users/{id}` (role, status, display name, e-mail), `POST /users/{id}/reset-credentials`; no delete yet |
 | tokens | `POST/GET/DELETE /tokens` (Swellwright tokens), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (values are write-only), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |
 | servers | CRUD, `POST /servers/{id}/facts/refresh`, `GET /servers/{id}/facts`, `/events`, `/snapshots`, `/baseline-results` |

@@ -54,6 +54,22 @@ export const LoginRequestSchema = z
   .meta({ id: 'LoginRequest' });
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
+export const AcceptInvitationRequestSchema = z
+  .object({
+    token: z.string().min(20).max(128).describe('The invitation token the owner handed over.'),
+    password: PasswordSchema,
+  })
+  .meta({ id: 'AcceptInvitationRequest' });
+export type AcceptInvitationRequest = z.infer<typeof AcceptInvitationRequestSchema>;
+
+export const ChangePasswordRequestSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(256),
+    newPassword: PasswordSchema,
+  })
+  .meta({ id: 'ChangePasswordRequest' });
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;
+
 export const AUTH_NEXT_STEPS = ['totp', 'totp_enrollment'] as const;
 export const AuthNextStepSchema = z.enum(AUTH_NEXT_STEPS).meta({ id: 'AuthNextStep' });
 export type AuthNextStep = z.infer<typeof AuthNextStepSchema>;

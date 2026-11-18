@@ -14,6 +14,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"dist/**/*.test.js\"",
     "start": "node dist/main.js",
+    "admin": "node --env-file-if-exists=../../.env dist/admin.js",
     "dev": "node --watch --env-file-if-exists=../../.env dist/main.js"
   },
   "dependencies": {

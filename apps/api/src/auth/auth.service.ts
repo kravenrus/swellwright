@@ -138,6 +138,48 @@ export class AuthService {
     }
   }
 
+  /**
+   * Changes the password of the signed-in user. Needs the current one; a wrong one counts towards the
+   * lockout. The other sessions of the user end, this one stays. (No second factor yet: step-up comes later.)
+   */
+  async changePassword(
+    ctx: AuthContext,
+    currentPassword: string,
+    newPassword: string,
+    meta: RequestMeta,
+  ): Promise<void> {
+    const credential = await this.credentialOf(ctx);
+    this.assertNotLocked(credential.lockedUntil);
+    if (!(await this.hasher.verify(credential.passwordHash, currentPassword))) {
+      await this.audit.note({
+        action: 'auth.password.changed',
+        outcome: 'failure',
+        actor: this.actorOf(ctx),
+        details: { reason: 'invalid_current_password' },
+        meta,
+      });
+      await this.registerFailure(ctx.user, meta);
+      throw new UnauthorizedException('The current password is not right.');
+    }
+    const passwordHash = await this.hasher.hash(newPassword);
+    await this.db.$transaction(async (tx) => {
+      await tx.credential.update({
+        where: { userId: ctx.user.id },
+        data: { passwordHash, passwordChangedAt: new Date(), failedAttempts: 0, lockedUntil: null },
+      });
+      await tx.session.deleteMany({ where: { userId: ctx.user.id, id: { not: ctx.sessionId } } });
+      await this.audit.record(
+        {
+          action: 'auth.password.changed',
+          outcome: 'success',
+          actor: this.actorOf(ctx),
+          meta,
+        },
+        tx,
+      );
+    });
+  }
+
   /** Starts a password-verified session for an account created in the setup. */
   async startPending(userId: string, meta: RequestMeta): Promise<IssuedSession> {
     return this.sessions.create(userId, SessionStage.password_verified, meta);

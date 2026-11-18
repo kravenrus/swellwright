@@ -17,6 +17,7 @@ import {
   IconSettings,
   IconShieldLock,
   IconUserShield,
+  IconUsers,
   IconWorldWww,
 } from '@tabler/icons-react';
 
@@ -131,6 +132,7 @@ const NAV: readonly GatedSection[] = [
     icon: IconShieldLock,
     links: [
       { id: 'vault', label: 'Vault', icon: IconKey, disabled: true, permission: 'vault:read' },
+      { id: 'users', label: 'Users', icon: IconUsers, permission: 'users:read' },
       { id: 'roles', label: 'Roles', icon: IconUserShield, permission: 'roles:read' },
       { id: 'audit', label: 'Audit', icon: IconBook, permission: 'audit:read' },
     ],

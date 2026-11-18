@@ -1,5 +1,9 @@
 import { Body, Controller, Inject, Req, Res } from '@nestjs/common';
 import {
+  acceptInvitationRoute,
+  type AcceptInvitationRequest,
+  changePasswordRoute,
+  type ChangePasswordRequest,
   loginRoute,
   logoutRoute,
   meRoute,
@@ -18,6 +22,7 @@ import type { Request, Response } from 'express';
 import { type AppConfig } from '../config.js';
 import { ContractRoute } from '../contract-route.js';
 import { CONFIG } from '../tokens.js';
+import { InvitationService } from '../users/invitation.service.js';
 import { AuthService } from './auth.service.js';
 import { type AuthedRequest, requestMeta, requireAuth, toSessionInfo } from './context.js';
 import { clearSessionCookie, readCookie, SESSION_COOKIE, setSessionCookie } from './cookies.js';
@@ -26,8 +31,34 @@ import { clearSessionCookie, readCookie, SESSION_COOKIE, setSessionCookie } from
 export class AuthController {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(InvitationService) private readonly invitations: InvitationService,
     @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
+
+  @ContractRoute(acceptInvitationRoute)
+  async acceptInvitation(
+    @Body() body: AcceptInvitationRequest,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PendingSession> {
+    const { session } = await this.invitations.accept(body.token, body.password, requestMeta(req));
+    setSessionCookie(res, session.token, this.config);
+    // A new or reset account has no authenticator: the next step is to set one up.
+    return { next: 'totp_enrollment' };
+  }
+
+  @ContractRoute(changePasswordRoute)
+  async changePassword(
+    @Body() body: ChangePasswordRequest,
+    @Req() req: AuthedRequest,
+  ): Promise<void> {
+    await this.auth.changePassword(
+      requireAuth(req),
+      body.currentPassword,
+      body.newPassword,
+      requestMeta(req),
+    );
+  }
 
   @ContractRoute(loginRoute)
   async login(

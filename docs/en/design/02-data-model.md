@@ -2,7 +2,7 @@
 
 > English translation of the [Russian design document](../../ru/design/02-data-model.md).
 
-The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is built from this description, entity by entity; so far `User`, `Credential`, `RecoveryCode`, `Session` and `AuditEvent` are implemented. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
+The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is built from this description, entity by entity; so far `User`, `Credential`, `RecoveryCode`, `Session`, `Invitation` and `AuditEvent` are implemented. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
 
 ## 1. Access and audit
 | Entity | Fields | Class |
@@ -10,6 +10,7 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 | `User` | id, name, email (optional), role, status, language, theme, last login | P |
 | `Credential` | password (Argon2id), TOTP secret (S; sealed with the instance authentication key, not the vault, so sign-in works while the vault is sealed, ADR 0014), WebAuthn keys (public), recovery codes (hashes; own table `RecoveryCode`) | S |
 | `Session` | id, user, token hash, stage (`password_verified`, `active`), IP, UA, created, last seen, idle and absolute expiry, elevated until | N |
+| `Invitation` | user (one open invitation per user), token hash (the token is shown once), purpose (`invite`, `reset`), expiry (72 hours), who issued it (null for the server command; no foreign key). Deleted when used (ADR 0016) | S (hash) |
 | `Role` / `RolePermission` | name, permission set (`servers:write`, `runs:execute:deploy`, `terminal:use`, `vault:reveal` …). The five built-in roles are fixed sets in `packages/contracts` (ADR 0015); the tables come with custom roles | N |
 | `ApiToken` (Swellwright) | name, hash, scopes, expiry, last use, IP restrictions | S (hash) |
 | `AuditEvent` (`audit_events`) | seq, time, actor (id and the name at that moment, no foreign key), action, outcome (`success`, `failure`, `denied`), object, IP, request id, details (flat, canonical text), hash of the previous entry, own hash (chain). Append-only: database triggers refuse update, delete and truncate (ADR 0015) | N |
