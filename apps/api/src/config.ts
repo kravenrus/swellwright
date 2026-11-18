@@ -34,6 +34,14 @@ const EnvSchema = z.object({
   SW_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
   /** How long a session counts as freshly verified after the second factor (ADR 0017). */
   SW_STEP_UP_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
+  /** The directory with the built console. When set, the API serves it at `/` (one image, ADR 0019). */
+  SW_WEB_DIR: optionalString,
+  /**
+   * Which proxies in front of the API may say who the client is (`X-Forwarded-For`): a number of hops, or a
+   * comma-separated list of addresses, CIDR ranges and the names `loopback`, `linklocal`, `uniquelocal`.
+   * Not set: nobody is trusted and the address of the connection is the client.
+   */
+  SW_TRUSTED_PROXIES: optionalString,
 });
 
 export interface AppConfig {
@@ -58,6 +66,10 @@ export interface AppConfig {
   readonly lockoutMs: number;
   /** How long a session stays elevated after sign-in or a step-up. */
   readonly stepUpMs: number;
+  /** The built console to serve, or undefined when a reverse proxy serves it. */
+  readonly webDir: string | undefined;
+  /** What Express is told about trusted proxies: a hop count, a list, or false (nobody). */
+  readonly trustProxy: number | string[] | false;
 }
 
 function decodeAuthKey(value: string): Buffer {
@@ -68,6 +80,42 @@ function decodeAuthKey(value: string): Buffer {
     );
   }
   return key;
+}
+
+/** `2` is two hops; anything else is a list Express understands. A typo must not silently trust everyone. */
+function parseTrustedProxies(value: string | undefined): number | string[] | false {
+  if (value === undefined) {
+    return false;
+  }
+  const text = value.trim();
+  if (/^\d+$/u.test(text)) {
+    const hops = Number(text);
+    if (hops < 1 || hops > 10) {
+      throw new Error('Invalid configuration: SW_TRUSTED_PROXIES as a number must be 1 to 10.');
+    }
+    return hops;
+  }
+  const entries = text
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  const named = new Set(['loopback', 'linklocal', 'uniquelocal']);
+  for (const entry of entries) {
+    const address = entry.split('/')[0] ?? '';
+    if (
+      !named.has(entry) &&
+      !z.ipv4().safeParse(address).success &&
+      !z.ipv6().safeParse(address).success
+    ) {
+      throw new Error(
+        `Invalid configuration: SW_TRUSTED_PROXIES entries must be addresses, CIDR ranges, loopback, linklocal or uniquelocal, got "${entry}".`,
+      );
+    }
+  }
+  if (entries.length === 0) {
+    throw new Error('Invalid configuration: SW_TRUSTED_PROXIES is empty.');
+  }
+  return entries;
 }
 
 export function loadConfig(
@@ -115,5 +163,7 @@ export function loadConfig(
     lockoutAttempts: e.SW_LOCKOUT_ATTEMPTS,
     lockoutMs: e.SW_LOCKOUT_MINUTES * 60_000,
     stepUpMs: e.SW_STEP_UP_MINUTES * 60_000,
+    webDir: e.SW_WEB_DIR,
+    trustProxy: parseTrustedProxies(e.SW_TRUSTED_PROXIES),
   };
 }

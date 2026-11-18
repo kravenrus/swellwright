@@ -3,72 +3,30 @@
 ## 1. Состав контейнеров (как у панели: приложение, PostgreSQL, Redis-совместимое хранилище)
 | Сервис | Образ | Роль | Сеть |
 |---|---|---|---|
-| `swellwright` | свой (multi-stage, non-root) | api + раздача интерфейса | внутренняя + публикация только на 127.0.0.1 за nginx |
-| `swellwright-worker` | тот же образ, другая команда | выполнение сценариев, SSH, зонды | внутренняя + исходящие по allowlist |
+| `swellwright` | свой (multi-stage, non-root; API и интерфейс в одном) | api + раздача интерфейса | внутренняя + публикация только на 127.0.0.1 за nginx |
+| `migrate` | тот же образ, другая команда | один раз применяет миграции базы перед запуском сервера | только внутренняя |
+| `swellwright-worker` | тот же образ, другая команда (планируется) | выполнение сценариев, SSH, зонды | внутренняя + исходящие по allowlist |
 | `postgres` | `postgres:17` (закреплён по дайджесту) | БД | только внутренняя |
-| `valkey` | `valkey/valkey` (закреплён) | очереди, блокировки | только внутренняя |
-| `swellwright-probe` | свой, отдельный образ (опц.) | агент зонда на машинах-наблюдателях | наружу только HTTPS к api |
+| `valkey` | `valkey/valkey:8` (закреплён по дайджесту) | очереди, блокировки | только внутренняя |
+| `swellwright-probe` | свой, отдельный образ (планируется, опц.) | агент зонда на машинах-наблюдателях | наружу только HTTPS к api |
 
-Образы собираются командой `docker build` с `pnpm install --frozen-lockfile --ignore-scripts`; результат тегируется версией (`swellwright:1.0.0`), без `latest`. Релизные образы собирает и публикует CI (раздел 10); локальная сборка тоже возможна.
+Образ собирает `Dockerfile` в корне репозитория с `pnpm install --frozen-lockfile --ignore-scripts`; базовый образ, pnpm и движок Prisma закреплены и проверяются (ADR 0019). Релизные образы тегируются версией (`swellwright:1.0.0`), без `latest`; их собирает и публикует CI (раздел 10). До этого образ собирается из рабочей копии compose-файлом.
 
-## 2. `docker-compose.yml` (эскиз)
-```yaml
-name: swellwright
-services:
-  swellwright:
-    image: swellwright:${SW_VERSION}
-    restart: unless-stopped
-    user: "10001:10001"
-    read_only: true
-    tmpfs: [/tmp]
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://sw:${POSTGRES_PASSWORD}@postgres:5432/swellwright
-      REDIS_URL: redis://valkey:6379
-      SW_PUBLIC_URL: https://sw.example.com
-    secrets: [pg_password]
-    ports: ["127.0.0.1:3100:3000"]
-    depends_on: { postgres: { condition: service_healthy }, valkey: { condition: service_healthy } }
-    healthcheck: { test: ["CMD", "node", "dist/healthcheck.js"], interval: 15s, timeout: 3s, retries: 5 }
-    networks: [internal, egress]
-  swellwright-worker:
-    image: swellwright:${SW_VERSION}
-    command: ["node", "dist/worker.js"]
-    restart: unless-stopped
-    user: "10001:10001"
-    read_only: true
-    tmpfs: [/tmp]
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
-    env_file: .env
-    networks: [internal, egress]
-  postgres:
-    image: postgres:17@sha256:...
-    restart: unless-stopped
-    volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck: { test: ["CMD-SHELL", "pg_isready -U sw -d swellwright"], interval: 10s, retries: 5 }
-    networks: [internal]
-  valkey:
-    image: valkey/valkey:8@sha256:...
-    command: ["valkey-server", "--appendonly", "yes", "--save", ""]
-    volumes: [valkeydata:/data]
-    healthcheck: { test: ["CMD", "valkey-cli", "ping"], interval: 10s, retries: 5 }
-    networks: [internal]
-networks:
-  internal: { internal: true }
-  egress: {}
-volumes: { pgdata: {}, valkeydata: {} }
-secrets: { pg_password: { file: ./secrets/pg_password } }
-```
+## 2. `docker-compose.yml`
+Файл лежит в `deploy/compose/docker-compose.yml`; секреты пишутся в `.env` рядом (каждый объяснён в `.env.example`), затем `docker compose up -d --build` (ADR 0019). Что он задаёт:
+- `migrate` выполняет `prisma migrate deploy` и завершается; `swellwright` стартует после его успешного завершения и после готовности Postgres и Valkey.
+- `swellwright`: непривилегированный пользователь, `read_only: true` с `/tmp` в памяти, `cap_drop: [ALL]`, `no-new-privileges`, `init`, публикация на `127.0.0.1:3100` (`SW_LISTEN`), `SW_TRUSTED_PROXIES=uniquelocal`, потому что прокси приходит к нему из сети Docker.
+- Сети: `backend` с `internal: true` (Postgres, Valkey, `migrate`, сервер); `frontend` несёт опубликованный порт и исходящий трафик сервера.
+- Обязательные секреты (`POSTGRES_PASSWORD`, `SW_AUTH_KEY`) проверяет Compose; без них запуск останавливается с сообщением.
+- Планируется и пока не в файле: worker, Docker secrets для пароля базы, лимиты ресурсов.
+
 Исходящий трафик ограничивается межсетевым экраном хоста (разрешены серверы инвентаря, панель, DNS-API, GitHub, Telegram), а не только Docker.
 
 ## 3. Переменные окружения (основные)
-`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 от 32 случайных байт; запечатывает секреты TOTP, это не ключ хранилища, ADR 0014; обязателен в production), `SW_SETUP_TOKEN` (необязательный постоянный токен первого запуска), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (сколько сессия остаётся повышенной после второго фактора, по умолчанию 5, от 1 до 30; ADR 0017), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (подсказка политике), `SW_UNSEAL_MODE` (`manual` по умолчанию, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (для Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **Мастер-пароль хранилища не передаётся через окружение.**
+`SW_PUBLIC_URL`, `SW_VERSION`, `SW_DATABASE_URL`, `SW_VALKEY_URL`, `SW_AUTH_KEY` (base64 от 32 случайных байт; запечатывает секреты TOTP, это не ключ хранилища, ADR 0014; обязателен в production), `SW_SETUP_TOKEN` (необязательный постоянный токен первого запуска), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (сколько сессия остаётся повышенной после второго фактора, по умолчанию 5, от 1 до 30; ADR 0017), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (подсказка политике), `SW_UNSEAL_MODE` (`manual` по умолчанию, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (для Prometheus), `SW_RETENTION_*`. Ещё: `SW_WEB_DIR` (каталог с собранным интерфейсом; API отдаёт его по `/`, в образе это `/app/web`, без `index.html` сервер не запускается) и `SW_TRUSTED_PROXIES` (какие прокси вправе сообщать адрес клиента через `X-Forwarded-For`: число переходов либо адреса, диапазоны CIDR и `loopback`, `linklocal`, `uniquelocal`; не задано: не доверяет никому; опечатка отвергается при запуске; ADR 0019). **Мастер-пароль хранилища не передаётся через окружение.**
 
 ## 4. Обратный прокси (nginx, по образцу панели)
-- Домен `sw.<база>`, сертификат (например wildcard на базовый домен), `proxy_pass http://127.0.0.1:3100`.
+- Домен `sw.<база>`, сертификат (например wildcard на базовый домен), `proxy_pass http://127.0.0.1:3100`. API отдаёт интерфейс сам, так что апстрим один; TLS и ограничение доступа остаются за прокси.
 - Заголовки: `X-Forwarded-For`, `X-Forwarded-Proto: https`, без под-пути.
 - WebSocket: `Upgrade`/`Connection`, `proxy_read_timeout` не менее 1 часа для терминала.
 - Ограничение доступа: список адресов (доверенные сети, VPN), опционально mTLS; rate limiting; отдельные `location` для `/ws`.
@@ -80,10 +38,10 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 Остаточный риск при общем хосте: общее ядро и хост; компрометация хоста затрагивает обе системы.
 
 ## 6. Первый запуск
-`docker compose up -d` → открыть консоль и ввести токен установки, который сервер напечатал в журнал → создать владельца экземпляра (пароль, TOTP, коды восстановления) → создать и **распечатать** хранилище (пароль + файл ключа по желанию) → подключить панель (P01) → импортировать парк → усыновить ноды (N01) → настроить уведомления и расписания.
+`cp .env.example .env`, заполнить три секрета, `docker compose up -d --build` (`deploy/compose`) → открыть консоль и ввести токен установки, который сервер напечатал в журнал → создать владельца экземпляра (пароль, TOTP, коды восстановления) → создать и **распечатать** хранилище (пароль + файл ключа по желанию) → подключить панель (P01) → импортировать парк → усыновить ноды (N01) → настроить уведомления и расписания.
 
 ## 7. Эксплуатация
-- **Обновления Swellwright:** новая версия образа → `prisma migrate deploy` → проверка `ready` → откат: предыдущий образ плюс восстановление базы из копии перед миграцией (автоматическая копия перед обновлением).
+- **Обновления Swellwright:** новая версия образа → сервис `migrate` выполняется при `docker compose up` перед сервером → проверка `ready` → откат: предыдущий образ плюс восстановление базы из копии перед миграцией (автоматическая копия перед обновлением).
 - **Резервные копии:** ежедневный `pg_dump` (шифрование в формате CMS: открытый ключ на сервере, приватный ключ хранится вне сервера у администратора), экспорт метаданных хранилища (шифртекст), копии вне сервера (внешнее хранилище), ежемесячная проверка восстановления в одноразовом Postgres.
 - **Мониторинг:** `/health`, `/ready`, `/metrics` (Basic Auth), алерты на возраст блокировок, очередь, сроки токенов и сертификатов, размер БД.
 - **Логи:** JSON, ротация Docker (`max-size`, `max-file`), хранение по политике, без секретов.
@@ -93,7 +51,7 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 | Ситуация | Действия |
 |---|---|
 | Потерян пароль хранилища | восстановление по набору (Shamir); при отсутствии набора хранилище утрачено: перевыпуск всех секретов и повторное подключение панели и серверов (ноды живы, доступ по аварийному ключу) |
-| Никто не может войти (владелец потерял пароль и аутентификатор) | на хосте Swellwright, с окружением сервера: `node dist/admin.js reset-credentials <логин>` удаляет учётные данные этой записи, завершает её сессии и печатает одноразовое приглашение; открыть консоль с ним, выбрать пароль, заново подключить аутентификатор. `node dist/admin.js users` показывает учётные записи. В цепочке аудита это `user.credentials.reset` с `via: cli` (ADR 0016) |
+| Никто не может войти (владелец потерял пароль и аутентификатор) | на хосте Swellwright, с окружением сервера: `docker compose exec swellwright node apps/api/dist/admin.js reset-credentials <логин>` удаляет учётные данные этой записи, завершает её сессии и печатает одноразовое приглашение; открыть консоль с ним, выбрать пароль, заново подключить аутентификатор. `... admin.js users` показывает учётные записи. В цепочке аудита это `user.credentials.reset` с `via: cli` (ADR 0016) |
 | Потерян сервер Swellwright | поднять на новой машине, восстановить БД из копии, распечатать хранилище, пересоздать токены агентов, проверить доступы |
 | Повреждена БД | восстановление из последней копии, пересинхронизация панели и серверов, пометка запусков «неопределённое состояние» и сверка по снимкам |
 | Swellwright скомпрометирован | отзыв токенов панели, смена CA SSH и ключей, смена DNS-секретов, аудит, перевыпуск (мастер N28) |

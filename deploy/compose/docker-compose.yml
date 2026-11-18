@@ -1,0 +1,96 @@
+# Swellwright with its database and cache, built from this checkout (ADR 0019).
+#
+#   cp .env.example .env      # then fill in the three secrets, see the comments in that file
+#   docker compose up -d --build
+#
+# The console and the API listen on 127.0.0.1:3100 (SW_LISTEN). Put a reverse proxy with TLS in front of it
+# (deploy/nginx); the compose file does not terminate TLS and does not publish anything else.
+name: swellwright
+
+x-swellwright: &swellwright
+  image: swellwright:${SW_IMAGE_TAG:-local}
+  build:
+    context: ../..
+  restart: "no"
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  init: true
+
+x-pins:
+  # Pinned by digest after the tag. Dependabot proposes new digests.
+  postgres: &postgres postgres:17@sha256:0d938e975177bef9f1f61f3f9dbcf2e0aa0a139568f66d3415ed8892eb97f6ac
+  valkey: &valkey valkey/valkey:8@sha256:8f836008e0986c36adf50da714c7060cf689dbb335f61fe077939d90fa650809
+
+services:
+  # Applies the database migrations and exits. The server starts when it has finished successfully.
+  migrate:
+    <<: *swellwright
+    command: ["node", "packages/db/scripts/prisma.mjs", "migrate", "deploy"]
+    environment:
+      SW_DATABASE_URL: postgresql://sw:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/swellwright
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [backend]
+
+  swellwright:
+    <<: *swellwright
+    restart: unless-stopped
+    # Nothing is written inside the container; /tmp is memory.
+    read_only: true
+    tmpfs: [/tmp]
+    # If you set a memory limit, leave at least 512 MiB: the secrets vault derives its key with Argon2id
+    # (256 MiB) whenever it is unsealed.
+    env_file: .env
+    environment:
+      SW_DATABASE_URL: postgresql://sw:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/swellwright
+      SW_VALKEY_URL: redis://valkey:6379
+      SW_AUTH_KEY: ${SW_AUTH_KEY:?Set SW_AUTH_KEY in .env}
+      # The reverse proxy reaches the container from a private address (the Docker bridge). Only those
+      # addresses may say who the client is; an address from the Internet cannot.
+      SW_TRUSTED_PROXIES: ${SW_TRUSTED_PROXIES:-uniquelocal}
+    ports:
+      - "${SW_LISTEN:-127.0.0.1:3100}:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    networks: [backend, frontend]
+
+  postgres:
+    image: *postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: swellwright
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sw -d swellwright"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+  valkey:
+    image: *valkey
+    restart: unless-stopped
+    # The queue of jobs survives a restart (append-only file); there is no snapshot schedule.
+    command: ["valkey-server", "--appendonly", "yes", "--save", ""]
+    volumes: [valkeydata:/data]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+networks:
+  # The database and the cache can reach nothing and nothing outside can reach them.
+  backend:
+    internal: true
+  # Where the server is published and from where it will reach the nodes and the panels.
+  frontend: {}
+
+volumes:
+  pgdata: {}
+  valkeydata: {}
