@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Supply-chain hardening (ADR 0009): never run dependency lifecycle scripts, and do not
+# install a version published less than three days ago (value is in minutes).
+onlyBuiltDependencies: []
+minimumReleaseAge: 4320
