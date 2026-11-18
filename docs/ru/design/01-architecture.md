@@ -3,7 +3,7 @@
 ## 1. Стек (согласован со стеком Remnawave; версии сверены с Remnawave 3.4.x)
 | Слой | Выбор | Примечание |
 |---|---|---|
-| Бэкенд | NestJS 11, TypeScript 5.9, Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | как у панели |
+| Бэкенд | NestJS 11, TypeScript 6.0 (в панели 5.9, см. ADR 0009), Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | как у панели |
 | БД | PostgreSQL + Prisma 6 (+ Kysely для тяжёлых запросов, как у панели) | миграции Prisma, партиционирование временных рядов |
 | Очереди и блокировки | BullMQ + Redis-совместимое хранилище (Valkey), блокировки Redlock и advisory locks Postgres | отдельные очереди по типам задач |
 | SSH | `ssh2` (в панели уже есть) | пул, закрепление ключей хоста, отдельные процессы на ноде, PTY, SFTP |

@@ -42,7 +42,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | blueprints | CRUD шаблонов развёртывания, `POST /blueprints/{id}/preview` |
 | baselines | CRUD эталонов, `POST /baselines/{id}/run`, `GET /baseline-results`, `POST /baselines/fix` (план) |
 | workflows | `GET /workflows` (каталог со схемами параметров), `POST /workflows/{code}/plan` (сухой прогон), `POST /workflows/{code}/runs` |
-| runs | `GET /runs`, `/runs/{id}`, `/stages`, `/steps`, `/events`, `/logs`, `POST /runs/{id}/approve|reject|cancel|pause|resume|retry|rollback`, `GET /runs/{id}/undo-plan` |
+| runs | `GET /runs`, `/runs/{id}`, `/stages`, `/steps`, `/events`, `/logs`, `POST /runs/{id}/approve\|reject\|cancel\|pause\|resume\|retry\|rollback`, `GET /runs/{id}/undo-plan` |
 | approvals | `GET /approvals`, `POST /approvals/{id}/decision` |
 | policies | CRUD правил, `GET /policies/violations`, `POST /policies/evaluate` |
 | schedules | CRUD расписаний, `POST /schedules/{id}/run-now` |
@@ -52,9 +52,9 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | audit | `GET /audit`, `POST /audit/verify-chain`, экспорт |
 | artifacts | `/artifacts` (установщик, node-engine, эталоны), `POST /artifacts/{id}/promote` |
 | advisories | `/advisories`, `POST /advisories/{id}/ack` |
-| system | `GET /system/health|ready|version|metrics`, `/settings`, `/backups`, `/updates` |
+| system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |
 | webhooks | `/webhooks` (подписки), `POST /webhooks/{id}/test` |
-| plugins | `GET /plugins`, `POST /plugins/{id}/enable|disable`, `GET/PUT /plugins/{id}/config` (схема из манифеста), `GET /plugins/{id}/permissions`, `POST /plugins/{id}/test`; эндпоинты плагинов с префиксом `/ext/{pluginId}/...` включаются в общую OpenAPI |
+| plugins | `GET /plugins`, `POST /plugins/{id}/enable\|disable`, `GET/PUT /plugins/{id}/config` (схема из манифеста), `GET /plugins/{id}/permissions`, `POST /plugins/{id}/test`; эндпоинты плагинов с префиксом `/ext/{pluginId}/...` включаются в общую OpenAPI |
 | import-export | `POST /export`, `POST /import` |
 
 ## 4. События и каналы реального времени

@@ -4,7 +4,7 @@ Swellwright is a self-hosted service for deploying and operating Remnawave fleet
 
 ## Goals
 
-- Cover every operational scenario of a fleet (about 90 scenarios) without manual gaps, each as a workflow with plan, approval, verification and rollback.
+- Cover every operational scenario of a fleet (87 scenarios) without manual gaps, each as a workflow with plan, approval, verification and rollback.
 - Integrate fully with Remnawave (3.4.x and later): all panel operations through a typed client, plus higher-level scenarios and checks the panel does not provide.
 - Keep an interface that looks and behaves like the Remnawave panel (same stack, same conventions).
 - Treat OpenAPI as a first-class artifact: documentation, SDK, CLI and contract tests are generated from it.
@@ -54,4 +54,4 @@ Swellwright is a self-hosted service for deploying and operating Remnawave fleet
 | [api.md](api.md) | OpenAPI conventions, resource groups, events |
 | [roadmap.md](roadmap.md) | phases and acceptance criteria |
 
-The complete design (data model, scenario catalog, engine, testing, risks) is in [`../ru/design/`](../ru/design/00-index.md) (Russian; an English translation is planned).
+The complete design (data model, scenario catalog, engine, testing, risks) is in [`design/`](design/00-index.md). The documents were written in Russian first and are kept in sync with the originals in [`../ru/design/`](../ru/design/00-index.md).

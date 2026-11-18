@@ -91,7 +91,7 @@ Probe agents on machines in other networks, time-of-day availability matrices, a
 </table>
 
 <details>
-<summary><b>Scenario families (about 90 scenarios)</b></summary>
+<summary><b>Scenario families (87 scenarios)</b></summary>
 
 - **Servers and nodes:** adopt, add, deploy, redeploy, rename with finalize, decommission, replace a blocked node, change IP, move between profiles, update image or Xray, OS and kernel updates, reboot cycles, hardening baseline and drift repair, API-port ACL, firewall and fail2ban, SSH access and key rotation, certificates, decoy site and proxy configs, ad-hoc commands, files, web terminal, incident playbooks.
 - **Remnawave objects:** panel connection and tokens, config profiles (editor, linter, impact calculator), REALITY key rotation, hosts and convention linter, squads, subscription templates and rules, hop chains (including multi-hop), plugins and snippets, infrastructure billing, panel backups and restore tests, snapshots and GitOps export, audit, API console.
@@ -139,6 +139,7 @@ Details: [architecture](docs/en/architecture.md).
 | [Security](docs/en/security.md) | threat model, vault, access methods, terminal, audit |
 | [API](docs/en/api.md) | OpenAPI conventions, resource groups, events |
 | [Roadmap](docs/en/roadmap.md) | phases and acceptance criteria |
+| [Design documents](docs/en/design/00-index.md) | the complete design: data model, scenario catalog, engine, testing, risks |
 | [Decisions](docs/adr/) | architecture decision records |
 | [Русская документация](docs/ru/README.md) | full design set in Russian |
 
