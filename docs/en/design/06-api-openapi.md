@@ -1,0 +1,83 @@
+# 06. API and OpenAPI
+
+> English translation of the [Russian design document](../../ru/design/06-api-openapi.md).
+
+OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and contract tests are built from it. An OpenAPI specification is mandatory for every API version.
+
+## 1. Principles
+- Base path `/api/v1`; JSON; Zod schemas in `packages/contracts` define validation, types and OpenAPI at the same time (`nestjs-zod` + `@nestjs/swagger`).
+- The spec is generated at build time, stored in the repository (`openapi/swellwright.json`), served at `/api/v1/openapi.json`, with Scalar documentation at `/docs` (as in the panel).
+- Errors follow RFC 9457 (`application/problem+json`): `type`, `title`, `status`, `detail`, `instance`, `code`, `errors[]`. The set of codes is limited (see section 6).
+- Cursor pagination (`limit`, `cursor`), uniform filters and sorting (`filter[...]`, `sort`), `ETag` and `If-Match` for optimistic updates.
+- Long operations: `202 Accepted` plus a run resource `runs/{id}`; a repeated `POST` with the same `Idempotency-Key` returns the same run.
+- OpenAPI extensions: `x-sw-risk` (`low|medium|high`), `x-sw-approval` (approval required), `x-sw-scopes`, `x-sw-locks` (which resources are locked).
+- Versioning: the major version is in the path; breaking changes only with a new major version; deprecation policy (`Deprecation`, `Sunset`).
+
+## 2. Authentication
+| Method | Who | Notes |
+|---|---|---|
+| Cookie session | UI | TOTP/passkey, CSRF, step-up |
+| Swellwright bearer token | CLI, automation, MCP | scopes `sw:<resource>:<action>`, expiry, IP |
+| Agent token | probe-agent | only writes results and reads its own configuration |
+| Signed webhooks (outgoing) | external systems | HMAC-SHA256 in a header |
+
+## 3. Resource groups and endpoints (main)
+| Group | Endpoints (in brief) |
+|---|---|
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
+| users, roles | CRUD for Swellwright users and roles, `GET /roles/permissions` |
+| tokens | `POST/GET/DELETE /tokens` (Swellwright tokens), `GET /tokens/scopes` |
+| vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (values are write-only), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |
+| servers | CRUD, `POST /servers/{id}/facts/refresh`, `GET /servers/{id}/facts`, `/events`, `/snapshots`, `/baseline-results` |
+| access | `POST /servers/{id}/access/verify`, `/access/rotate`, `/host-keys/accept` |
+| terminal | `POST /servers/{id}/terminal/sessions` (step-up), `WS /ws/terminal/{sessionId}`, `GET /terminal/sessions`, `DELETE ...`, recordings: `GET /terminal/recordings/{id}` |
+| commands, scripts | `POST /commands` (server selection, strategy), `GET/POST /scripts`, `GET /commands/{id}` |
+| files | `GET /servers/{id}/files?path=`, `PUT`, `DELETE`, `POST /files/distribute` |
+| panels | `POST /panels` (connection wizard), `GET /panels/{id}`, `/health`, `/compatibility`, `/tokens` |
+| panel-objects | cache reads and a write proxy: `/panels/{id}/nodes`, `/hosts`, `/profiles`, `/squads`, `/templates`, `/subscription-settings`, `/page-configs`, `/plugins`, `/snippets`, `/billing`, `/users` (optional) |
+| panel-console | `GET /panels/{id}/console/operations`, `POST /panels/{id}/console/plan`, `POST /panels/{id}/console/execute` (approval) |
+| snapshots | `/panels/{id}/snapshots`, `/diff?from=&to=`, `POST /snapshots/{id}/restore` (object) |
+| conventions | CRUD, `POST /conventions/check` (drift), `POST /conventions/fix` (plan) |
+| chains | CRUD for hop chains, `POST /chains/{id}/verify`, `GET /chains/{id}/topology` |
+| dns | `/dns/providers`, `/dns/zones`, `/dns/records`, `POST /dns/plan`, `/dns/apply`, `/dns/propagation`, `/dns/changes` |
+| certs | `/certsync/entries`, `POST /certsync/sync`, `/certs/status`, ACME: `/acme/orders` (optional) |
+| blueprints | CRUD for deployment templates, `POST /blueprints/{id}/preview` |
+| baselines | CRUD for baselines, `POST /baselines/{id}/run`, `GET /baseline-results`, `POST /baselines/fix` (plan) |
+| workflows | `GET /workflows` (catalog with parameter schemas), `POST /workflows/{code}/plan` (dry run), `POST /workflows/{code}/runs` |
+| runs | `GET /runs`, `/runs/{id}`, `/stages`, `/steps`, `/events`, `/logs`, `POST /runs/{id}/approve\|reject\|cancel\|pause\|resume\|retry\|rollback`, `GET /runs/{id}/undo-plan` |
+| approvals | `GET /approvals`, `POST /approvals/{id}/decision` |
+| policies | CRUD for rules, `GET /policies/violations`, `POST /policies/evaluate` |
+| schedules | CRUD for schedules, `POST /schedules/{id}/run-now` |
+| probes | `/probes/agents`, `/targets`, `/results`, `POST /probes/run`, `GET /probes/matrix` |
+| alerts, notifications | `/alerts`, `/alert-rules`, `/notification-channels`, `POST /notifications/test` |
+| reports | `POST /reports`, `GET /reports/{id}` (HTML, Markdown, PDF) |
+| audit | `GET /audit`, `POST /audit/verify-chain`, export |
+| artifacts | `/artifacts` (installer, node-engine, baselines), `POST /artifacts/{id}/promote` |
+| advisories | `/advisories`, `POST /advisories/{id}/ack` |
+| system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |
+| webhooks | `/webhooks` (subscriptions), `POST /webhooks/{id}/test` |
+| plugins | `GET /plugins`, `POST /plugins/{id}/enable\|disable`, `GET/PUT /plugins/{id}/config` (schema from the manifest), `GET /plugins/{id}/permissions`, `POST /plugins/{id}/test`; plugin endpoints with the `/ext/{pluginId}/...` prefix are included in the common OpenAPI |
+| import-export | `POST /export`, `POST /import` |
+
+## 4. Events and real-time channels
+- WebSocket `/ws`: channels `runs/{id}`, `fleet`, `alerts`, `terminal/{id}`, `servers/{id}`; SSE `/events` as a fallback.
+- Event schema: `{id, type, time, runId?, stage?, step?, severity, data}`; types: `run.created`, `run.awaiting_approval`, `run.started`, `stage.started`, `stage.progress`, `stage.finished`, `step.log`, `run.finished`, `run.rolled_back`, `alert.fired`, `alert.resolved`, `server.drift_detected`, `panel.object_changed`, `probe.result`, `vault.sealed`.
+- Acknowledgements and redelivery: `id` is monotonic, and the client requests missed events with `Last-Event-ID`.
+
+## 5. SDK, CLI, MCP
+- **TypeScript SDK** is generated from the spec (`openapi-typescript` + a thin client); a Python client if needed (generator).
+- **CLI `sw`:** `sw runs start deploy --server ... --blueprint ...`, `sw runs watch`, `sw plan`, `sw approve`, `sw rollback`, `sw servers`, `sw dns`, `sw vault status`, `sw status`; output copies as plain text, with `--ascii` and `--json` modes.
+- **MCP server** (optional): read tools, writes through drafts and approval; data masking by default (stable pseudonyms).
+- **Outgoing webhooks:** subscriptions by event type, retries with exponential backoff, HMAC signature, delivery log.
+
+## 6. Error codes (list)
+`validation_failed`, `unauthenticated`, `forbidden`, `step_up_required`, `vault_sealed`, `not_found`, `conflict`, `lock_held`, `precondition_failed`, `policy_blocked`, `approval_required`, `rate_limited`, `panel_unavailable`, `panel_contract_mismatch`, `ssh_unreachable`, `ssh_host_key_changed`, `dns_conflict`, `remote_step_failed`, `rollback_failed`, `internal_error`.
+
+## 7. Spec management (in CI)
+Spectral linter (naming rules, mandatory `x-sw-*`, descriptions, examples), `oasdiff` (forbids breaking changes in `v1`), contract tests (Schemathesis against a running API), a check that every endpoint has a test and an example, SDK generation and a check that the client compiles, publishing the spec artifact with the release.
+
+## 8. Compatibility with Remnawave idioms
+For familiarity, the same conventions are used where they do not make the design worse: UUIDs for objects, flat camelCase field names, `Authorization: Bearer`, Scalar documentation. The panel's response envelope `{response: ...}` is **not copied** (plain JSON) so as not to complicate clients; the generated SDK hides the differences.
+
+## 9. Plugins in the API
+Plugins can add their own routes only in the `/api/v1/ext/{pluginId}/...` namespace. The routes are described with Zod schemas and appear in the common spec marked with their source (`x-sw-plugin`). Plugin permissions are checked on every call, and responses go through secret redaction. The spec without plugins (core only) is published separately as the canonical one.
