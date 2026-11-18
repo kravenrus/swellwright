@@ -143,7 +143,9 @@ export class PluginHostService implements OnApplicationShutdown {
       runnerPath: RUNNER,
       memoryMiB: this.config.pluginLimits.memoryMiB,
       startTimeoutMs: START_TIMEOUT_MS,
-      onChange: (snapshot) => this.runtime.report(id, snapshot),
+      onChange: (snapshot) => {
+        this.runtime.report(id, snapshot);
+      },
       onRefused: (host, reason) => {
         if (this.mayNote(id)) {
           void this.audit.note({
@@ -187,7 +189,9 @@ export class PluginHostService implements OnApplicationShutdown {
     const runnable = await this.plugins.runnable(id);
     if (runnable.kind !== 'ok') {
       throw new PluginCallError(
-        runnable.kind === 'unknown' ? 'There is no such plugin.' : `The plugin does not run: ${runnable.why}.`,
+        runnable.kind === 'unknown'
+          ? 'There is no such plugin.'
+          : `The plugin does not run: ${runnable.why}.`,
         'not_running',
       );
     }
@@ -198,7 +202,10 @@ export class PluginHostService implements OnApplicationShutdown {
     try {
       return await running.call(kind, method, params, this.config.pluginLimits.callTimeoutMs);
     } catch (error) {
-      if (error instanceof PluginCallError && (error.reason === 'timeout' || error.reason === 'crashed')) {
+      if (
+        error instanceof PluginCallError &&
+        (error.reason === 'timeout' || error.reason === 'crashed')
+      ) {
         this.recordFailure(id);
         if (this.mayNote(id)) {
           void this.audit.note({
@@ -227,7 +234,7 @@ export class PluginHostService implements OnApplicationShutdown {
       throw new ConflictException(`Enable the plugin before checking it: ${runnable.why}.`);
     }
     let outcome: 'success' | 'failure' = 'success';
-    let details: Record<string, string | number> = {};
+    let details: Record<string, string | number>;
     try {
       const running = await this.ensure(id, runnable, { ignoreFailures: true });
       const modules = running?.snapshot().modules ?? [];

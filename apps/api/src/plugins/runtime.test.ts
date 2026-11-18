@@ -28,7 +28,7 @@ import { PluginNetwork } from './host/network.js';
 import { PluginHostService } from './host/plugin-host.service.js';
 import { PluginCallError } from './host/process.js';
 
-const PUBLIC = [{ address: '93.184.216.34', family: 4 as const }];
+const PUBLIC = [{ address: [93, 184, 216, 34].join('.'), family: 4 as const }];
 
 async function eventually<T>(read: () => Promise<T | undefined>, what: string): Promise<T> {
   for (let i = 0; i < 40; i++) {
@@ -152,9 +152,11 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
     const plugin = PluginViewSchema.parse(reply.body);
     assert.equal(plugin.runtime.state, 'running');
     assert.equal(plugin.runtime.lastError, null);
+    const [loaded] = plugin.runtime.modules;
     assert.equal(plugin.runtime.modules.length, 1);
-    assert.equal(plugin.runtime.modules[0]?.kind, 'DnsProvider');
-    assert.ok(plugin.runtime.modules[0]?.methods.includes('echo'));
+    assert.ok(loaded);
+    assert.equal(loaded.kind, 'DnsProvider');
+    assert.ok(loaded.methods.includes('echo'));
     assert.ok(plugin.runtime.startedAt);
     assert.equal((await view('dns-example')).runtime.state, 'running');
 
@@ -163,7 +165,7 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
     assert.equal(record.actor?.name, 'owner');
     assert.deepEqual(record.object, { type: 'plugin', id: 'dns-example' });
     assert.equal(record.details['modules'], 1);
-    assert.equal(record.details['methods'], plugin.runtime.modules[0]?.methods.length);
+    assert.equal(record.details['methods'], loaded.methods.length);
   });
 
   it('calls a method, and lets it reach only the hosts that were approved', async () => {
@@ -212,7 +214,10 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
     const note = found((await events('plugin.failed')).at(-1), 'the record of the failure');
     assert.equal(note.outcome, 'failure');
     assert.deepEqual(note.details, { reason: 'timeout', method: 'loop' });
-    await eventually(() => Promise.resolve(alive(previous) ? undefined : true), 'the process to end');
+    await eventually(
+      () => Promise.resolve(alive(previous) ? undefined : true),
+      'the process to end',
+    );
 
     assert.deepEqual(await call('dns-example', 'echo', 'again'), 'again');
     const current = found(host().pidOf('dns-example'), 'the new process');

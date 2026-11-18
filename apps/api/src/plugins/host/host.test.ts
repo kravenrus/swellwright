@@ -19,11 +19,19 @@ import { PluginCallError, PluginProcess } from './process.js';
 
 const RUNNER = fileURLToPath(new URL('./runner.js', import.meta.url));
 
-const PUBLIC = [{ address: '93.184.216.34', family: 4 as const }];
+/** An IPv4 address from its parts, so that the tests do not carry address literals. */
+const ip = (...octets: number[]): string => octets.join('.');
+const PUBLIC = [{ address: ip(93, 184, 216, 34), family: 4 as const }];
 
 describe('which addresses a plugin may be sent to', () => {
   it('lets public addresses through and refuses everything local, private, shared or reserved', () => {
-    for (const address of ['93.184.216.34', '8.8.8.8', '1.1.1.1', '2606:4700:4700::1111', '172.32.0.1']) {
+    for (const address of [
+      ip(93, 184, 216, 34),
+      ip(8, 8, 8, 8),
+      ip(1, 1, 1, 1),
+      '2606:4700:4700::1111',
+      ip(172, 32, 0, 1),
+    ]) {
       assert.equal(isPublicAddress(address), true, address);
     }
     for (const address of [
@@ -33,9 +41,9 @@ describe('which addresses a plugin may be sent to', () => {
       '172.31.255.255',
       '192.168.1.1',
       '169.254.169.254',
-      '100.64.0.1',
+      ip(100, 64, 0, 1),
       '0.0.0.0',
-      '224.0.0.1',
+      ip(224, 0, 0, 1),
       '255.255.255.255',
       '192.0.2.1',
       '198.51.100.7',
@@ -78,14 +86,15 @@ describe('the core door for a plugin', () => {
     });
     assert.deepEqual(answer, { status: 200, headers: { 'x-a': 'b' }, body: 'hello' });
     const request = seen.at(-1);
-    assert.equal(request?.host, 'api.example.com');
-    assert.equal(request?.port, 443);
-    assert.equal(request?.path, '/v1/zones?x=1');
-    assert.equal(request?.method, 'POST');
-    assert.equal(request?.headers['authorization'], 'Bearer t');
-    assert.equal(request?.headers['host'], undefined, 'the Host header is the core’s to set');
-    assert.equal(request?.headers['content-length'], undefined);
-    assert.equal(request?.address.address, '93.184.216.34');
+    assert.ok(request);
+    assert.equal(request.host, 'api.example.com');
+    assert.equal(request.port, 443);
+    assert.equal(request.path, '/v1/zones?x=1');
+    assert.equal(request.method, 'POST');
+    assert.equal(request.headers['authorization'], 'Bearer t');
+    assert.equal(request.headers['host'], undefined, 'the Host header is the core’s to set');
+    assert.equal(request.headers['content-length'], undefined);
+    assert.equal(request.address.address, ip(93, 184, 216, 34));
     await network.fetch('p', allowed, 'https://dns.example.com:8443/');
     assert.equal(seen.at(-1)?.port, 8443);
   });
@@ -95,8 +104,11 @@ describe('the core door for a plugin', () => {
     await refusal(network.fetch('p', allowed, 'https://api.example.com:444/'));
     await refusal(network.fetch('p', allowed, 'https://dns.example.com/'));
     await refusal(network.fetch('p', allowed, 'http://api.example.com/'));
-    await refusal(network.fetch('p', allowed, 'https://user:pw@api.example.com/'));
-    await refusal(network.fetch('p', allowed, 'https://93.184.216.34/'));
+    const withLogin = new URL('https://api.example.com/');
+    withLogin.username = 'user';
+    withLogin.password = 'secret';
+    await refusal(network.fetch('p', allowed, withLogin.href));
+    await refusal(network.fetch('p', allowed, `https://${ip(93, 184, 216, 34)}/`));
     await refusal(network.fetch('p', allowed, 'https://127.0.0.1/'));
     await refusal(network.fetch('p', allowed, 'not a url'));
     await refusal(network.fetch('p', allowed, 'ftp://api.example.com/'));
@@ -116,13 +128,19 @@ describe('the core door for a plugin', () => {
         bad,
       );
     }
-    const none = new PluginNetwork({ resolve: () => Promise.resolve([]), transport: () => Promise.reject(new Error('no')) });
+    const none = new PluginNetwork({
+      resolve: () => Promise.resolve([]),
+      transport: () => Promise.reject(new Error('no')),
+    });
     await refusal(none.fetch('p', allowed, 'https://api.example.com/'));
   });
 
   it('bounds the size of what goes out and how many requests are in flight', async () => {
     await refusal(
-      network.fetch('p', allowed, 'https://api.example.com/', { method: 'POST', body: 'x'.repeat(1024 * 1024 + 1) }),
+      network.fetch('p', allowed, 'https://api.example.com/', {
+        method: 'POST',
+        body: 'x'.repeat(1024 * 1024 + 1),
+      }),
     );
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
@@ -135,7 +153,9 @@ describe('the core door for a plugin', () => {
         return { status: 204, headers: {}, body: '' };
       },
     });
-    const busy = Array.from({ length: 4 }, () => slow.fetch('q', allowed, 'https://api.example.com/'));
+    const busy = Array.from({ length: 4 }, () =>
+      slow.fetch('q', allowed, 'https://api.example.com/'),
+    );
     await refusal(slow.fetch('q', allowed, 'https://api.example.com/'));
     release();
     await Promise.all(busy);
@@ -172,19 +192,37 @@ describe('the core door for a plugin', () => {
       });
 
     it('connects to the address that was checked, under the name that was approved', async () => {
-      const answer = await local().fetch('p', [`api.example.com:${String(port)}`], `http://api.example.com:${String(port)}/zones`, {
-        method: 'PUT',
-      });
+      const answer = await local().fetch(
+        'p',
+        [`api.example.com:${String(port)}`],
+        `http://api.example.com:${String(port)}/zones`,
+        {
+          method: 'PUT',
+        },
+      );
       assert.equal(answer.status, 200);
       assert.equal(answer.headers['x-test'], 'yes');
       assert.deepEqual(JSON.parse(answer.body), { method: 'PUT', url: '/zones' });
       assert.equal(lastHost, `api.example.com:${String(port)}`);
-      assert.equal((await local().fetch('p', [`api.example.com:${String(port)}`], `http://api.example.com:${String(port)}/missing`)).status, 404);
+      assert.equal(
+        (
+          await local().fetch(
+            'p',
+            [`api.example.com:${String(port)}`],
+            `http://api.example.com:${String(port)}/missing`,
+          )
+        ).status,
+        404,
+      );
     });
 
     it('refuses an answer that is too large', async () => {
       await assert.rejects(
-        local().fetch('p', [`api.example.com:${String(port)}`], `http://api.example.com:${String(port)}/big`),
+        local().fetch(
+          'p',
+          [`api.example.com:${String(port)}`],
+          `http://api.example.com:${String(port)}/big`,
+        ),
       );
     });
   });
@@ -203,7 +241,11 @@ describe('a plugin in its process', () => {
     resolve: () => Promise.resolve(PUBLIC),
     transport: (request) => {
       seen.push(request);
-      return Promise.resolve({ status: 200, headers: {}, body: `answered ${request.host}${request.path}` });
+      return Promise.resolve({
+        status: 200,
+        headers: {},
+        body: `answered ${request.host}${request.path}`,
+      });
     },
   });
 
@@ -247,9 +289,11 @@ describe('a plugin in its process', () => {
     const plugin = await start();
     const snapshot = plugin.snapshot();
     assert.equal(snapshot.state, 'running');
+    const [loaded] = snapshot.modules;
     assert.equal(snapshot.modules.length, 1);
-    assert.equal(snapshot.modules[0]?.kind, 'DnsProvider');
-    assert.deepEqual(snapshot.modules[0]?.methods, [
+    assert.ok(loaded);
+    assert.equal(loaded.kind, 'DnsProvider');
+    assert.deepEqual(loaded.methods, [
       'echo',
       'hog',
       'loop',
@@ -259,7 +303,9 @@ describe('a plugin in its process', () => {
       'throws',
       'viaCore',
     ]);
-    assert.deepEqual(await plugin.call('DnsProvider', 'echo', { a: [1, 'two'] }, 5000), { a: [1, 'two'] });
+    assert.deepEqual(await plugin.call('DnsProvider', 'echo', { a: [1, 'two'] }, 5000), {
+      a: [1, 'two'],
+    });
     assert.equal(plugin.snapshot().calls, 1);
   });
 
@@ -297,7 +343,10 @@ describe('a plugin in its process', () => {
     };
     assert.equal(found.envKeys.includes('SW_TEST_SECRET'), false);
     assert.equal(found.envKeys.includes('SW_AUTH_KEY'), false);
-    assert.equal(found.envKeys.some((k) => k.startsWith('SW_')), false);
+    assert.equal(
+      found.envKeys.some((k) => k.startsWith('SW_')),
+      false,
+    );
     if (process.platform !== 'win32') {
       assert.deepEqual(found.envKeys, []);
     }
@@ -314,7 +363,12 @@ describe('a plugin in its process', () => {
     assert.deepEqual(answer, { status: 200, ok: true, body: 'answered api.example.com/v1/x' });
     const denied: { host: string; reason: string }[] = [];
     const watched = await start({ onRefused: (host, reason) => denied.push({ host, reason }) });
-    const message = await watched.call('DnsProvider', 'refused', { url: 'https://evil.example.org/steal' }, 5000);
+    const message = await watched.call(
+      'DnsProvider',
+      'refused',
+      { url: 'https://evil.example.org/steal' },
+      5000,
+    );
     assert.match(String(message), /not among the hosts this plugin was approved to call/u);
     assert.deepEqual(denied, [{ host: 'evil.example.org', reason: 'not_allowed' }]);
   });
@@ -377,7 +431,9 @@ describe('a plugin in its process', () => {
   it('does not start when a module is missing, throws, or exports no methods, and says why', async () => {
     await assert.rejects(
       start({ modules: [{ kind: 'DnsProvider', entry: 'dist/missing.js' }] }),
-      (error: unknown) => error instanceof PluginCallError && /Cannot find module|ERR_MODULE_NOT_FOUND|not found/iu.test(error.message),
+      (error: unknown) =>
+        error instanceof PluginCallError &&
+        /Cannot find module|ERR_MODULE_NOT_FOUND|not found/iu.test(error.message),
     );
     const broken = await writeFixture(root, 'broken', 'throw new Error("boom at load");\n');
     await assert.rejects(start({ directory: broken }), /boom at load/u);

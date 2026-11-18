@@ -88,7 +88,11 @@ export class PluginProcess {
     private readonly child: ChildProcess,
     private readonly options: StartOptions,
   ) {
-    this.exited = new Promise((resolve) => child.once('exit', () => resolve()));
+    this.exited = new Promise((resolve) => {
+      child.once('exit', () => {
+        resolve();
+      });
+    });
     const keep = (chunk: Buffer): void => {
       this.tail = (this.tail + chunk.toString('utf8')).slice(-TAIL_BYTES);
     };
@@ -103,7 +107,9 @@ export class PluginProcess {
   static async start(options: StartOptions): Promise<PluginProcess> {
     const directory = await realpath(options.directory);
     const runner = await realpath(options.runnerPath);
-    const specs = options.modules.map((m) => `${m.kind}=${pathToFileURL(join(directory, m.entry)).href}`);
+    const specs = options.modules.map(
+      (m) => `${m.kind}=${pathToFileURL(join(directory, m.entry)).href}`,
+    );
     const child = fork(runner, [options.pluginId, ...specs], {
       execPath: options.execPath ?? process.execPath,
       // Never started without the permission model: if the flag is not understood, the start fails.
@@ -116,7 +122,10 @@ export class PluginProcess {
       ],
       cwd: directory,
       // Nothing of the core's environment: no keys, no database address.
-      env: process.platform === 'win32' ? { SystemRoot: process.env['SystemRoot'] ?? 'C:\\Windows' } : {},
+      env:
+        process.platform === 'win32'
+          ? { SystemRoot: process.env['SystemRoot'] ?? 'C:\\Windows' }
+          : {},
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       serialization: 'json',
       windowsHide: true,
@@ -142,7 +151,10 @@ export class PluginProcess {
       };
       this.child.on('message', (message: FromPlugin) => {
         if (message.type === 'ready') {
-          this.modules = Object.entries(message.modules).map(([kind, methods]) => ({ kind, methods }));
+          this.modules = Object.entries(message.modules).map(([kind, methods]) => ({
+            kind,
+            methods,
+          }));
           finish();
         } else if (message.type === 'failed') {
           this.fail(message.message);
@@ -192,7 +204,7 @@ export class PluginProcess {
       this.reply({ type: 'fetched', id: message.id, ok: true, ...response });
     } catch (error) {
       if (error instanceof NetworkRefused) {
-        let host = '';
+        let host: string;
         try {
           host = new URL(message.url).host;
         } catch {

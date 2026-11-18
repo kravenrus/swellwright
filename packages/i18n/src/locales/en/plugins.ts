@@ -1,7 +1,7 @@
 /**
  * The plugins page (apps/web/src/settings/plugins-page.tsx): the plugins found in the directories of this instance,
- * what each one asks for, and enabling or disabling them. Names, ids, versions, hosts, scopes and the problems a
- * plugin reports are data and stay as they are.
+ * what each one asks for, enabling or disabling them, and checking that an enabled one loads. Names, ids, versions,
+ * hosts, scopes, method names and the problems or errors a plugin reports are data and stay as they are.
  */
 export const plugins = {
   header: {
@@ -101,7 +101,32 @@ export const plugins = {
 
   local: {
     title: 'Code from this server',
-    body: 'This plugin comes from a directory of this server, not from the Swellwright project. The administrator who enables it answers for what it does.',
+    body: 'This plugin comes from a directory of this server, not from the Swellwright project. It runs in a process of its own that can read only its own files and reach only the hosts you approve. That limits mistakes and most misuse; it is not a sandbox against code written to attack the server. Enable only what you trust.',
+  },
+
+  runtime: {
+    title: 'Runtime',
+    states: {
+      stopped: 'Stopped',
+      running: 'Running',
+      failed: 'Failed',
+    },
+    started: 'Started',
+    calls: 'Calls',
+    idle: 'No process is running now.',
+    noCode: 'It has no code to run: nothing starts.',
+    failedTitle: 'It failed to run',
+    failedUnknown: 'No reason was recorded.',
+    modulesTitle: 'Loaded modules',
+    methodsTitle: 'Methods it offers',
+    noMethods: 'none',
+    restricted:
+      'A plugin runs in a restricted process of its own. It can read only its own files, has no network of its own (it reaches only the hosts you approved, through Swellwright), cannot start programs or workers, sees nothing of the environment of Swellwright, has a memory limit, and is ended when a call takes too long.',
+    check: {
+      button: 'Check',
+      note: 'Loads the plugin in its restricted process and lists what it offers. Nothing else happens.',
+      forbidden: 'Your role may not check plugins.',
+    },
   },
 
   changed: {

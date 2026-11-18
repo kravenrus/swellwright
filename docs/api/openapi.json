@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -2565,6 +2565,59 @@
         "x-sw-permission": "plugins:manage",
         "x-sw-step-up": true
       }
+    },
+    "/plugins/{id}/check": {
+      "post": {
+        "operationId": "checkPlugin",
+        "tags": [
+          "plugins"
+        ],
+        "summary": "Load an enabled plugin in its restricted process",
+        "responses": {
+          "200": {
+            "description": "The plugin and its runtime.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Starts the plugin in a process of its own (no network, no child processes, only its own directory readable, a heap limit) and loads its modules; the answer says what loaded and which methods each module offers, or why it did not. The files are verified against the approval first: a plugin that is not what was approved is switched off instead. The process stays up until it is idle for a while, switched off, or changed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 48,
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "plugins:manage",
+        "x-sw-step-up": true
+      }
     }
   },
   "components": {
@@ -3095,7 +3148,10 @@
           "token.revoked",
           "auth.token.denied",
           "plugin.enabled",
-          "plugin.disabled"
+          "plugin.disabled",
+          "plugin.checked",
+          "plugin.failed",
+          "plugin.network.denied"
         ]
       },
       "AuditOutcome": {
@@ -4575,6 +4631,75 @@
         ],
         "additionalProperties": false
       },
+      "PluginRuntime": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "stopped",
+              "running",
+              "failed"
+            ]
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls made since the process started."
+          },
+          "lastError": {
+            "description": "Why it failed; null while it has not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "methods"
+              ],
+              "additionalProperties": false
+            },
+            "description": "What the process loaded: each extension kind and the methods it offers."
+          }
+        },
+        "required": [
+          "state",
+          "startedAt",
+          "calls",
+          "lastError",
+          "modules"
+        ],
+        "additionalProperties": false
+      },
       "PluginApproval": {
         "type": "object",
         "properties": {
@@ -4722,6 +4847,9 @@
               }
             ]
           },
+          "runtime": {
+            "$ref": "#/components/schemas/PluginRuntime"
+          },
           "change": {
             "anyOf": [
               {
@@ -4751,6 +4879,7 @@
           "signed",
           "hasSettings",
           "approval",
+          "runtime",
           "change"
         ],
         "additionalProperties": false

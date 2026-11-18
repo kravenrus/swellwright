@@ -63,7 +63,10 @@ export async function writeFixture(
 ): Promise<string> {
   const directory = join(root, id);
   await mkdir(join(directory, 'dist'), { recursive: true });
-  await writeFile(join(directory, 'swellwright.plugin.json'), JSON.stringify(FIXTURE_MANIFEST(id, extra)));
+  await writeFile(
+    join(directory, 'swellwright.plugin.json'),
+    JSON.stringify(FIXTURE_MANIFEST(id, extra)),
+  );
   await writeFile(join(directory, 'dist', 'entry.js'), module);
   return directory;
 }

@@ -80,7 +80,8 @@ export function isPublicAddress(address: string): boolean {
   if (!isIPv6(lower)) {
     return false;
   }
-  const first = Number.parseInt(lower.split(':')[0] || '0', 16);
+  const head = lower.split(':')[0] ?? '';
+  const first = head === '' ? 0 : Number.parseInt(head, 16);
   return !(
     lower === '::' ||
     lower === '::1' ||
@@ -244,7 +245,8 @@ export class PluginNetwork {
     if (parsed.username !== '' || parsed.password !== '') {
       throw new NetworkRefused('A URL with a name and password is refused.', 'invalid');
     }
-    const port = parsed.port === '' ? (parsed.protocol === 'https:' ? 443 : 80) : Number(parsed.port);
+    const port =
+      parsed.port === '' ? (parsed.protocol === 'https:' ? 443 : 80) : Number(parsed.port);
     const host = parsed.hostname.toLowerCase();
     if (!allowed.includes(`${host}:${String(port)}`)) {
       throw new NetworkRefused(

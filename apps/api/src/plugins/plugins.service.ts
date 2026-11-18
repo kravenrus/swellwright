@@ -253,14 +253,20 @@ export class PluginsService implements OnApplicationBootstrap {
    * was enabled and is not any more is switched off here, so the host never runs what nobody approved.
    */
   async runnable(id: string): Promise<
-    | { readonly kind: 'ok'; readonly plugin: DiscoveredPlugin; readonly network: readonly string[] }
+    | {
+        readonly kind: 'ok';
+        readonly plugin: DiscoveredPlugin;
+        readonly network: readonly string[];
+      }
     | { readonly kind: 'unknown' }
     | { readonly kind: 'not_enabled'; readonly why: string }
   > {
     const plugin = indexById(await this.discover()).get(id);
     const record = await this.db.pluginApproval.findUnique({ where: { pluginId: id } });
     if (record === null) {
-      return plugin === undefined ? { kind: 'unknown' } : { kind: 'not_enabled', why: 'it was never enabled' };
+      return plugin === undefined
+        ? { kind: 'unknown' }
+        : { kind: 'not_enabled', why: 'it was never enabled' };
     }
     if (!record.enabled) {
       return { kind: 'not_enabled', why: 'it is disabled' };
@@ -268,7 +274,10 @@ export class PluginsService implements OnApplicationBootstrap {
     const reason = whyNotRunning(record, plugin);
     if (reason !== undefined || plugin === undefined) {
       await this.switchOff(id, reason ?? 'missing');
-      return { kind: 'not_enabled', why: `its files are not what was approved (${reason ?? 'missing'}); it was switched off` };
+      return {
+        kind: 'not_enabled',
+        why: `its files are not what was approved (${reason ?? 'missing'}); it was switched off`,
+      };
     }
     return { kind: 'ok', plugin, network: parseApproved(record.permissions).network };
   }

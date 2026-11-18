@@ -38,7 +38,11 @@ function describe(error: unknown): string {
   return text.slice(0, MAX_MESSAGE_CHARS);
 }
 
-function responseOf(status: number, headers: Record<string, string>, body: string): PluginFetchResponse {
+function responseOf(
+  status: number,
+  headers: Record<string, string>,
+  body: string,
+): PluginFetchResponse {
   return {
     status,
     ok: status >= 200 && status < 300,
@@ -92,7 +96,11 @@ interface CallMessage {
 async function handleCall(pluginId: string, message: CallMessage): Promise<void> {
   const methods = modules.get(message.kind);
   // Own properties only: `constructor` and `toString` are not methods of the plugin.
-  if (methods === undefined || !Object.hasOwn(methods, message.method)) {
+  const handler =
+    methods !== undefined && Object.hasOwn(methods, message.method)
+      ? methods[message.method]
+      : undefined;
+  if (handler === undefined) {
     send({
       type: 'error',
       id: message.id,
@@ -101,7 +109,7 @@ async function handleCall(pluginId: string, message: CallMessage): Promise<void>
     return;
   }
   try {
-    const value = await (methods[message.method] as Method)(message.params, contextOf(pluginId));
+    const value = await handler(message.params, contextOf(pluginId));
     send({ type: 'result', id: message.id, value: value === undefined ? null : value });
   } catch (error) {
     send({ type: 'error', id: message.id, message: describe(error) });
