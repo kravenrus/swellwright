@@ -166,7 +166,9 @@ async function auditCheckpoint(
   io: AdminIo,
 ): Promise<number> {
   if (!authKey) {
-    io.err('SW_AUTH_KEY is not set: a checkpoint would carry a signature this server cannot check later.');
+    io.err(
+      'SW_AUTH_KEY is not set: a checkpoint would carry a signature this server cannot check later.',
+    );
     return 1;
   }
   const checkpoint = await audit.createCheckpoint(null, NO_REQUEST);
