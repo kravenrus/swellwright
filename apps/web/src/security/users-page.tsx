@@ -24,6 +24,7 @@ import {
   IconKeyOff,
   IconPencil,
   IconRefresh,
+  IconTrash,
   IconUserPlus,
   IconUsers,
 } from '@tabler/icons-react';
@@ -43,7 +44,7 @@ import {
 } from '@swellwright/contracts';
 import { PageHeader, StatusText, type StatusKind } from '@swellwright/ui';
 
-import { createUser, listUsers, resetCredentials, updateUser } from '../api.js';
+import { createUser, deleteUser, listUsers, resetCredentials, updateUser } from '../api.js';
 import { invitationLink } from '../auth/invitation.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
@@ -443,7 +444,88 @@ function ResetDialog({
   );
 }
 
-/** The users of the instance. Reading needs `users:read`; inviting, changing and resetting need `users:write`. */
+/** Deleting a disabled account for good. The warning is plain because nothing brings the account back. */
+function DeleteDialog({
+  user,
+  onClose,
+  onDone,
+}: {
+  user: UserView | undefined;
+  onClose: () => void;
+  onDone: (username: string) => void;
+}) {
+  const { t } = useTranslation(['users', 'common']);
+  const step = useStepUp();
+  const mutation = useMutation({
+    mutationFn: (target: UserView) => step.run(() => deleteUser(target.id)),
+    onSuccess: (_result, target) => {
+      onDone(target.username);
+      onClose();
+    },
+  });
+  const close = () => {
+    mutation.reset();
+    onClose();
+  };
+  const username = user?.username ?? '';
+  return (
+    <Modal
+      centered
+      onClose={close}
+      opened={user !== undefined}
+      title={t('delete.title', { username })}
+    >
+      <Stack gap="md">
+        <Text fw={600} fz="sm">
+          {t('delete.irreversible')}
+        </Text>
+        <Text fz="sm">{t('delete.warning', { username })}</Text>
+        <ErrorNote error={mutation.error} fallback={t('delete.forbidden')} />
+        <Group justify="flex-end">
+          <Button onClick={close} variant="default">
+            {t('common:cancel')}
+          </Button>
+          <Button
+            color="red"
+            leftSection={<IconTrash size={16} />}
+            loading={mutation.isPending}
+            onClick={() => {
+              if (user) {
+                mutation.mutate(user);
+              }
+            }}
+          >
+            {t('delete.submit')}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
+/** What the page says after an account was deleted. Only the name is kept, so the text follows the language. */
+function DeletedNotice({ username, onClose }: { username: string; onClose: () => void }) {
+  const { t } = useTranslation(['users', 'common']);
+  return (
+    <Alert
+      closeButtonLabel={t('common:close')}
+      color="teal"
+      icon={<IconCheck size={16} />}
+      mb="md"
+      onClose={onClose}
+      role="status"
+      variant="light"
+      withCloseButton
+    >
+      {t('delete.done', { username })}
+    </Alert>
+  );
+}
+
+/**
+ * The users of the instance. Reading needs `users:read`; inviting, changing, resetting and deleting need
+ * `users:write`.
+ */
 export function UsersPage({
   permissions,
   currentUserId,
@@ -458,6 +540,8 @@ export function UsersPage({
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<UserView | undefined>(undefined);
   const [resetting, setResetting] = useState<UserView | undefined>(undefined);
+  const [deleting, setDeleting] = useState<UserView | undefined>(undefined);
+  const [deleted, setDeleted] = useState<string | undefined>(undefined);
 
   const list = useInfiniteQuery({
     queryKey: ['users'],
@@ -499,6 +583,15 @@ export function UsersPage({
         icon={<IconUsers size={22} />}
         title={t('header.title')}
       />
+
+      {deleted !== undefined ? (
+        <DeletedNotice
+          onClose={() => {
+            setDeleted(undefined);
+          }}
+          username={deleted}
+        />
+      ) : null}
 
       <Card padding={0}>
         {list.isPending ? (
@@ -591,6 +684,17 @@ export function UsersPage({
                             >
                               {t('menu.resetCredentials')}
                             </Menu.Item>
+                            {user.state === 'disabled' && user.id !== currentUserId ? (
+                              <Menu.Item
+                                color="red"
+                                leftSection={<IconTrash size={16} />}
+                                onClick={() => {
+                                  setDeleting(user);
+                                }}
+                              >
+                                {t('menu.deleteUser')}
+                              </Menu.Item>
+                            ) : null}
                           </Menu.Dropdown>
                         </Menu>
                       ) : null}
@@ -635,6 +739,16 @@ export function UsersPage({
         }}
         onDone={() => void refresh()}
         user={resetting}
+      />
+      <DeleteDialog
+        onClose={() => {
+          setDeleting(undefined);
+        }}
+        onDone={(username) => {
+          setDeleted(username);
+          void refresh();
+        }}
+        user={deleting}
       />
     </>
   );

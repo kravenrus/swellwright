@@ -34,6 +34,7 @@ export const users = {
   menu: {
     change: 'Change',
     resetCredentials: 'Reset credentials',
+    deleteUser: 'Delete user',
   },
 
   invite: {
@@ -61,6 +62,17 @@ export const users = {
       'This deletes their password, authenticator and recovery codes and signs them out everywhere, now. They cannot sign in until they accept the new invitation you will get.',
     forbidden: 'Your role may not reset credentials.',
     submit: 'Reset credentials',
+  },
+
+  /** Deleting a disabled account for good. */
+  delete: {
+    title: 'Delete {{username}}',
+    irreversible: 'This cannot be undone.',
+    warning:
+      'The account of {{username}} is removed for good, with its password, authenticator, sessions and tokens. What the account did stays in the audit log under its name.',
+    forbidden: 'Your role may not delete users.',
+    submit: 'Delete user',
+    done: '{{username}} was deleted.',
   },
 
   /** The invitation, shown once after creating a user or resetting their credentials. */

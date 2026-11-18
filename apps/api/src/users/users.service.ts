@@ -2,6 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import {
   type CreateUserRequest,
   type UpdateUserRequest,
+  type UserSummary,
   USER_PAGE_DEFAULT,
   type UserInvitation,
   type UserList,
@@ -11,7 +12,7 @@ import {
 import { type Database, Prisma, type User } from '@swellwright/db';
 
 import { AuditService } from '../audit/audit.service.js';
-import { type RequestMeta, requireDatabase } from '../auth/context.js';
+import { type RequestMeta, requireDatabase, toUserSummary } from '../auth/context.js';
 import { DATABASE } from '../tokens.js';
 import { issueInvitation } from './invitations.js';
 
@@ -262,5 +263,44 @@ export class UsersService {
   private async view(id: string): Promise<UserView> {
     const row = await this.db.user.findUniqueOrThrow({ where: { id }, include: WITH_SETUP });
     return toUserView(row);
+  }
+
+  /**
+   * Removes a disabled account for good, with everything that hangs on it: password, authenticator, recovery
+   * codes, sessions, tokens, the open invitation. What the account did stays in the audit log under the name
+   * it had (the log keeps no foreign key to users). Disabling comes first so that deleting is never the only
+   * step between a person and losing an account by a slip.
+   */
+  async remove(actor: Actor, id: string, meta: RequestMeta): Promise<void> {
+    await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${USERS_LOCK_KEY})`;
+      const target = await tx.user.findUnique({ where: { id } });
+      if (!target) {
+        throw new NotFoundException('There is no such user.');
+      }
+      if (actor?.id === id) {
+        throw new ConflictException('You cannot delete your own account.');
+      }
+      if (target.status !== 'disabled') {
+        throw new ConflictException('Disable the account before deleting it.');
+      }
+      await tx.user.delete({ where: { id } });
+      await this.audit.record(
+        {
+          action: 'user.deleted',
+          outcome: 'success',
+          actor,
+          object: { type: 'user', id },
+          details: { username: target.username, role: target.role },
+          meta,
+        },
+        tx,
+      );
+    });
+  }
+
+  /** The language a person chose, kept on their account so it follows them to every browser. */
+  async setLanguage(id: string, language: string | null): Promise<UserSummary> {
+    return toUserSummary(await this.db.user.update({ where: { id }, data: { language } }));
   }
 }

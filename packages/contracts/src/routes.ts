@@ -13,6 +13,8 @@ import {
   TotpCodeRequestSchema,
   TotpConfirmedSchema,
   TotpEnrollmentSchema,
+  UpdatePreferencesRequestSchema,
+  UserSummarySchema,
 } from './auth.js';
 import { ApiErrorSchema } from './errors.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
@@ -339,6 +341,34 @@ export const updateUserRoute = defineRoute({
   stepUp: true,
   request: { params: UserIdParamsSchema, body: UpdateUserRequestSchema },
   responses: { 200: { description: 'The user after the change.', schema: UserViewSchema } },
+});
+
+export const deleteUserRoute = defineRoute({
+  operationId: 'deleteUser',
+  method: 'delete',
+  path: '/users/{id}',
+  tags: ['users'],
+  summary: 'Delete a disabled user',
+  description:
+    'Removes the account with its password, authenticator, recovery codes, sessions, tokens and open invitation. Cannot be undone. Only a disabled account can be deleted (409 otherwise), and never your own (409). What the account did stays in the audit log under the name it had.',
+  auth: 'session',
+  permission: 'users:write',
+  stepUp: true,
+  request: { params: UserIdParamsSchema },
+  responses: { 204: { description: 'The user is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const updatePreferencesRoute = defineRoute({
+  operationId: 'updatePreferences',
+  method: 'patch',
+  path: '/auth/preferences',
+  tags: ['auth'],
+  summary: 'Change your own preferences',
+  description:
+    'The language the console uses for you after you sign in, on any browser. `null` goes back to following the browser.',
+  auth: 'session',
+  request: { body: UpdatePreferencesRequestSchema },
+  responses: { 200: { description: 'You, after the change.', schema: UserSummarySchema } },
 });
 
 export const resetCredentialsRoute = defineRoute({
@@ -744,6 +774,7 @@ export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'revokeOtherSessions',
   'listMyTokens',
   'revokeMyToken',
+  'updatePreferences',
 ];
 
 /** Every route of the public API. The server binds its handlers to these definitions. */
@@ -766,6 +797,8 @@ export const routes = [
   listUsersRoute,
   createUserRoute,
   updateUserRoute,
+  deleteUserRoute,
+  updatePreferencesRoute,
   resetCredentialsRoute,
   vaultStatusRoute,
   initializeVaultRoute,

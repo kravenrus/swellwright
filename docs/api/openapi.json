@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.10.0",
+    "version": "0.12.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -818,6 +818,96 @@
         ],
         "x-sw-permission": "users:write",
         "x-sw-step-up": true
+      },
+      "delete": {
+        "operationId": "deleteUser",
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete a disabled user",
+        "responses": {
+          "204": {
+            "description": "The user is gone."
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes the account with its password, authenticator, recovery codes, sessions, tokens and open invitation. Cannot be undone. Only a disabled account can be deleted (409 otherwise), and never your own (409). What the account did stays in the audit log under the name it had.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "users:write",
+        "x-sw-step-up": true
+      }
+    },
+    "/auth/preferences": {
+      "patch": {
+        "operationId": "updatePreferences",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change your own preferences",
+        "responses": {
+          "200": {
+            "description": "You, after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The language the console uses for you after you sign in, on any browser. `null` goes back to following the browser.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
       }
     },
     "/users/{id}/reset-credentials": {
@@ -2343,7 +2433,11 @@
             "$ref": "#/components/schemas/UserRole"
           },
           "language": {
-            "type": "string"
+            "description": "The language the person chose; null until they do (the console follows the browser).",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "theme": {
             "type": "string"
@@ -2500,6 +2594,27 @@
         ],
         "additionalProperties": false
       },
+      "UpdatePreferencesRequest": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z]{2,3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The language to use after signing in; null: follow the browser again."
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "additionalProperties": false
+      },
       "TotpConfirmed": {
         "type": "object",
         "properties": {
@@ -2640,6 +2755,7 @@
           "auth.password.changed",
           "user.created",
           "user.updated",
+          "user.deleted",
           "user.credentials.reset",
           "vault.initialized",
           "vault.unsealed",
