@@ -19,7 +19,7 @@ SKIP_DIRS = {".git", "node_modules", "dist", "build", ".turbo", ".pnpm-store", "
 SKIP_FILES = {"LICENSE", "DCO"}
 FORBIDDEN_NAMES = re.compile(r"(^\.env($|\.)|\.pem$|\.key$|\.p12$|\.pfx$|(^|/)id_(rsa|ed25519|ecdsa)|\.sqlite3?$|\.dump$)")
 ALLOWED_NAMES = {".env.example"}
-SECRETS = [
+DETECTORS = [
     ("private key block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("GitHub token", re.compile(r"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b|github_pat_[A-Za-z0-9_]{40,}")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
@@ -39,6 +39,10 @@ def relpath(p):
         return p.relative_to(ROOT).as_posix()
     except ValueError:
         return str(p)
+
+
+def lineno(text, pos):
+    return text.count(chr(10), 0, pos) + 1
 
 
 def files(paths):
@@ -76,15 +80,19 @@ def main():
             text = p.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        for name, rx in SECRETS:
-            if rx.search(text):
-                errors.append(f"{rel}: {name}")
+        # Findings are reported as file and line only: the matched value is never printed, so CI logs
+        # (which are public for a public repository) cannot repeat what the check has just found.
+        for kind, rx in DETECTORS:
+            m = rx.search(text)
+            if m:
+                errors.append(f"{rel}:{lineno(text, m.start())}: {kind} (value not shown)")
         for m in EMAIL.finditer(text):
             if not EMAIL_OK.search(m.group(0)) and m.group(0) not in allow and not m.group(0).startswith("Signed-off-by"):
-                errors.append(f"{rel}: e-mail address {m.group(0)}")
+                errors.append(f"{rel}:{lineno(text, m.start())}: e-mail address (value not shown)")
         for rx in forbidden:
-            if rx.search(text):
-                errors.append(f"{rel}: matches a forbidden pattern (SW_FORBIDDEN_PATTERNS)")
+            m = rx.search(text)
+            if m:
+                errors.append(f"{rel}:{lineno(text, m.start())}: matches a forbidden pattern (SW_FORBIDDEN_PATTERNS)")
         for m in IPV4.finditer(text):
             s = m.group(0)
             try:
@@ -93,7 +101,7 @@ def main():
                 continue
             if ip.is_private or ip.is_loopback or ip.is_unspecified or ip.is_link_local or ip.is_multicast or any(ip in n for n in DOC_NETS) or s in allow:
                 continue
-            warns.append(f"{rel}: public-looking IPv4 {s}")
+            warns.append(f"{rel}:{lineno(text, m.start())}: public-looking IPv4 address (value not shown)")
     for w in sorted(set(warns)):
         print("warning:", w)
     for e in sorted(set(errors)):
