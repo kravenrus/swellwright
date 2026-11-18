@@ -8,6 +8,8 @@ import {
   ChainVerificationSchema,
   type ChangePasswordRequest,
   type CreateUserRequest,
+  type Elevation,
+  ElevationSchema,
   type ErrorCode,
   type HealthResponse,
   HealthResponseSchema,
@@ -43,6 +45,13 @@ const BASE = '/api/v1';
 export class ApiUnreachableError extends Error {
   constructor() {
     super('The API did not answer.');
+  }
+}
+
+/** The person was asked to confirm with a code (step-up) and closed the dialog instead. */
+export class StepUpCancelledError extends Error {
+  constructor() {
+    super('The confirmation was cancelled.');
   }
 }
 
@@ -162,6 +171,9 @@ export const confirmTotpEnrollment = (code: string): Promise<TotpConfirmed> =>
   send('POST', '/auth/totp/confirm', { code }, TotpConfirmedSchema);
 
 export const logout = (): Promise<void> => send('POST', '/auth/logout', undefined, undefined);
+
+export const stepUp = (code: string): Promise<Elevation> =>
+  send('POST', '/auth/step-up', { code }, ElevationSchema);
 
 export const acceptInvitation = (request: AcceptInvitationRequest): Promise<PendingSession> =>
   send('POST', '/auth/invitations/accept', request, PendingSessionSchema);

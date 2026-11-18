@@ -11,6 +11,7 @@ import { hasPermission, type RouteDef } from '@swellwright/contracts';
 import { AuditService } from '../audit/audit.service.js';
 import { type AppConfig } from '../config.js';
 import { ROUTE_METADATA } from '../contract-route.js';
+import { StepUpRequiredException } from '../http.js';
 import { CONFIG } from '../tokens.js';
 import { type AuthedRequest, requestMeta } from './context.js';
 import { readCookie, SESSION_COOKIE } from './cookies.js';
@@ -89,6 +90,29 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Authentication required.');
     }
     req.auth = auth;
+    return true;
+  }
+}
+
+/**
+ * Enforces `stepUp` (ADR 0017): the session must have proved the second factor within the step-up window.
+ * Runs after the permission guard, so someone who may not do this at all hears 403 `forbidden`, not a request
+ * for a code. A cookie session only: the guard refuses anything without one.
+ */
+@Injectable()
+export class StepUpGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const route = routeOf(context);
+    if (!route?.stepUp) {
+      return true;
+    }
+    const auth = context.switchToHttp().getRequest<AuthedRequest>().auth;
+    if (!auth) {
+      throw new UnauthorizedException('Authentication required.');
+    }
+    if (!auth.elevatedUntil || auth.elevatedUntil.getTime() <= Date.now()) {
+      throw new StepUpRequiredException();
+    }
     return true;
   }
 }

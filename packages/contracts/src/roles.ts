@@ -44,6 +44,17 @@ export const IMPLIED_PERMISSIONS: Readonly<Partial<Record<Permission, Permission
   'audit:verify': 'audit:read',
 };
 
+/**
+ * Permissions whose routes always need a freshly verified second factor (ADR 0017). A test fails the build
+ * for a route that holds one of them without declaring `stepUp`, so a new route cannot forget it.
+ */
+export const STEP_UP_PERMISSIONS: readonly Permission[] = [
+  'users:write',
+  'vault:manage',
+  'vault:reveal',
+  'terminal:use',
+];
+
 const READ_ONLY_OPERATIONS: readonly Permission[] = [
   'servers:read',
   'panel:read',

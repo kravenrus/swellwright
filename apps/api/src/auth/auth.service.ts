@@ -139,6 +139,60 @@ export class AuthService {
   }
 
   /**
+   * Elevates the signed-in session for the step-up window after the second factor was proved again: a code
+   * from the authenticator or a recovery code, under the same lockout as at sign-in (ADR 0017). A code is
+   * accepted only for a later time step than the last one used, so the code that signed in cannot be replayed.
+   */
+  async stepUp(
+    ctx: AuthContext,
+    code: string,
+    meta: RequestMeta,
+  ): Promise<{ elevatedUntil: Date }> {
+    const credential = await this.credentialOf(ctx);
+    if (!credential.totpSecret || !credential.totpConfirmedAt) {
+      throw new ConflictException('The authenticator is not set up yet.');
+    }
+    this.assertNotLocked(credential.lockedUntil);
+    const method = looksLikeTotpCode(code) ? 'totp' : 'recovery_code';
+    const accepted =
+      method === 'totp'
+        ? await this.acceptTotp(ctx.user.id, credential.totpSecret, credential.totpLastStep, code)
+        : await this.acceptRecoveryCode(ctx.user.id, code);
+    if (!accepted) {
+      await this.audit.note({
+        action: 'auth.step_up.failed',
+        outcome: 'failure',
+        actor: this.actorOf(ctx),
+        details: { method },
+        meta,
+      });
+      await this.registerFailure(ctx.user, meta);
+      throw new UnauthorizedException('Invalid code.');
+    }
+    if (method === 'recovery_code') {
+      await this.audit.record({
+        action: 'auth.recovery_code.used',
+        outcome: 'success',
+        actor: this.actorOf(ctx),
+        meta,
+      });
+    }
+    // Recorded before the elevation exists: without a record there is no elevation.
+    await this.audit.record({
+      action: 'auth.step_up.succeeded',
+      outcome: 'success',
+      actor: this.actorOf(ctx),
+      details: { method },
+      meta,
+    });
+    await this.db.credential.update({
+      where: { userId: ctx.user.id },
+      data: { failedAttempts: 0, lockedUntil: null },
+    });
+    return { elevatedUntil: await this.sessions.elevate(ctx.sessionId) };
+  }
+
+  /**
    * Changes the password of the signed-in user. Needs the current one; a wrong one counts towards the
    * lockout. The other sessions of the user end, this one stays. (No second factor yet: step-up comes later.)
    */
@@ -360,8 +414,11 @@ export class AuthService {
       details: { method },
       meta,
     });
-    // The password-verified session is replaced by a new one: nothing carries over.
-    const session = await this.sessions.create(ctx.user.id, SessionStage.active, meta);
+    // The password-verified session is replaced by a new one: nothing carries over. The second factor has
+    // just been proved, so the new session starts elevated (ADR 0017).
+    const session = await this.sessions.create(ctx.user.id, SessionStage.active, meta, {
+      elevated: true,
+    });
     await this.sessions.revokeSession(ctx.sessionId);
     this.logger.log(`sign-in completed for user ${ctx.user.id}`);
     return { session, user };

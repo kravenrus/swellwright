@@ -46,6 +46,16 @@ const CODE_BY_STATUS: Readonly<Record<number, ErrorCode>> = {
   503: 'not_ready',
 };
 
+/**
+ * 403 with its own error code: the caller may do this, but not with a session that has not proved the second
+ * factor lately (ADR 0017). A client answers it by asking for a code and trying again.
+ */
+export class StepUpRequiredException extends HttpException {
+  constructor() {
+    super('Confirm with a code from your authenticator, then try again.', HttpStatus.FORBIDDEN);
+  }
+}
+
 /** 429 with a `Retry-After` header. */
 export class RateLimitedException extends HttpException {
   constructor(
@@ -80,6 +90,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       message = status >= 500 ? 'Internal error.' : exception.message;
       if (exception instanceof RateLimitedException) {
         res.setHeader('retry-after', String(exception.retryAfterSeconds));
+      }
+      if (exception instanceof StepUpRequiredException) {
+        code = 'step_up_required';
       }
     } else {
       this.logger.error(

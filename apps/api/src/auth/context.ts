@@ -12,6 +12,8 @@ export interface AuthContext {
   readonly user: User;
   /** When the session ends if it stays idle. */
   readonly expiresAt: Date;
+  /** The session counts as freshly verified until then (ADR 0017); null if it never was. */
+  readonly elevatedUntil: Date | null;
 }
 
 export type AuthedRequest = Request & { auth?: AuthContext };

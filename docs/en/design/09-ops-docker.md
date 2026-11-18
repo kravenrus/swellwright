@@ -67,7 +67,7 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 Outbound traffic is restricted by the host firewall (allowed: inventory servers, the panel, DNS APIs, GitHub, Telegram), not by Docker alone.
 
 ## 3. Environment variables (main ones)
-`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 of 32 random bytes; seals the TOTP secrets, not a vault key, ADR 0014; required in production), `SW_SETUP_TOKEN` (optional fixed first-run token), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
+`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 of 32 random bytes; seals the TOTP secrets, not a vault key, ADR 0014; required in production), `SW_SETUP_TOKEN` (optional fixed first-run token), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (how long a session stays elevated after the second factor, 5 by default, 1 to 30; ADR 0017), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (a hint for the policy), `SW_UNSEAL_MODE` (`manual` by default, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (for Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **The vault master password is never passed through the environment.**
 
 ## 4. Reverse proxy (nginx, modeled on the panel)
 - Domain `sw.<base>`, certificate (for example a wildcard for the base domain), `proxy_pass http://127.0.0.1:3100`.

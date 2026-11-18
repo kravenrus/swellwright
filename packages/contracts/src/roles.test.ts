@@ -5,6 +5,8 @@ import { buildOpenApi } from './openapi.js';
 import {
   AUDIT_ACTIONS,
   AuditDetailsSchema,
+  ERROR_CODES,
+  STEP_UP_PERMISSIONS,
   AuditEventSchema,
   AuditQuerySchema,
   hasPermission,
@@ -112,7 +114,7 @@ describe('route permissions', () => {
     for (const id of ROUTES_OPEN_TO_ANY_SESSION) {
       assert.ok(ids.includes(id), id);
     }
-    assert.ok(ROUTES_OPEN_TO_ANY_SESSION.length <= 2);
+    assert.ok(ROUTES_OPEN_TO_ANY_SESSION.length <= 3);
   });
 
   it('puts the permission into the OpenAPI description', () => {
@@ -121,6 +123,48 @@ describe('route permissions', () => {
     assert.equal(doc.paths['/audit/verify-chain']?.['post']?.['x-sw-permission'], 'audit:verify');
     assert.equal(doc.paths['/roles']?.['get']?.['x-sw-permission'], 'roles:read');
     assert.equal(doc.paths['/auth/me']?.['get']?.['x-sw-permission'], undefined);
+  });
+});
+
+describe('step-up authentication on routes', () => {
+  it('is declared by every route that holds a permission that always needs it', () => {
+    for (const route of routes) {
+      const permission = 'permission' in route ? route.permission : undefined;
+      if (permission && STEP_UP_PERMISSIONS.includes(permission)) {
+        assert.ok(
+          'stepUp' in route,
+          `${route.operationId} holds ${permission} and must declare stepUp`,
+        );
+      }
+    }
+  });
+
+  it('is only for a signed-in cookie session, and not for the route that grants it', () => {
+    for (const route of routes) {
+      if ('stepUp' in route) {
+        assert.equal(route.auth, 'session', `${route.operationId} needs a cookie session`);
+        assert.notEqual(route.operationId, 'stepUp', 'asking for a code cannot need a code');
+      }
+    }
+  });
+
+  it('covers the user management and the own password change today', () => {
+    const stepped = routes
+      .filter((r) => 'stepUp' in r)
+      .map((r) => r.operationId)
+      .sort();
+    assert.deepEqual(stepped, ['changePassword', 'createUser', 'resetCredentials', 'updateUser']);
+  });
+
+  it('marks the operations in the OpenAPI description and names the error code', () => {
+    const doc = buildOpenApi() as { paths: Record<string, Record<string, Json>> };
+    const marked = (path: string, method: string): unknown =>
+      doc.paths[path]?.[method]?.['x-sw-step-up'];
+    assert.equal(marked('/users', 'post'), true);
+    assert.equal(marked('/auth/password', 'post'), true);
+    assert.equal(marked('/users', 'get'), undefined);
+    assert.equal(marked('/auth/step-up', 'post'), undefined);
+    assert.ok((ERROR_CODES as readonly string[]).includes('step_up_required'));
   });
 });
 

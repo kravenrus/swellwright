@@ -4,9 +4,11 @@ import {
   type AcceptInvitationRequest,
   changePasswordRoute,
   type ChangePasswordRequest,
+  type Elevation,
   loginRoute,
   logoutRoute,
   meRoute,
+  stepUpRoute,
   type LoginRequest,
   type PendingSession,
   type SessionInfo,
@@ -34,6 +36,12 @@ export class AuthController {
     @Inject(InvitationService) private readonly invitations: InvitationService,
     @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
+
+  @ContractRoute(stepUpRoute)
+  async stepUp(@Body() body: TotpCodeRequest, @Req() req: AuthedRequest): Promise<Elevation> {
+    const { elevatedUntil } = await this.auth.stepUp(requireAuth(req), body.code, requestMeta(req));
+    return { elevatedUntil: elevatedUntil.toISOString() };
+  }
 
   @ContractRoute(acceptInvitationRoute)
   async acceptInvitation(

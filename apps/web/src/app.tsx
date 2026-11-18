@@ -7,6 +7,7 @@ import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
 import { ChangePasswordDialog } from './auth/change-password.js';
 import { AuthGate } from './auth/gate.js';
+import { StepUpProvider } from './auth/step-up.js';
 import { navFor } from './nav.js';
 import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
@@ -85,7 +86,7 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
   const [activeId, setActiveId] = useState('overview');
   const { permissions } = session;
   return (
-    <>
+    <StepUpProvider>
       <AppHeader
         activeId={activeId}
         controls={
@@ -110,7 +111,7 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
           <AuditPage permissions={permissions} />
         ) : null}
       </main>
-    </>
+    </StepUpProvider>
   );
 }
 

@@ -4,6 +4,7 @@ import { AuditPageSchema, AuditQuerySchema, ChainVerificationSchema } from './au
 import {
   AcceptInvitationRequestSchema,
   ChangePasswordRequestSchema,
+  ElevationSchema,
   LoginRequestSchema,
   PendingSessionSchema,
   SessionInfoSchema,
@@ -58,6 +59,11 @@ export interface RouteDef {
    * signed-in user may call (`ROUTES_OPEN_TO_ANY_SESSION`).
    */
   readonly permission?: Permission;
+  /**
+   * The session must have been freshly verified with the second factor (ADR 0017); otherwise 403 with the
+   * code `step_up_required`. Required for routes that hold a permission in `STEP_UP_PERMISSIONS`.
+   */
+  readonly stepUp?: true;
   readonly request?: {
     readonly params?: z.ZodObject<Record<string, z.ZodType>>;
     readonly query?: z.ZodObject<Record<string, z.ZodType>>;
@@ -222,6 +228,19 @@ export const meRoute = defineRoute({
   responses: { 200: { description: 'The current session.', schema: SessionInfoSchema } },
 });
 
+export const stepUpRoute = defineRoute({
+  operationId: 'stepUp',
+  method: 'post',
+  path: '/auth/step-up',
+  tags: ['auth'],
+  summary: 'Prove the second factor again to elevate the session',
+  description:
+    'Takes a code from the authenticator or a recovery code. For a short time afterwards the session may call the routes marked `x-sw-step-up`; they answer 403 `step_up_required` before that. A wrong code counts towards the lockout like a wrong code at sign-in. Signing in elevates the session already.',
+  auth: 'session',
+  request: { body: TotpCodeRequestSchema },
+  responses: { 200: { description: 'The session is elevated.', schema: ElevationSchema } },
+});
+
 export const acceptInvitationRoute = defineRoute({
   operationId: 'acceptInvitation',
   method: 'post',
@@ -242,8 +261,9 @@ export const changePasswordRoute = defineRoute({
   tags: ['auth'],
   summary: 'Change your own password',
   description:
-    'Needs the current password. Ends your other sessions and keeps this one. A wrong current password counts towards the lockout.',
+    'Needs the current password and an elevated session. Ends your other sessions and keeps this one. A wrong current password counts towards the lockout.',
   auth: 'session',
+  stepUp: true,
   request: { body: ChangePasswordRequestSchema },
   responses: {
     204: { description: 'The password was changed.', schema: z.undefined(), empty: true },
@@ -272,6 +292,7 @@ export const createUserRoute = defineRoute({
     'Creates the account without a password and returns an invitation. The token is shown once. A taken login name or e-mail address answers 409.',
   auth: 'session',
   permission: 'users:write',
+  stepUp: true,
   request: { body: CreateUserRequestSchema },
   responses: { 201: { description: 'The user and the invitation.', schema: UserInvitationSchema } },
 });
@@ -286,6 +307,7 @@ export const updateUserRoute = defineRoute({
     'Role, status, display name and e-mail address. Refused with 409 when it would leave the instance without an active owner, or when you change your own role or status. Disabling a user ends their sessions.',
   auth: 'session',
   permission: 'users:write',
+  stepUp: true,
   request: { params: UserIdParamsSchema, body: UpdateUserRequestSchema },
   responses: { 200: { description: 'The user after the change.', schema: UserViewSchema } },
 });
@@ -300,6 +322,7 @@ export const resetCredentialsRoute = defineRoute({
     'Deletes the password, the authenticator and the recovery codes, ends every session of the user at once, and returns a new invitation. The user cannot sign in until it is accepted. Refused with 409 when you reset your own account (change your password instead).',
   auth: 'session',
   permission: 'users:write',
+  stepUp: true,
   request: { params: UserIdParamsSchema },
   responses: {
     200: { description: 'The user and a new invitation.', schema: UserInvitationSchema },
@@ -346,7 +369,7 @@ export const verifyAuditChainRoute = defineRoute({
 });
 
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
-export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe', 'changePassword'];
+export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe', 'changePassword', 'stepUp'];
 
 /** Every route of the public API. The server binds its handlers to these definitions. */
 export const routes = [
@@ -362,6 +385,7 @@ export const routes = [
   totpConfirmRoute,
   logoutRoute,
   meRoute,
+  stepUpRoute,
   acceptInvitationRoute,
   changePasswordRoute,
   listUsersRoute,

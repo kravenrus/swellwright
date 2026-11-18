@@ -27,7 +27,16 @@ export class SessionService {
     @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
 
-  async create(userId: string, stage: SessionStage, meta: RequestMeta): Promise<IssuedSession> {
+  /**
+   * Starts a session. `elevated` marks it as freshly verified for the step-up window: the sign-in has just
+   * proved the second factor.
+   */
+  async create(
+    userId: string,
+    stage: SessionStage,
+    meta: RequestMeta,
+    options: { readonly elevated?: boolean } = {},
+  ): Promise<IssuedSession> {
     const db = requireDatabase(this.database).client;
     const now = Date.now();
     const token = newSessionToken();
@@ -39,6 +48,10 @@ export class SessionService {
         ? Math.min(now + this.config.sessionIdleMs, absolute.getTime())
         : now + PENDING_TTL_MS,
     );
+    const elevatedUntil =
+      options.elevated === true
+        ? new Date(Math.min(now + this.config.stepUpMs, absolute.getTime()))
+        : null;
     await db.session.create({
       data: {
         userId,
@@ -46,6 +59,7 @@ export class SessionService {
         stage,
         expiresAt: idle,
         absoluteExpiresAt: absolute,
+        elevatedUntil,
         ip: meta.ip?.slice(0, 64) ?? null,
         userAgent: meta.userAgent ?? null,
       },
@@ -83,7 +97,24 @@ export class SessionService {
         data: { lastSeenAt: new Date(now), expiresAt },
       });
     }
-    return { sessionId: row.id, stage: row.stage, user: row.user, expiresAt };
+    return {
+      sessionId: row.id,
+      stage: row.stage,
+      user: row.user,
+      expiresAt,
+      elevatedUntil: row.elevatedUntil,
+    };
+  }
+
+  /** Marks a session as freshly verified for the step-up window, never beyond the end of the session. */
+  async elevate(sessionId: string): Promise<Date> {
+    const db = requireDatabase(this.database).client;
+    const row = await db.session.findUniqueOrThrow({ where: { id: sessionId } });
+    const until = new Date(
+      Math.min(Date.now() + this.config.stepUpMs, row.absoluteExpiresAt.getTime()),
+    );
+    await db.session.update({ where: { id: sessionId }, data: { elevatedUntil: until } });
+    return until;
   }
 
   async revokeToken(token: string): Promise<void> {

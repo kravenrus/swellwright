@@ -65,7 +65,7 @@ secrets: { pg_password: { file: ./secrets/pg_password } }
 Исходящий трафик ограничивается межсетевым экраном хоста (разрешены серверы инвентаря, панель, DNS-API, GitHub, Telegram), а не только Docker.
 
 ## 3. Переменные окружения (основные)
-`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 от 32 случайных байт; запечатывает секреты TOTP, это не ключ хранилища, ADR 0014; обязателен в production), `SW_SETUP_TOKEN` (необязательный постоянный токен первого запуска), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (подсказка политике), `SW_UNSEAL_MODE` (`manual` по умолчанию, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (для Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **Мастер-пароль хранилища не передаётся через окружение.**
+`SW_PUBLIC_URL`, `SW_VERSION`, `DATABASE_URL`, `REDIS_URL`, `SW_AUTH_KEY` (base64 от 32 случайных байт; запечатывает секреты TOTP, это не ключ хранилища, ADR 0014; обязателен в production), `SW_SETUP_TOKEN` (необязательный постоянный токен первого запуска), `SW_COOKIE_SECURE`, `SW_ALLOWED_ORIGINS`, `SW_STEP_UP_MINUTES` (сколько сессия остаётся повышенной после второго фактора, по умолчанию 5, от 1 до 30; ADR 0017), `SW_LOG_LEVEL`, `SW_EGRESS_ALLOWLIST` (подсказка политике), `SW_UNSEAL_MODE` (`manual` по умолчанию, `file`, `systemd-creds`), `SW_METRICS_BASIC_AUTH` (для Prometheus), `SW_RETENTION_*`, `SW_TRUSTED_PROXIES`. **Мастер-пароль хранилища не передаётся через окружение.**
 
 ## 4. Обратный прокси (nginx, по образцу панели)
 - Домен `sw.<база>`, сертификат (например wildcard на базовый домен), `proxy_pass http://127.0.0.1:3100`.

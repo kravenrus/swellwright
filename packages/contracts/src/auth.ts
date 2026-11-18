@@ -70,6 +70,15 @@ export const ChangePasswordRequestSchema = z
   .meta({ id: 'ChangePasswordRequest' });
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;
 
+export const ElevationSchema = z
+  .object({
+    elevatedUntil: z.iso
+      .datetime()
+      .describe('Until when this session counts as freshly verified (step-up authentication).'),
+  })
+  .meta({ id: 'Elevation' });
+export type Elevation = z.infer<typeof ElevationSchema>;
+
 export const AUTH_NEXT_STEPS = ['totp', 'totp_enrollment'] as const;
 export const AuthNextStepSchema = z.enum(AUTH_NEXT_STEPS).meta({ id: 'AuthNextStep' });
 export type AuthNextStep = z.infer<typeof AuthNextStepSchema>;

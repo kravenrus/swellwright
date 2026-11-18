@@ -98,6 +98,11 @@ describe('sign-in configuration', () => {
     assert.equal(c.sessionMaxMs, 12 * 3_600_000);
     assert.equal(c.lockoutAttempts, 5);
     assert.equal(c.lockoutMs, 15 * 60_000);
+    assert.equal(c.stepUpMs, 5 * 60_000, 'the elevation window is five minutes by default');
+    assert.equal(loadConfig({ SW_STEP_UP_MINUTES: '30' }, 'v').stepUpMs, 30 * 60_000);
+    for (const bad of ['0', '31', 'soon']) {
+      assert.throws(() => loadConfig({ SW_STEP_UP_MINUTES: bad }, 'v'), /SW_STEP_UP_MINUTES/u);
+    }
     assert.throws(() => loadConfig({ SW_LOCKOUT_ATTEMPTS: '1' }, 'v'), /SW_LOCKOUT_ATTEMPTS/u);
     assert.throws(
       () => loadConfig({ SW_SESSION_IDLE_MINUTES: '1' }, 'v'),

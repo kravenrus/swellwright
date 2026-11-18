@@ -172,6 +172,8 @@ model Session {
   expiresAt         DateTime     @map("expires_at") @db.Timestamptz(3)
   /// The session ends here whatever its activity.
   absoluteExpiresAt DateTime     @map("absolute_expires_at") @db.Timestamptz(3)
+  /// The session counts as freshly verified until then (step-up authentication, ADR 0017). Null: never elevated.
+  elevatedUntil     DateTime?    @map("elevated_until") @db.Timestamptz(3)
   ip                String?      @db.VarChar(64)
   userAgent         String?      @map("user_agent") @db.VarChar(256)
 
