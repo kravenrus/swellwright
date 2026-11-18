@@ -26,6 +26,8 @@ export function describeError(
       }
       case 'forbidden':
         return whenForbidden;
+      case 'vault_sealed':
+        return 'The vault is sealed. Unseal it with the passphrase first.';
       case 'step_up_required':
         return 'Confirm with a code from your authenticator, then try again.';
       case 'not_ready':

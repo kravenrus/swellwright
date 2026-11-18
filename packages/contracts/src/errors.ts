@@ -7,6 +7,7 @@ export const ERROR_CODES = [
   'unauthorized',
   'forbidden',
   'step_up_required',
+  'vault_sealed',
   'not_found',
   'conflict',
   'rate_limited',
