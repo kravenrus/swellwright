@@ -63,7 +63,7 @@ Tabs, server selection, font and size, copy and paste with confirmation of multi
 - Shared components in `packages/ui`, Storybook as a catalog (optional).
 
 ## 7. Language and universality
-The UI is English by default, Russian is complete (i18next); core texts are not tied to a country or provider; plugin contributions are described declaratively (settings pages, widgets) and rendered with the same set of Mantine components; arbitrary React bundles from plugins are not loaded in the first version.
+The UI is English by default, Russian is complete (i18next 26, texts in `packages/i18n`, ADR 0020): the keys are type-checked against the English catalogue and a test fails the build when a language differs from it; the language is the person's choice (account menu, kept in the browser), else the browser's, else English; dates and numbers follow the language; core texts are not tied to a country or provider; plugin contributions are described declaratively (settings pages, widgets) and rendered with the same set of Mantine components; arbitrary React bundles from plugins are not loaded in the first version.
 
 ## 8. Wireframes
 Annotated wireframes of the key screens (overview, server card, plan and approval, run card, sealed vault, vault, first-run setup, phone layouts) are in [`wireframes/`](wireframes/README.md).

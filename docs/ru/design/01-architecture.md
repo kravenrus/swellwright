@@ -46,6 +46,7 @@ packages/vault           шифрование, запечатывание, ро�
 packages/policy          правила и оценка
 packages/node-assets     install.sh, node-engine (py), эталоны проверок, версии и хеши
 packages/ui              общие компоненты и тема (клон по виду панели)
+packages/i18n            тексты консоли на английском и русском, выбор языка (ADR 0020)
 packages/testing         фейковая панель, фейковый SSH, лаборатория
 packages/plugin-api      контракты расширений (DnsProvider, NodeFlavor, AuthProvider, ...)
 plugins/official/        официальные плагины (драйверы DNS: rucenter, cloudflare, rfc2136 и др.; драйверы хостеров; вход; уведомления; пакет узла selfsteal; распространение сертификатов)

@@ -2,6 +2,7 @@ import { Alert, Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@m
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 
@@ -48,6 +49,7 @@ export function AcceptInvitationForm({
   onAccepted: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation('auth');
   const [token, setToken] = useState(initialToken ?? '');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -78,8 +80,8 @@ export function AcceptInvitationForm({
       <Stack gap="md">
         <TextInput
           autoComplete="off"
-          description="The owner gave it to you, or it came with the link."
-          label="Invitation"
+          description={t('invitation.tokenHint')}
+          label={t('invitation.tokenLabel')}
           onChange={(e) => {
             setToken(e.currentTarget.value.trim());
           }}
@@ -89,9 +91,9 @@ export function AcceptInvitationForm({
         <PasswordInput
           autoComplete="new-password"
           autoFocus={token.length > 0}
-          description={`At least ${String(PASSWORD_MIN_LENGTH)} characters. A passphrase is fine.`}
-          error={touched && !passwordCheck.success ? 'The password is too short.' : undefined}
-          label="Choose a password"
+          description={t('shared.passwordHint', { count: PASSWORD_MIN_LENGTH })}
+          error={touched && !passwordCheck.success ? t('shared.passwordTooShort') : undefined}
+          label={t('invitation.passwordLabel')}
           onChange={(e) => {
             setPassword(e.currentTarget.value);
           }}
@@ -100,8 +102,8 @@ export function AcceptInvitationForm({
         />
         <PasswordInput
           autoComplete="new-password"
-          error={mismatch ? 'The passwords differ.' : undefined}
-          label="Repeat the password"
+          error={mismatch ? t('shared.passwordsDiffer') : undefined}
+          label={t('shared.repeatPassword')}
           onChange={(e) => {
             setRepeat(e.currentTarget.value);
           }}
@@ -110,20 +112,17 @@ export function AcceptInvitationForm({
         />
         {mutation.error ? (
           <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-            {describeError(
-              mutation.error,
-              'This invitation is not valid, was used already, or has expired. Ask the owner for a new one.',
-            )}
+            {describeError(t, mutation.error, t('invitation.invalid'))}
           </Alert>
         ) : null}
         <Button fullWidth loading={mutation.isPending} type="submit">
-          Set the password
+          {t('invitation.submit')}
         </Button>
         <Text c="dimmed" fz="sm" ta="center">
-          Next you will set up an authenticator app.
+          {t('invitation.next')}
         </Text>
         <Anchor c="dimmed" component="button" fz="sm" onClick={onBack} type="button">
-          Back to sign in
+          {t('invitation.backToSignIn')}
         </Anchor>
       </Stack>
     </form>

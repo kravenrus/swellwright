@@ -1,13 +1,24 @@
 import { ActionIcon, Badge, Group, Menu, Text } from '@mantine/core';
-import { IconBell, IconKey, IconLogout, IconSearch, IconUser } from '@tabler/icons-react';
+import {
+  IconBell,
+  IconCheck,
+  IconKey,
+  IconLanguage,
+  IconLogout,
+  IconSearch,
+  IconUser,
+} from '@tabler/icons-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { SessionInfo } from '@swellwright/contracts';
+import { LANGUAGES, LANGUAGE_NAMES, isLanguage } from '@swellwright/i18n';
 import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
 import { ChangePasswordDialog } from './auth/change-password.js';
 import { AuthGate } from './auth/gate.js';
 import { StepUpProvider } from './auth/step-up.js';
+import { setLanguage } from './i18n.js';
 import { navFor } from './nav.js';
 import { Overview } from './overview.js';
 import { AuditPage } from './security/audit-page.js';
@@ -51,10 +62,11 @@ function AccountDropdown({
   onSignOut: () => Promise<void>;
   onChangePassword: () => void;
 }) {
+  const { t, i18n } = useTranslation(['common', 'roles']);
   return (
     <Menu position="bottom-end" shadow="md" withinPortal>
       <Menu.Target>
-        <ActionIcon aria-label="Account" color="gray" size={36}>
+        <ActionIcon aria-label={t('account')} color="gray" size={36}>
           <IconUser size={18} />
         </ActionIcon>
       </Menu.Target>
@@ -64,19 +76,43 @@ function AccountDropdown({
             <Text fw={600} fz="sm">
               {session.user.displayName ?? session.user.username}
             </Text>
-            <Badge size="xs">{session.user.role}</Badge>
+            <Badge size="xs">{t(`roles:names.${session.user.role}`)}</Badge>
           </Group>
         </Menu.Label>
         <Menu.Item leftSection={<IconKey size={16} />} onClick={onChangePassword}>
-          Change password
+          {t('changePassword')}
         </Menu.Item>
+        <Menu.Divider />
+        <Menu.Label>
+          <Group gap={6} wrap="nowrap">
+            <IconLanguage size={14} />
+            {t('language')}
+          </Group>
+        </Menu.Label>
+        {LANGUAGES.map((language) => (
+          <Menu.Item
+            key={language}
+            leftSection={
+              i18n.language === language ? <IconCheck size={16} /> : <span style={{ width: 16 }} />
+            }
+            lang={language}
+            onClick={() => {
+              if (isLanguage(language)) {
+                void setLanguage(language);
+              }
+            }}
+          >
+            {LANGUAGE_NAMES[language]}
+          </Menu.Item>
+        ))}
+        <Menu.Divider />
         <Menu.Item
           leftSection={<IconLogout size={16} />}
           onClick={() => {
             void onSignOut();
           }}
         >
-          Sign out
+          {t('signOut')}
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
@@ -84,6 +120,7 @@ function AccountDropdown({
 }
 
 function Console({ session, signOut }: { session: SessionInfo; signOut: () => Promise<void> }) {
+  const { t } = useTranslation(['common', 'nav']);
   const [activeId, setActiveId] = useState('overview');
   const { permissions } = session;
   return (
@@ -92,13 +129,14 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
         activeId={activeId}
         controls={
           <>
-            <HeaderIconButton icon={IconSearch} label="Search and commands" />
-            <HeaderIconButton icon={IconBell} label="Alerts" />
+            <HeaderIconButton icon={IconSearch} label={t('searchAndCommands')} />
+            <HeaderIconButton icon={IconBell} label={t('alerts')} />
             <AccountMenu onSignOut={signOut} session={session} />
           </>
         }
+        navLabel={t('mainNavigation')}
         onNavigate={setActiveId}
-        sections={navFor(permissions)}
+        sections={navFor(permissions, t)}
       />
       <main className="sw-page">
         {activeId === 'overview' ? <Overview /> : null}

@@ -13,6 +13,7 @@ import {
 import { IconAlertCircle, IconCheck, IconCopy, IconDownload } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { TotpConfirmed } from '@swellwright/contracts';
 
@@ -23,6 +24,7 @@ import { QrCode } from './qr.js';
 
 /** Shows the authenticator secret as a QR code and as text, then asks for a code to prove it works. */
 export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConfirmed) => void }) {
+  const { t } = useTranslation(['auth', 'common']);
   const enrollment = useQuery({
     queryKey: ['auth', 'enrollment'],
     queryFn: startTotpEnrollment,
@@ -57,7 +59,7 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
   if (enrollment.isError) {
     return (
       <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-        {describeError(enrollment.error, 'Sign in again to continue.')}
+        {describeError(t, enrollment.error, t('shared.signInAgain'))}
       </Alert>
     );
   }
@@ -66,16 +68,16 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
     <Stack gap="lg">
       <Stack gap="xs">
         <Text fw={600} fz="sm">
-          1. Add Swellwright to an authenticator app
+          {t('enrollment.addTitle')}
         </Text>
         <Text c="dimmed" fz="sm">
-          Scan the code with any app that supports time-based codes (TOTP), or type the key in.
+          {t('enrollment.addHint')}
         </Text>
         <Group align="flex-start" gap="lg" wrap="wrap">
-          <QrCode label="QR code with the authenticator key" text={otpauthUri} />
+          <QrCode label={t('enrollment.qrLabel')} text={otpauthUri} />
           <Stack gap={6} style={{ flex: 1, minWidth: 180 }}>
             <Text c="dimmed" fz="xs">
-              Key, for typing it in
+              {t('enrollment.keyLabel')}
             </Text>
             <Code block fz="sm" style={{ wordBreak: 'break-all' }}>
               {secret.match(/.{1,4}/gu)?.join(' ') ?? secret}
@@ -88,7 +90,7 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
                   size="xs"
                   variant="default"
                 >
-                  {copied ? 'Copied' : 'Copy the key'}
+                  {copied ? t('common:copied') : t('enrollment.copyKey')}
                 </Button>
               )}
             </CopyButton>
@@ -97,15 +99,12 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
       </Stack>
       <Stack gap="xs">
         <Text fw={600} fz="sm">
-          2. Enter the six-digit code it shows
+          {t('enrollment.enterTitle')}
         </Text>
         <CodeInput busy={isPending} onChange={setCode} value={code} />
         {confirm.error ? (
           <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-            {describeError(
-              confirm.error,
-              'That code is not right. Wait for the next one and try again.',
-            )}
+            {describeError(t, confirm.error, t('totp.codeWrong'))}
           </Alert>
         ) : null}
       </Stack>
@@ -116,7 +115,7 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
           confirm.mutate(code);
         }}
       >
-        Confirm and continue
+        {t('enrollment.submit')}
       </Button>
     </Stack>
   );
@@ -124,6 +123,7 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
 
 /** The one-time recovery codes. They are shown once, so the person has to say they saved them. */
 export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onDone: () => void }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [saved, setSaved] = useState(false);
   const text = codes.join('\n');
   const download = () => {
@@ -137,8 +137,7 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
   return (
     <Stack gap="lg">
       <Text c="dimmed" fz="sm">
-        Each code signs you in once if you lose your authenticator. Keep them somewhere safe and
-        separate from your password. They are not shown again.
+        {t('recoveryCodes.intro')}
       </Text>
       <SimpleGrid cols={2} spacing="xs">
         {codes.map((code) => (
@@ -156,7 +155,7 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
               size="xs"
               variant="default"
             >
-              {copied ? 'Copied' : 'Copy all'}
+              {copied ? t('common:copied') : t('recoveryCodes.copyAll')}
             </Button>
           )}
         </CopyButton>
@@ -166,18 +165,18 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
           size="xs"
           variant="default"
         >
-          Download
+          {t('common:download')}
         </Button>
       </Group>
       <Checkbox
         checked={saved}
-        label="I have saved these codes"
+        label={t('recoveryCodes.saved')}
         onChange={(e) => {
           setSaved(e.currentTarget.checked);
         }}
       />
       <Button disabled={!saved} onClick={onDone}>
-        Continue to the console
+        {t('recoveryCodes.continue')}
       </Button>
     </Stack>
   );

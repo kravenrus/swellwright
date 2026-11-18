@@ -2,6 +2,7 @@ import { Alert, Button, Group, Modal, PasswordInput, Stack, Text } from '@mantin
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 
@@ -17,6 +18,7 @@ export function ChangePasswordDialog({
   opened: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -54,14 +56,14 @@ export function ChangePasswordDialog({
   };
 
   return (
-    <Modal centered onClose={close} opened={opened} title="Change your password">
+    <Modal centered onClose={close} opened={opened} title={t('changePassword.title')}>
       {mutation.isSuccess ? (
         <Stack gap="md">
           <Alert color="teal" icon={<IconCheck size={16} />} variant="light">
-            Your password was changed. Your other sessions were signed out.
+            {t('changePassword.success')}
           </Alert>
           <Group justify="flex-end">
-            <Button onClick={close}>Done</Button>
+            <Button onClick={close}>{t('changePassword.done')}</Button>
           </Group>
         </Stack>
       ) : (
@@ -70,7 +72,7 @@ export function ChangePasswordDialog({
             <PasswordInput
               autoComplete="current-password"
               data-autofocus
-              label="Current password"
+              label={t('changePassword.currentLabel')}
               onChange={(e) => {
                 setCurrent(e.currentTarget.value);
               }}
@@ -79,9 +81,9 @@ export function ChangePasswordDialog({
             />
             <PasswordInput
               autoComplete="new-password"
-              description={`At least ${String(PASSWORD_MIN_LENGTH)} characters.`}
-              error={touched && !check.success ? 'The password is too short.' : undefined}
-              label="New password"
+              description={t('changePassword.newHint', { count: PASSWORD_MIN_LENGTH })}
+              error={touched && !check.success ? t('shared.passwordTooShort') : undefined}
+              label={t('changePassword.newLabel')}
               onChange={(e) => {
                 setNext(e.currentTarget.value);
               }}
@@ -90,8 +92,8 @@ export function ChangePasswordDialog({
             />
             <PasswordInput
               autoComplete="new-password"
-              error={mismatch ? 'The passwords differ.' : undefined}
-              label="Repeat the new password"
+              error={mismatch ? t('shared.passwordsDiffer') : undefined}
+              label={t('changePassword.repeatLabel')}
               onChange={(e) => {
                 setRepeat(e.currentTarget.value);
               }}
@@ -100,18 +102,18 @@ export function ChangePasswordDialog({
             />
             {mutation.error ? (
               <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-                {describeError(mutation.error, 'The current password is not right.')}
+                {describeError(t, mutation.error, t('changePassword.currentWrong'))}
               </Alert>
             ) : null}
             <Text c="dimmed" fz="xs">
-              Five wrong current passwords in a row lock the account for a while.
+              {t('changePassword.lockoutNote')}
             </Text>
             <Group justify="flex-end">
               <Button onClick={close} variant="default">
-                Cancel
+                {t('common:cancel')}
               </Button>
               <Button loading={mutation.isPending} type="submit">
-                Change the password
+                {t('changePassword.submit')}
               </Button>
             </Group>
           </Stack>
