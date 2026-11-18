@@ -2,7 +2,8 @@
 // entity-card.root.tsx,entity-card.header.tsx,entity-card.icon.tsx,entity-card.content.tsx,entity-card.actions.tsx,
 // entity-card.menu-action.tsx,entity-card.tags.tsx,entity-card.module.css}. Changes: the CSS module became `sw-entity-card*`
 // classes; the `color-hash` package is replaced by a small local hash (tag colours are stable but not identical to the
-// panel's); the menu button has an accessible name; the decorative icon is hidden from assistive technology.
+// panel's); the menu button has an accessible name; the decorative icon is hidden from assistive technology; the optional
+// `wrap` prop lets the badges drop under the title at any width (the panel does it only below 48em).
 import {
   ActionIcon,
   type ActionIconProps,
@@ -29,6 +30,11 @@ export interface EntityCardRootProps {
   isActive?: boolean;
   /** Makes the whole card a button (the panel opens the entity). */
   onClick?: () => void;
+  /**
+   * For a card with many badges: the badges drop under the title as soon as the row is too narrow for both, at any
+   * width. The panel does it only below 48em, because its cards carry little next to the title.
+   */
+  wrap?: boolean;
   /** Accessible name of the card when it is a button. */
   'aria-label'?: string;
 }
@@ -37,6 +43,7 @@ function EntityCardRoot({
   children,
   isActive = true,
   onClick,
+  wrap = false,
   'aria-label': ariaLabel,
 }: EntityCardRootProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -52,6 +59,7 @@ function EntityCardRoot({
       className="sw-entity-card"
       data-clickable={onClick ? true : undefined}
       data-layout="row"
+      data-wrap={wrap ? true : undefined}
       pb={6}
       pl={12}
       pr={10}

@@ -1,21 +1,22 @@
 import {
-  Alert,
   Button,
   Group,
   List,
   NumberInput,
   Select,
-  Skeleton,
   Stack,
   Switch,
   Text,
   TextInput,
 } from '@mantine/core';
 import {
-  IconAlertCircle,
   IconAlertTriangle,
-  IconCheck,
   IconDeviceFloppy,
+  IconHash,
+  IconKey,
+  IconListDetails,
+  IconSettings,
+  IconTextCaption,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
@@ -30,11 +31,14 @@ import {
   type SecretView,
   type UpdatePluginConfigRequest,
 } from '@swellwright/contracts';
+import { Callout, ErrorMessageBlock, LoaderModal, SettingsCard } from '@swellwright/ui';
 
 import { ApiRequestError, getPluginConfig, listSecrets, updatePluginConfig } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
+import { notifySuccess } from '../shell/feedback.js';
+import { FailureCard, useCopyLabels, usePluginFailure } from './plugin-shared.js';
 
 /** How many characters of a secret's id are shown when the secrets cannot be listed. */
 const SHORT_ID = 8;
@@ -155,6 +159,7 @@ function SecretPicker({
           description={description}
           disabled
           label={label}
+          leftSection={<IconKey size={16} />}
           placeholder={choices.status === 'loading' ? t('common:loading') : t('settings.notSet')}
           value={bound === null ? '' : shortId(bound)}
           withAsterisk={field.required}
@@ -188,6 +193,7 @@ function SecretPicker({
         description={description}
         disabled={disabled}
         label={label}
+        leftSection={<IconKey size={16} />}
         nothingFoundMessage={t('settings.noSecrets', {
           type: known === undefined ? type : t(`vault:types.${known}`),
         })}
@@ -267,6 +273,7 @@ function SettingInput({
         description={description}
         disabled={disabled}
         label={label}
+        leftSection={<IconHash size={16} />}
         {...(field.maximum === null ? {} : { max: field.maximum })}
         {...(field.minimum === null ? {} : { min: field.minimum })}
         onChange={(next) => {
@@ -288,6 +295,7 @@ function SettingInput({
         description={description}
         disabled={disabled}
         label={label}
+        leftSection={<IconListDetails size={16} />}
         onChange={onChange}
         placeholder={placeholder}
         value={typeof value === 'string' ? value : null}
@@ -301,6 +309,7 @@ function SettingInput({
       description={description}
       disabled={disabled}
       label={label}
+      leftSection={<IconTextCaption size={16} />}
       maxLength={field.maxLength ?? undefined}
       onChange={(event) => {
         onChange(event.currentTarget.value);
@@ -312,45 +321,17 @@ function SettingInput({
   );
 }
 
-/**
- * The error of a save. A 400 names each field that was refused, in the server's words (English), and that is what the
- * person needs; the other failures read as everywhere else.
- */
-function SaveError({ error }: { error: unknown }) {
-  const { t } = useTranslation(['plugins', 'errors']);
-  if (!error) {
-    return null;
-  }
-  const detail =
-    error instanceof ApiRequestError && error.code === 'bad_request' ? error.message : undefined;
-  return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      <Text fz="sm">
-        {detail === undefined
-          ? describeError(t, error, t('signInAgain'), t('settings.forbidden'))
-          : t('errors:validation')}
-      </Text>
-      {detail === undefined ? null : (
-        <Text fz="sm" mt={4} style={{ wordBreak: 'break-word' }}>
-          {detail}
-        </Text>
-      )}
-    </Alert>
-  );
-}
-
 /** What the server says is wrong with the stored settings (a field the plugin added since): names are data. */
-function ProblemsAlert({ problems }: { problems: PluginConfigView['problems'] }) {
+function ProblemsCallout({ problems }: { problems: PluginConfigView['problems'] }) {
   const { t } = useTranslation('plugins');
   if (problems.length === 0) {
     return null;
   }
   return (
-    <Alert
+    <Callout
       color="orange"
-      icon={<IconAlertTriangle size={16} />}
+      icon={<IconAlertTriangle size={20} />}
       title={t('settings.problemsTitle')}
-      variant="light"
     >
       <List fz="sm" size="sm" spacing={2}>
         {problems.map((problem) => (
@@ -362,7 +343,7 @@ function ProblemsAlert({ problems }: { problems: PluginConfigView['problems'] })
           </List.Item>
         ))}
       </List>
-    </Alert>
+    </Callout>
   );
 }
 
@@ -381,12 +362,15 @@ function SettingsForm({
   canManage: boolean;
   canReadVault: boolean;
 }) {
-  const { t } = useTranslation(['plugins', 'common']);
+  const { t } = useTranslation(['plugins', 'common', 'errors']);
   const queryClient = useQueryClient();
   const step = useStepUp();
+  const fail = usePluginFailure();
+  const labels = useCopyLabels();
   const formatDate = useDateTime('short');
   const [edits, setEdits] = useState<ReadonlyMap<string, Draft>>(() => new Map());
-  const [saved, setSaved] = useState(false);
+  // A 400 names each field the server refused, in its own words (English): shown next to the fields, not as a toast.
+  const [rejected, setRejected] = useState<string | undefined>(undefined);
 
   const needsSecrets = view.fields.some((field) => field.secretKind !== null);
   const vault = useQuery({
@@ -416,16 +400,26 @@ function SettingsForm({
   const save = useMutation({
     mutationFn: (values: UpdatePluginConfigRequest['values']) =>
       step.run(() => updatePluginConfig(plugin.id, values)),
+    onMutate: () => {
+      setRejected(undefined);
+    },
     onSuccess: (updated) => {
       queryClient.setQueryData(pluginConfigKey(plugin.id), updated);
       void queryClient.invalidateQueries({ queryKey: pluginConfigKey(plugin.id) });
       setEdits(new Map());
-      setSaved(true);
+      notifySuccess(t('settings.title'), t('settings.saved'));
+    },
+    onError: (error) => {
+      if (error instanceof ApiRequestError && error.code === 'bad_request') {
+        setRejected(error.message);
+      } else {
+        fail(t('settings.title'), error, t('settings.forbidden'));
+      }
     },
   });
 
   const change = (field: PluginConfigField, value: Draft) => {
-    setSaved(false);
+    setRejected(undefined);
     setEdits((previous) => new Map(previous).set(field.name, value));
   };
   const submit = (event: SyntheticEvent) => {
@@ -441,64 +435,70 @@ function SettingsForm({
   };
 
   return (
-    <form onSubmit={submit}>
-      <Stack gap="md">
-        <ProblemsAlert problems={view.problems} />
-        {view.fields.map((field) => (
-          <SettingInput
-            disabled={!canManage || save.isPending}
-            field={field}
-            key={field.name}
-            onChange={(value) => {
-              change(field, value);
-            }}
-            secrets={secrets}
-            value={current(field)}
-          />
-        ))}
-        {canManage ? null : (
-          <Text c="dimmed" fz="xs">
-            {t('settings.readOnly')}
-          </Text>
-        )}
-        {saved ? (
-          <Alert
-            closeButtonLabel={t('common:close')}
-            color="teal"
-            icon={<IconCheck size={16} />}
-            onClose={() => {
-              setSaved(false);
-            }}
-            role="status"
-            variant="light"
-            withCloseButton
-          >
-            {t('settings.saved')}
-          </Alert>
-        ) : null}
-        <SaveError error={save.error} />
-        <Group gap="md" justify="space-between" wrap="wrap">
-          <Text c="dimmed" fz="xs">
-            {view.updatedAt !== null && view.updatedBy !== null
-              ? t('settings.lastChanged', {
-                  who: view.updatedBy,
-                  when: formatDate(view.updatedAt),
-                })
-              : t('settings.neverSaved')}
-          </Text>
-          {canManage ? (
-            <Button
-              disabled={!dirty}
-              leftSection={<IconDeviceFloppy size={16} />}
-              loading={save.isPending}
-              size="xs"
-              type="submit"
-            >
-              {t('settings.save')}
-            </Button>
-          ) : null}
-        </Group>
-      </Stack>
+    <form onSubmit={submit} style={{ display: 'contents' }}>
+      <SettingsCard.Container>
+        <SettingsCard.Header
+          description={t('settings.description')}
+          icon={<IconSettings size={24} />}
+          iconColor="violet"
+          title={t('settings.title')}
+        />
+        <SettingsCard.Content>
+          <Stack gap="md">
+            <ProblemsCallout problems={view.problems} />
+            {view.fields.map((field) => (
+              <SettingInput
+                disabled={!canManage || save.isPending}
+                field={field}
+                key={field.name}
+                onChange={(value) => {
+                  change(field, value);
+                }}
+                secrets={secrets}
+                value={current(field)}
+              />
+            ))}
+            {canManage ? null : (
+              <Text c="dimmed" fz="xs">
+                {t('settings.readOnly')}
+              </Text>
+            )}
+            {rejected === undefined ? null : (
+              <Stack gap="xs" role="alert">
+                <Text c="red" size="xs">
+                  {t('errors:validation')}
+                </Text>
+                <ErrorMessageBlock message={rejected} {...labels} />
+              </Stack>
+            )}
+          </Stack>
+        </SettingsCard.Content>
+        <SettingsCard.Bottom>
+          <Group gap="md" justify="space-between" wrap="wrap">
+            <Text c="dimmed" fz="xs">
+              {view.updatedAt !== null && view.updatedBy !== null
+                ? t('settings.lastChanged', {
+                    who: view.updatedBy,
+                    when: formatDate(view.updatedAt),
+                  })
+                : t('settings.neverSaved')}
+            </Text>
+            {canManage ? (
+              <Button
+                color="teal"
+                disabled={!dirty}
+                leftSection={<IconDeviceFloppy size={16} />}
+                loading={save.isPending}
+                size="md"
+                type="submit"
+                variant="soft"
+              >
+                {t('settings.save')}
+              </Button>
+            ) : null}
+          </Group>
+        </SettingsCard.Bottom>
+      </SettingsCard.Container>
     </form>
   );
 }
@@ -516,31 +516,31 @@ export function PluginSettings({
   canManage: boolean;
   canReadVault: boolean;
 }) {
-  const { t } = useTranslation('plugins');
+  const { t } = useTranslation(['plugins', 'common']);
   const config = useQuery({
     queryKey: pluginConfigKey(plugin.id),
     queryFn: () => getPluginConfig(plugin.id),
     retry: false,
   });
-  return (
-    <Stack gap="xs">
-      <Text fw={600} fz="sm">
-        {t('settings.title')}
-      </Text>
-      {config.data !== undefined ? (
-        <SettingsForm
-          canManage={canManage}
-          canReadVault={canReadVault}
-          plugin={plugin}
-          view={config.data}
-        />
-      ) : config.isError ? (
-        <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-          {describeError(t, config.error, t('signInAgain'), t('settings.loadFailed'))}
-        </Alert>
-      ) : (
-        <Skeleton h={28} />
-      )}
-    </Stack>
-  );
+  if (config.data !== undefined) {
+    return (
+      <SettingsForm
+        canManage={canManage}
+        canReadVault={canReadVault}
+        plugin={plugin}
+        view={config.data}
+      />
+    );
+  }
+  if (config.isError) {
+    return (
+      <FailureCard
+        message={describeError(t, config.error, t('signInAgain'), t('settings.loadFailed'))}
+        onRetry={() => void config.refetch()}
+        retrying={config.isRefetching}
+        title={t('settings.title')}
+      />
+    );
+  }
+  return <LoaderModal label={t('common:loading')} mih="160px" />;
 }

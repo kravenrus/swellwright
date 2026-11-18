@@ -1,27 +1,26 @@
 import {
-  ActionIcon,
-  Alert,
   Badge,
+  Box,
   Button,
-  Card,
+  Center,
   Code,
   CopyButton,
   Group,
-  List,
+  Menu,
   Modal,
-  Skeleton,
+  SimpleGrid,
   Stack,
-  Table,
   Text,
   ThemeIcon,
+  Tooltip,
   VisuallyHidden,
 } from '@mantine/core';
 import {
-  IconAlertCircle,
+  IconActivity,
   IconAlertTriangle,
-  IconCheck,
-  IconCopy,
+  IconBook,
   IconEye,
+  IconGitCompare,
   IconInfoCircle,
   IconMinus,
   IconPlayerPause,
@@ -29,10 +28,12 @@ import {
   IconPlus,
   IconPuzzle,
   IconRefresh,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { PiCheck, PiCopy } from 'react-icons/pi';
 
 import type {
   Permission,
@@ -44,29 +45,61 @@ import type {
   PluginTrust,
   PluginView,
 } from '@swellwright/contracts';
-import { PageHeader } from '@swellwright/ui';
+import {
+  Callout,
+  CopyableCodeBlock,
+  CopyableDataListItem,
+  EntityCard,
+  ErrorMessageBlock,
+  HeaderAction,
+  HeaderActions,
+  LoadingScreen,
+  ModalFooter,
+  OverlayHeader,
+  PageHeader,
+  SectionCard,
+  SingleRowOverflowList,
+  StatusBadge,
+  type StatusKind,
+  TagFilterBar,
+  filterByTag,
+} from '@swellwright/ui';
 
 import { ApiRequestError, checkPlugin, disablePlugin, enablePlugin, listPlugins } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
+import { confirmAction, notifySuccess } from '../shell/feedback.js';
+import { useIsMobile } from '../shell/use-is-mobile.js';
 import { PluginSettings } from './plugin-settings.js';
+import {
+  DetailList,
+  DetailRow,
+  FailureCard,
+  useCopyLabels,
+  usePluginFailure,
+} from './plugin-shared.js';
 import { SidecarSection } from './plugin-sidecar.js';
 
-/** Shown where a plugin has no value (a plugin that is gone has no version). */
-const DASH = '—';
-/** How much of the digest is shown in the open; the whole of it is in the tooltip and on the clipboard. */
-const DIGEST_SHORT = 12;
+/** Where the plugins are documented (the header's help action, as the panel's lime book). */
+const PLUGINS_DOCS_URL = 'https://github.com/swellwright/swellwright/blob/main/docs/en/plugins.md';
 
-/** Colour and style of the status badge. Never colour alone: the word is always there too. */
-const STATUS_BADGE = {
-  enabled: { color: 'teal', variant: 'light' },
-  disabled: { color: 'gray', variant: 'light' },
-  not_enabled: { color: 'gray', variant: 'outline' },
-  changed: { color: 'orange', variant: 'light' },
-  unavailable: { color: 'red', variant: 'light' },
-  missing: { color: 'red', variant: 'light' },
-} as const satisfies Record<PluginStatus, { color: string; variant: 'light' | 'outline' }>;
+/** The chip of each status: an icon and a word, never colour alone. */
+const STATUS_KIND = {
+  enabled: 'ok',
+  disabled: 'wait',
+  not_enabled: 'wait',
+  changed: 'warn',
+  unavailable: 'err',
+  missing: 'err',
+} as const satisfies Record<PluginStatus, StatusKind>;
+
+/** The chip of the state of a plugin's process. */
+const RUNTIME_KIND = {
+  stopped: 'wait',
+  running: 'run',
+  failed: 'err',
+} as const satisfies Record<PluginRuntime['state'], StatusKind>;
 
 /** Colour of the trust badge: the project's own, this server's, and plugins by others. */
 const TRUST_COLOR = {
@@ -75,15 +108,40 @@ const TRUST_COLOR = {
   community: 'violet',
 } as const satisfies Record<PluginTrust, string>;
 
-/** Colour and style of the badge for the state of a plugin's process. Never colour alone: the word is always there too. */
-const RUNTIME_BADGE = {
-  stopped: { color: 'gray', variant: 'light' },
-  running: { color: 'teal', variant: 'light' },
-  failed: { color: 'red', variant: 'light' },
-} as const satisfies Record<PluginRuntime['state'], { color: string; variant: 'light' }>;
-
 /** The statuses from which a plugin can be (re)enabled: usable, and not running now. */
 const ENABLEABLE: readonly PluginStatus[] = ['not_enabled', 'disabled', 'changed'];
+
+/**
+ * The filter tabs. The filter bar sorts its tags alphabetically, so each tag starts with its place in the strip; the
+ * tab shows the translated name that follows the number.
+ */
+const FILTERS = ['enabled', 'attention', 'inactive', 'unavailable'] as const;
+type Filter = (typeof FILTERS)[number];
+const filterTag = (filter: Filter): string => `${String(FILTERS.indexOf(filter))}:${filter}`;
+const filterOfTag = (tag: string): Filter =>
+  FILTERS.find((filter) => filterTag(filter) === tag) ?? 'inactive';
+
+/** The tabs a plugin shows under: enabled, needs a decision or a look, cannot be used, or simply not enabled. */
+function filtersOf(plugin: PluginView): string[] {
+  const tags: Filter[] = [];
+  if (plugin.status === 'enabled') {
+    tags.push('enabled');
+  }
+  if (
+    plugin.status === 'changed' ||
+    plugin.status === 'missing' ||
+    (plugin.status === 'enabled' && plugin.runtime.state === 'failed')
+  ) {
+    tags.push('attention');
+  }
+  if (plugin.status === 'unavailable') {
+    tags.push('unavailable');
+  }
+  if (plugin.status === 'not_enabled' || plugin.status === 'disabled') {
+    tags.push('inactive');
+  }
+  return tags.map(filterTag);
+}
 
 /** What the page says after a plugin was enabled or disabled. Kept as data so the text follows the language. */
 interface Notice {
@@ -93,160 +151,216 @@ interface Notice {
 
 const displayName = (plugin: PluginView): string => plugin.name ?? plugin.id;
 
-/** `fallback` is what a refusal for lack of permission says, already translated. */
-function ErrorNote({ error, fallback }: { error: unknown; fallback: string }) {
-  const { t } = useTranslation('plugins');
-  if (!error) {
-    return null;
-  }
-  return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(t, error, t('signInAgain'), fallback)}
-    </Alert>
-  );
-}
+/** The chips must not be squeezed or cut inside the card's single row. */
+const CHIP_STYLES = {
+  root: { flexShrink: 0, width: 'max-content' },
+  label: { overflow: 'visible' },
+};
 
-function NoticeAlert({ notice, onClose }: { notice: Notice; onClose: () => void }) {
-  const { t } = useTranslation(['plugins', 'common']);
-  return (
-    <Alert
-      closeButtonLabel={t('common:close')}
-      color="teal"
-      icon={<IconCheck size={16} />}
-      mb="md"
-      onClose={onClose}
-      role="status"
-      variant="light"
-      withCloseButton
-    >
-      {t(`notice.${notice.kind}`, { name: notice.name })}
-    </Alert>
-  );
-}
-
-function PluginStatusBadge({ status }: { status: PluginStatus }) {
+function PluginStatusChip({ plugin }: { plugin: PluginView }) {
   const { t } = useTranslation('plugins');
-  const { color, variant } = STATUS_BADGE[status];
-  return (
-    <Badge
-      color={color}
-      leftSection={status === 'changed' ? <IconAlertTriangle aria-hidden size={13} /> : undefined}
-      maw="none"
-      styles={{ root: { width: 'max-content' }, label: { overflow: 'visible' } }}
-      variant={variant}
-    >
-      {t(`statuses.${status}`)}
-    </Badge>
+  const problems = plugin.status === 'unavailable' ? plugin.problems : [];
+  const chip = (
+    <StatusBadge kind={STATUS_KIND[plugin.status]} maw="none" styles={CHIP_STYLES}>
+      {t(`statuses.${plugin.status}`)}
+    </StatusBadge>
+  );
+  return problems.length > 0 ? (
+    <Tooltip label={problems.join('\n')} multiline w={280}>
+      {chip}
+    </Tooltip>
+  ) : (
+    chip
   );
 }
 
 /**
- * In the table, only the two states worth a second badge: the process is running, or it failed (the error is on
- * hover). A plugin that is stopped has nothing to add to its status.
+ * On a card, only the two states worth a second chip: the process is running, or it failed (the error is on hover).
+ * A plugin that is stopped has nothing to add to its status.
  */
-function RuntimeBadge({ runtime }: { runtime: PluginRuntime }) {
+function RuntimeChip({ runtime }: { runtime: PluginRuntime }) {
   const { t } = useTranslation('plugins');
-  if (runtime.state === 'running') {
-    return (
-      <Badge color="teal" size="sm" variant="dot">
-        {t('runtime.states.running')}
-      </Badge>
-    );
+  if (runtime.state === 'stopped') {
+    return null;
   }
-  if (runtime.state === 'failed') {
-    return (
-      <Badge color="red" size="sm" title={runtime.lastError ?? undefined} variant="light">
-        {t('runtime.states.failed')}
-      </Badge>
-    );
-  }
-  return null;
-}
-
-function TrustBadge({ trust }: { trust: PluginTrust | null }) {
-  const { t } = useTranslation('plugins');
-  if (trust === null) {
-    return (
-      <Text c="dimmed" fz="sm">
-        {DASH}
-      </Text>
-    );
-  }
-  return (
-    <Badge
-      color={TRUST_COLOR[trust]}
-      maw="none"
-      styles={{ root: { width: 'max-content' }, label: { overflow: 'visible' } }}
-      title={t(`trustHint.${trust}`)}
-      variant="light"
-    >
-      {t(`trust.${trust}`)}
-    </Badge>
+  const chip = (
+    <StatusBadge kind={RUNTIME_KIND[runtime.state]} maw="none" styles={CHIP_STYLES}>
+      {t(`runtime.states.${runtime.state}`)}
+    </StatusBadge>
+  );
+  return runtime.state === 'failed' && runtime.lastError ? (
+    <Tooltip label={runtime.lastError} multiline w={280}>
+      {chip}
+    </Tooltip>
+  ) : (
+    chip
   );
 }
 
-/** The extension kinds a plugin provides, a declarative one marked as such. */
+function TrustBadge({ trust }: { trust: PluginTrust }) {
+  const { t } = useTranslation('plugins');
+  return (
+    <Tooltip label={t(`trustHint.${trust}`)} multiline w={260}>
+      <Badge color={TRUST_COLOR[trust]} maw="none" size="lg" styles={CHIP_STYLES} variant="soft">
+        {t(`trust.${trust}`)}
+      </Badge>
+    </Tooltip>
+  );
+}
+
+/** The extension kinds a plugin provides, a declarative one marked as such, in one row with a "+N" for the rest. */
 function KindBadges({ provides }: { provides: PluginView['provides'] }) {
   const { t } = useTranslation('plugins');
+  const label = (item: PluginView['provides'][number]): string =>
+    item.mode === 'declarative' ? t('provides.declarative', { kind: item.kind }) : item.kind;
   if (provides.length === 0) {
-    return (
-      <Text c="dimmed" fz="sm">
-        {DASH}
-      </Text>
-    );
+    return null;
   }
   return (
-    <Group gap={4} wrap="wrap">
-      {provides.map((item, index) => (
-        <Badge
-          color="gray"
+    <SingleRowOverflowList
+      data={provides}
+      gap={6}
+      renderItem={(item, index) => (
+        <Tooltip
           key={`${item.kind}:${item.mode}:${String(index)}`}
-          size="sm"
-          title={
+          label={
             item.mode === 'declarative' ? t('provides.declarativeHint') : t('provides.codeHint')
           }
-          tt="none"
-          variant="outline"
         >
-          {item.mode === 'declarative' ? t('provides.declarative', { kind: item.kind }) : item.kind}
-        </Badge>
-      ))}
-    </Group>
+          <Badge color="gray" size="md" tt="none" variant="light">
+            {label(item)}
+          </Badge>
+        </Tooltip>
+      )}
+      renderOverflow={(hidden) => (
+        <Tooltip label={hidden.map(label).join(', ')}>
+          <Badge color="gray" size="md" variant="transparent">
+            +{hidden.length}
+          </Badge>
+        </Tooltip>
+      )}
+      rowHeight={22}
+    />
   );
 }
 
-/** The start of the digest, with the whole of it on hover and a button that copies it. */
-function Digest({ digest }: { digest: string }) {
-  const { t } = useTranslation('common');
+/** One plugin of the list: a card of the panel's kind, the whole card opens the review, its menu holds the actions. */
+function PluginCard({
+  plugin,
+  canManage,
+  onReview,
+  onDisable,
+}: {
+  plugin: PluginView;
+  canManage: boolean;
+  onReview: (plugin: PluginView) => void;
+  onDisable: (plugin: PluginView) => void;
+}) {
+  const { t } = useTranslation('plugins');
+  const name = displayName(plugin);
+  const enabled = plugin.status === 'enabled';
   return (
-    <Group gap={4} wrap="nowrap">
-      <Code title={digest}>{digest.slice(0, DIGEST_SHORT)}…</Code>
-      <CopyButton value={digest}>
-        {({ copied, copy }) => (
-          <ActionIcon
-            aria-label={copied ? t('copied') : t('copy')}
-            color="gray"
-            onClick={copy}
-            size="sm"
-            variant="subtle"
+    <EntityCard.Root
+      aria-label={t('actions.reviewAria', { name })}
+      isActive={enabled}
+      onClick={() => {
+        onReview(plugin);
+      }}
+      wrap
+    >
+      <EntityCard.Header>
+        <EntityCard.Icon highlight={enabled}>
+          <IconPuzzle size={22} />
+        </EntityCard.Icon>
+
+        <EntityCard.Content
+          badges={
+            <>
+              {plugin.version ? (
+                <Text c="dimmed" fz="xs" style={{ flexShrink: 0 }}>
+                  {plugin.version}
+                </Text>
+              ) : null}
+              <PluginStatusChip plugin={plugin} />
+              {enabled ? <RuntimeChip runtime={plugin.runtime} /> : null}
+              {plugin.trust === null ? null : <TrustBadge trust={plugin.trust} />}
+              {plugin.provides.length > 0 ? (
+                <Box maw={220} miw={0}>
+                  <KindBadges provides={plugin.provides} />
+                </Box>
+              ) : null}
+            </>
+          }
+          title={name}
+        />
+      </EntityCard.Header>
+
+      <EntityCard.Actions>
+        <EntityCard.Menu label={t('actions.menuAria', { name })}>
+          <Menu.Item
+            leftSection={<IconEye size={18} />}
+            onClick={() => {
+              onReview(plugin);
+            }}
           >
-            {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-          </ActionIcon>
-        )}
-      </CopyButton>
-    </Group>
-  );
-}
+            {t('actions.review')}
+          </Menu.Item>
 
-/** A label and its value, side by side. */
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Group align="baseline" gap="md" wrap="nowrap">
-      <Text c="dimmed" fz="sm" style={{ flexShrink: 0 }} w={120}>
-        {label}
-      </Text>
-      <div style={{ minWidth: 0 }}>{children}</div>
-    </Group>
+          {canManage && ENABLEABLE.includes(plugin.status) ? (
+            <Menu.Item
+              color="teal"
+              leftSection={<IconPlayerPlay size={18} />}
+              onClick={() => {
+                onReview(plugin);
+              }}
+            >
+              {t('actions.enable')}
+            </Menu.Item>
+          ) : null}
+
+          <CopyButton timeout={2000} value={plugin.id}>
+            {({ copied, copy }) => (
+              <Menu.Item
+                {...(copied ? { color: 'teal' } : {})}
+                leftSection={copied ? <PiCheck size={18} /> : <PiCopy size={18} />}
+                onClick={copy}
+              >
+                {t('actions.copyId')}
+              </Menu.Item>
+            )}
+          </CopyButton>
+
+          {plugin.digest === null ? null : (
+            <CopyButton timeout={2000} value={plugin.digest}>
+              {({ copied, copy }) => (
+                <Menu.Item
+                  {...(copied ? { color: 'teal' } : {})}
+                  leftSection={copied ? <PiCheck size={18} /> : <PiCopy size={18} />}
+                  onClick={copy}
+                >
+                  {t('actions.copyDigest')}
+                </Menu.Item>
+              )}
+            </CopyButton>
+          )}
+
+          {canManage && enabled ? (
+            <>
+              <Menu.Divider />
+              <Menu.Item
+                color="red"
+                leftSection={<IconPlayerPause size={18} />}
+                onClick={() => {
+                  onDisable(plugin);
+                }}
+              >
+                {t('actions.disable')}
+              </Menu.Item>
+            </>
+          ) : null}
+        </EntityCard.Menu>
+      </EntityCard.Actions>
+    </EntityCard.Root>
   );
 }
 
@@ -270,12 +384,14 @@ function ValueList({ values }: { values: readonly string[] }) {
   );
 }
 
-/** What a plugin asks for, as plain lists. Anything not listed is denied. */
+/** What a plugin asks for, as rows of a card. Anything not listed is denied. */
 function AsksSection({
   title,
+  color,
   permissions,
 }: {
   title: string;
+  color: string;
   permissions: PluginPermissionsView;
 }) {
   const { t } = useTranslation('plugins');
@@ -285,40 +401,50 @@ function AsksSection({
     permissions.secrets.length === 0 &&
     permissions.panel.length === 0;
   return (
-    <Stack gap="xs">
-      <Text fw={600} fz="sm">
-        {title}
-      </Text>
-      {nothing ? (
-        <Text fz="sm">{t('asks.nothing')}</Text>
-      ) : (
-        <Stack gap="xs">
-          <Field label={t('asks.network')}>
-            <ValueList values={permissions.network} />
-          </Field>
-          <Field label={t('asks.secrets')}>
-            <ValueList values={permissions.secrets} />
-          </Field>
-          <Field label={t('asks.panel')}>
-            <ValueList values={permissions.panel} />
-          </Field>
-          <Field label={t('asks.ssh')}>
-            {permissions.ssh ? (
-              <Text c="orange.4" fw={600} fz="sm">
-                {t('asks.sshYes')}
-              </Text>
-            ) : (
-              <Text c="dimmed" fz="sm">
-                {t('asks.sshNo')}
-              </Text>
-            )}
-          </Field>
+    <SectionCard.Root>
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconShieldCheck}
+          iconColor={color}
+          iconSize={18}
+          title={title}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Stack gap="sm">
+          {nothing ? (
+            <Text fz="sm">{t('asks.nothing')}</Text>
+          ) : (
+            <DetailList>
+              <DetailRow label={t('asks.network')}>
+                <ValueList values={permissions.network} />
+              </DetailRow>
+              <DetailRow label={t('asks.secrets')}>
+                <ValueList values={permissions.secrets} />
+              </DetailRow>
+              <DetailRow label={t('asks.panel')}>
+                <ValueList values={permissions.panel} />
+              </DetailRow>
+              <DetailRow label={t('asks.ssh')}>
+                {permissions.ssh ? (
+                  <Text c="orange.4" fw={600} fz="sm">
+                    {t('asks.sshYes')}
+                  </Text>
+                ) : (
+                  <Text c="dimmed" fz="sm">
+                    {t('asks.sshNo')}
+                  </Text>
+                )}
+              </DetailRow>
+            </DetailList>
+          )}
+          <Text c="dimmed" fz="xs">
+            {t('asks.note')}
+          </Text>
         </Stack>
-      )}
-      <Text c="dimmed" fz="xs">
-        {t('asks.note')}
-      </Text>
-    </Stack>
+      </SectionCard.Section>
+    </SectionCard.Root>
   );
 }
 
@@ -373,137 +499,237 @@ function ChangeSection({ change }: { change: PluginPermissionChange }) {
     change.ssh !== 'unchanged' ||
     groups.some(({ list }) => list.added.length > 0 || list.removed.length > 0);
   return (
-    <Stack gap={6}>
-      <Text fw={600} fz="sm">
-        {t('changed.permissionsTitle')}
-      </Text>
-      {change.widens ? (
-        <Text c="red.4" fw={600} fz="sm">
-          {t('changed.widens')}
-        </Text>
-      ) : null}
-      {differs ? (
-        <Stack gap={2}>
-          {groups.flatMap(({ label, list }) => [
-            ...list.added.map((value) => (
-              <ChangeLine
-                key={`${label}:added:${value}`}
-                kind="added"
-                label={label}
-                value={value}
-              />
-            )),
-            ...list.removed.map((value) => (
-              <ChangeLine
-                key={`${label}:removed:${value}`}
-                kind="removed"
-                label={label}
-                value={value}
-              />
-            )),
-          ])}
-          {change.ssh === 'granted' ? (
-            <ChangeLine kind="added" label={t('changed.ssh')} value={undefined} />
+    <SectionCard.Root>
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconGitCompare}
+          iconColor="orange"
+          iconSize={18}
+          title={t('changed.permissionsTitle')}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Stack gap={6}>
+          {change.widens ? (
+            <Text c="red.4" fw={600} fz="sm">
+              {t('changed.widens')}
+            </Text>
           ) : null}
-          {change.ssh === 'revoked' ? (
-            <ChangeLine kind="removed" label={t('changed.ssh')} value={undefined} />
-          ) : null}
+          {differs ? (
+            <Stack gap={2}>
+              {groups.flatMap(({ label, list }) => [
+                ...list.added.map((value) => (
+                  <ChangeLine
+                    key={`${label}:added:${value}`}
+                    kind="added"
+                    label={label}
+                    value={value}
+                  />
+                )),
+                ...list.removed.map((value) => (
+                  <ChangeLine
+                    key={`${label}:removed:${value}`}
+                    kind="removed"
+                    label={label}
+                    value={value}
+                  />
+                )),
+              ])}
+              {change.ssh === 'granted' ? (
+                <ChangeLine kind="added" label={t('changed.ssh')} value={undefined} />
+              ) : null}
+              {change.ssh === 'revoked' ? (
+                <ChangeLine kind="removed" label={t('changed.ssh')} value={undefined} />
+              ) : null}
+            </Stack>
+          ) : (
+            <Text c="dimmed" fz="sm">
+              {t('changed.same')}
+            </Text>
+          )}
         </Stack>
-      ) : (
-        <Text c="dimmed" fz="sm">
-          {t('changed.same')}
-        </Text>
-      )}
-    </Stack>
+      </SectionCard.Section>
+    </SectionCard.Root>
   );
 }
 
-/** The problems discovery found, as the plugin or the server worded them (English data). */
-function ProblemList({ problems }: { problems: readonly string[] }) {
-  if (problems.length === 0) {
-    return null;
-  }
-  return (
-    <List fz="sm" mt={6} size="sm" spacing={2}>
-      {problems.map((problem) => (
-        <List.Item key={problem}>{problem}</List.Item>
-      ))}
-    </List>
-  );
-}
-
-/** The blocks that say how the plugin stands, for the statuses that need more than a badge. */
-function StatusBlocks({ plugin }: { plugin: PluginView }) {
+/** When and by whom the plugin was approved, for the statuses that have an approval on record. */
+function useApprovedLine(plugin: PluginView): string | undefined {
   const { t } = useTranslation('plugins');
   const formatDate = useDateTime('short');
   const { approval } = plugin;
-  const approvedLine = approval
+  return approval
     ? t('approval.line', {
         when: formatDate(approval.approvedAt),
         who: approval.approvedBy,
         version: approval.version,
       })
     : undefined;
+}
+
+/** The notes that say how the plugin stands, for the statuses that need more than a chip: they come first. */
+function StatusBlocks({ plugin }: { plugin: PluginView }) {
+  const { t } = useTranslation(['plugins', 'common']);
+  const labels = useCopyLabels();
+  const approvedLine = useApprovedLine(plugin);
 
   if (plugin.status === 'unavailable') {
     return (
-      <Alert
-        color="red"
-        icon={<IconAlertCircle size={16} />}
-        title={t('unavailable.title')}
-        variant="light"
-      >
-        <Text fz="sm">
-          {plugin.discovery === 'incompatible'
-            ? t('unavailable.incompatible')
-            : t('unavailable.invalid')}
-        </Text>
-        <ProblemList problems={plugin.problems} />
-      </Alert>
+      <Callout color="red" title={t('unavailable.title')}>
+        <Stack gap="xs">
+          <Text c="gray.3" fz="sm">
+            {plugin.discovery === 'incompatible'
+              ? t('unavailable.incompatible')
+              : t('unavailable.invalid')}
+          </Text>
+          {plugin.problems.length > 0 ? (
+            <ErrorMessageBlock message={plugin.problems.join('\n')} {...labels} />
+          ) : null}
+        </Stack>
+      </Callout>
     );
   }
   if (plugin.status === 'missing') {
     return (
-      <Alert
-        color="red"
-        icon={<IconAlertCircle size={16} />}
-        title={t('missing.title')}
-        variant="light"
-      >
-        <Text fz="sm">{t('missing.body')}</Text>
-        {approvedLine ? (
-          <Text c="dimmed" fz="xs" mt={6}>
-            {approvedLine}
+      <Callout color="red" title={t('missing.title')}>
+        <Stack gap={6}>
+          <Text c="gray.3" fz="sm">
+            {t('missing.body')}
           </Text>
-        ) : null}
-      </Alert>
-    );
-  }
-  if (plugin.status === 'changed') {
-    return (
-      <Alert
-        color="orange"
-        icon={<IconAlertTriangle size={16} />}
-        title={t('changed.title')}
-        variant="light"
-      >
-        <Stack gap="sm">
-          <Text fz="sm">{t('changed.body')}</Text>
           {approvedLine ? (
             <Text c="dimmed" fz="xs">
               {approvedLine}
             </Text>
           ) : null}
-          {plugin.change ? <ChangeSection change={plugin.change} /> : null}
         </Stack>
-      </Alert>
+      </Callout>
     );
   }
-  return approvedLine ? (
-    <Text c="dimmed" fz="xs">
-      {approvedLine}
-    </Text>
-  ) : null;
+  if (plugin.status === 'changed') {
+    return (
+      <>
+        <Callout color="orange" title={t('changed.title')}>
+          <Stack gap={6}>
+            <Text c="gray.3" fz="sm">
+              {t('changed.body')}
+            </Text>
+            {approvedLine ? (
+              <Text c="dimmed" fz="xs">
+                {approvedLine}
+              </Text>
+            ) : null}
+          </Stack>
+        </Callout>
+        {plugin.change ? <ChangeSection change={plugin.change} /> : null}
+      </>
+    );
+  }
+  return null;
+}
+
+/** The card with the facts of the plugin: its status, id, version, licence, trust, what it provides, its digest. */
+function DetailsSection({ plugin }: { plugin: PluginView }) {
+  const { t } = useTranslation(['plugins', 'common']);
+  const labels = useCopyLabels();
+  const approvedLine = useApprovedLine(plugin);
+  const { digest } = plugin;
+  // The callout of a changed or missing plugin already says when it was approved.
+  const showApproved = plugin.status !== 'changed' && plugin.status !== 'missing';
+  return (
+    <SectionCard.Root>
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconInfoCircle}
+          iconColor="blue"
+          iconSize={18}
+          title={t('detail.title')}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Stack gap="sm">
+          <Group gap="xs">
+            <PluginStatusChip plugin={plugin} />
+          </Group>
+
+          {plugin.description ? <Text fz="sm">{plugin.description}</Text> : null}
+          {showApproved && approvedLine ? (
+            <Text c="dimmed" fz="xs">
+              {approvedLine}
+            </Text>
+          ) : null}
+
+          <DetailList>
+            <CopyableDataListItem
+              {...labels}
+              label={t('detail.fields.id')}
+              monospace
+              value={plugin.id}
+            />
+            {plugin.version ? (
+              <CopyableDataListItem
+                {...labels}
+                label={t('detail.fields.version')}
+                value={plugin.version}
+              />
+            ) : null}
+            {plugin.license ? (
+              <CopyableDataListItem
+                {...labels}
+                label={t('detail.fields.license')}
+                value={plugin.license}
+              />
+            ) : null}
+            {plugin.trust === null ? null : (
+              <DetailRow label={t('detail.fields.trust')}>
+                <Stack align="flex-start" gap={4}>
+                  <TrustBadge trust={plugin.trust} />
+                  <Text c="dimmed" fz="xs">
+                    {t(`trustHint.${plugin.trust}`)}
+                  </Text>
+                </Stack>
+              </DetailRow>
+            )}
+            {plugin.provides.length > 0 ? (
+              <DetailRow label={t('detail.provides')}>
+                <Group gap={6} wrap="wrap">
+                  {plugin.provides.map((item, index) => (
+                    <Tooltip
+                      key={`${item.kind}:${item.mode}:${String(index)}`}
+                      label={
+                        item.mode === 'declarative'
+                          ? t('provides.declarativeHint')
+                          : t('provides.codeHint')
+                      }
+                    >
+                      <Badge color="gray" size="md" tt="none" variant="light">
+                        {item.mode === 'declarative'
+                          ? t('provides.declarative', { kind: item.kind })
+                          : item.kind}
+                      </Badge>
+                    </Tooltip>
+                  ))}
+                </Group>
+              </DetailRow>
+            ) : null}
+          </DetailList>
+
+          {digest !== null ? (
+            <CopyableCodeBlock
+              {...labels}
+              inputWrapperProps={{
+                label: t('detail.fields.digest'),
+                description: t('detail.digestHint'),
+              }}
+              size="small"
+              value={digest}
+            />
+          ) : null}
+        </Stack>
+      </SectionCard.Section>
+    </SectionCard.Root>
+  );
 }
 
 /** What the plugin's process loaded: each extension kind and the methods it offers (names are data). */
@@ -535,14 +761,7 @@ function ModuleList({
           ) : (
             <Group gap={4} wrap="wrap">
               {module.methods.map((method) => (
-                <Badge
-                  color="gray"
-                  ff="monospace"
-                  key={method}
-                  size="sm"
-                  tt="none"
-                  variant="outline"
-                >
+                <Badge color="gray" ff="monospace" key={method} size="md" tt="none" variant="light">
                   {method}
                 </Badge>
               ))}
@@ -564,8 +783,9 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
   const formatNumber = useNumber();
   const queryClient = useQueryClient();
   const step = useStepUp();
+  const fail = usePluginFailure();
+  const labels = useCopyLabels();
   const { runtime } = plugin;
-  const { color, variant } = RUNTIME_BADGE[runtime.state];
   const enabled = plugin.status === 'enabled';
   // The code runs in a container the administrator starts, not in a process of Swellwright's.
   const inContainer = plugin.sidecar !== null;
@@ -587,109 +807,101 @@ function RuntimeSection({ plugin, canManage }: { plugin: PluginView; canManage: 
           : list,
       );
     },
+    onError: (error) => {
+      fail(t('runtime.check.button'), error, t('runtime.check.forbidden'));
+    },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['plugins'] });
     },
   });
 
-  return (
-    <Stack gap="xs">
-      <Group gap="xs">
-        <Text fw={600} fz="sm">
-          {t('runtime.title')}
+  let checkNote: string = t('runtime.check.note');
+  if (noCode) {
+    checkNote = t('runtime.check.noteData');
+  } else if (inContainer) {
+    checkNote = t('runtime.check.noteSidecar');
+  }
+  const checkRow =
+    canManage && (noCode || enabled) ? (
+      <Stack gap="xs">
+        <Button
+          leftSection={<IconPlayerPlay size={16} />}
+          loading={check.isPending}
+          onClick={() => {
+            check.mutate();
+          }}
+          size="sm"
+          variant="soft"
+          w="fit-content"
+        >
+          {t('runtime.check.button')}
+        </Button>
+        <Text c="dimmed" fz="xs">
+          {checkNote}
         </Text>
-        {noCode ? null : (
-          <Badge color={color} size="sm" variant={variant}>
-            {t(`runtime.states.${runtime.state}`)}
-          </Badge>
-        )}
-      </Group>
+      </Stack>
+    ) : null;
 
-      {noCode ? (
-        <Stack gap="xs">
-          <Text fz="sm">{t('runtime.noCode')}</Text>
-          {runtime.modules.length > 0 ? <ModuleList declarative modules={runtime.modules} /> : null}
-          {canManage ? (
-            <Stack gap={6}>
-              <ErrorNote error={check.error} fallback={t('runtime.check.forbidden')} />
-              <Group>
-                <Button
-                  leftSection={<IconPlayerPlay size={16} />}
-                  loading={check.isPending}
-                  onClick={() => {
-                    check.mutate();
-                  }}
-                  size="xs"
-                  variant="default"
-                >
-                  {t('runtime.check.button')}
-                </Button>
-              </Group>
-              <Text c="dimmed" fz="xs">
-                {t('runtime.check.noteData')}
-              </Text>
-            </Stack>
-          ) : null}
-        </Stack>
-      ) : (
-        <>
-          {runtime.state === 'stopped' ? (
-            <Text c="dimmed" fz="sm">
-              {inContainer ? t('runtime.sidecarIdle') : t('runtime.idle')}
-            </Text>
-          ) : null}
-          {runtime.state === 'running' ? (
-            <Stack gap="xs">
-              {runtime.startedAt ? (
-                <Field label={t('runtime.started')}>
-                  <Text fz="sm">{formatDate(runtime.startedAt)}</Text>
-                </Field>
+  return (
+    <SectionCard.Root>
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconActivity}
+          iconColor="cyan"
+          iconSize={18}
+          title={t('runtime.title')}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Stack gap="sm">
+          {noCode ? (
+            <>
+              <Text fz="sm">{t('runtime.noCode')}</Text>
+              {runtime.modules.length > 0 ? (
+                <ModuleList declarative modules={runtime.modules} />
               ) : null}
-              <Field label={t('runtime.calls')}>
-                <Text fz="sm">{formatNumber(runtime.calls)}</Text>
-              </Field>
-            </Stack>
-          ) : null}
-          {runtime.state === 'failed' ? (
-            <Alert
-              color="red"
-              icon={<IconAlertCircle size={16} />}
-              title={t('runtime.failedTitle')}
-              variant="light"
-            >
-              <Text fz="sm" style={{ wordBreak: 'break-word' }}>
-                {runtime.lastError ?? t('runtime.failedUnknown')}
-              </Text>
-            </Alert>
-          ) : null}
-          {runtime.modules.length > 0 ? <ModuleList modules={runtime.modules} /> : null}
-          <Text c="dimmed" fz="xs">
-            {inContainer ? t('runtime.restrictedContainer') : t('runtime.restricted')}
-          </Text>
-          {canManage && enabled ? (
-            <Stack gap={6}>
-              <ErrorNote error={check.error} fallback={t('runtime.check.forbidden')} />
-              <Group>
-                <Button
-                  leftSection={<IconPlayerPlay size={16} />}
-                  loading={check.isPending}
-                  onClick={() => {
-                    check.mutate();
-                  }}
-                  size="xs"
-                  variant="default"
-                >
-                  {t('runtime.check.button')}
-                </Button>
+            </>
+          ) : (
+            <>
+              <Group gap="xs">
+                <StatusBadge kind={RUNTIME_KIND[runtime.state]}>
+                  {t(`runtime.states.${runtime.state}`)}
+                </StatusBadge>
               </Group>
+              {runtime.state === 'stopped' ? (
+                <Text c="dimmed" fz="sm">
+                  {inContainer ? t('runtime.sidecarIdle') : t('runtime.idle')}
+                </Text>
+              ) : null}
+              {runtime.state === 'running' ? (
+                <DetailList>
+                  {runtime.startedAt ? (
+                    <DetailRow label={t('runtime.started')}>
+                      {formatDate(runtime.startedAt)}
+                    </DetailRow>
+                  ) : null}
+                  <DetailRow label={t('runtime.calls')}>{formatNumber(runtime.calls)}</DetailRow>
+                </DetailList>
+              ) : null}
+              {runtime.state === 'failed' ? (
+                <Callout color="red" title={t('runtime.failedTitle')}>
+                  <ErrorMessageBlock
+                    message={runtime.lastError ?? t('runtime.failedUnknown')}
+                    {...labels}
+                  />
+                </Callout>
+              ) : null}
+              {runtime.modules.length > 0 ? <ModuleList modules={runtime.modules} /> : null}
               <Text c="dimmed" fz="xs">
-                {inContainer ? t('runtime.check.noteSidecar') : t('runtime.check.note')}
+                {inContainer ? t('runtime.restrictedContainer') : t('runtime.restricted')}
               </Text>
-            </Stack>
-          ) : null}
-        </>
-      )}
-    </Stack>
+            </>
+          )}
+          {checkRow}
+        </Stack>
+      </SectionCard.Section>
+    </SectionCard.Root>
   );
 }
 
@@ -719,6 +931,7 @@ function ReviewBody({
   const { t } = useTranslation(['plugins', 'common']);
   const queryClient = useQueryClient();
   const step = useStepUp();
+  const fail = usePluginFailure();
   const plugin = opened.status === 'enabled' && live !== undefined ? live : opened;
   const { digest } = plugin;
   const canEnable =
@@ -736,6 +949,7 @@ function ReviewBody({
       if (error instanceof ApiRequestError && error.status === 409) {
         void queryClient.invalidateQueries({ queryKey: ['plugins'] });
       }
+      fail(t('enable.confirm'), error, t('manageForbidden'));
     },
   });
   // What the plugin was approved for stands in for what its files ask for, when the files are gone.
@@ -743,107 +957,72 @@ function ReviewBody({
     plugin.permissions === null ? (plugin.approval?.permissions ?? null) : null;
 
   return (
-    <Stack gap="md">
-      <Group gap="xs">
-        <PluginStatusBadge status={plugin.status} />
-        <TrustBadge trust={plugin.trust} />
-      </Group>
+    <>
+      <Stack gap="md">
+        <StatusBlocks plugin={plugin} />
 
-      {plugin.description ? <Text fz="sm">{plugin.description}</Text> : null}
+        <DetailsSection plugin={plugin} />
 
-      <StatusBlocks plugin={plugin} />
+        {plugin.permissions ? (
+          <AsksSection color="cyan" permissions={plugin.permissions} title={t('asks.title')} />
+        ) : null}
+        {approvedPermissions ? (
+          <AsksSection
+            color="teal"
+            permissions={approvedPermissions}
+            title={t('asks.approvedTitle')}
+          />
+        ) : null}
 
-      <Stack gap="xs">
-        <Field label={t('detail.fields.id')}>
-          <Text ff="monospace" fz="sm">
-            {plugin.id}
-          </Text>
-        </Field>
-        {plugin.version ? (
-          <Field label={t('detail.fields.version')}>
-            <Text fz="sm">{plugin.version}</Text>
-          </Field>
+        {plugin.hasConfig && plugin.discovery === 'available' ? (
+          <PluginSettings canManage={canManage} canReadVault={canReadVault} plugin={plugin} />
         ) : null}
-        {plugin.license ? (
-          <Field label={t('detail.fields.license')}>
-            <Text fz="sm">{plugin.license}</Text>
-          </Field>
+
+        {plugin.sidecar !== null ? (
+          <SidecarSection canManage={canManage} onDialogChange={onNestedChange} plugin={plugin} />
         ) : null}
-        {plugin.provides.length > 0 ? (
-          <Field label={t('detail.provides')}>
-            <KindBadges provides={plugin.provides} />
-          </Field>
+
+        {plugin.status === 'enabled' || plugin.runtime.state !== 'stopped' ? (
+          <RuntimeSection canManage={canManage} plugin={plugin} />
         ) : null}
-        {digest !== null ? (
-          <Field label={t('detail.fields.digest')}>
-            <Stack gap={2}>
-              <Digest digest={digest} />
-              <Text c="dimmed" fz="xs">
-                {t('detail.digestHint')}
-              </Text>
-            </Stack>
-          </Field>
+
+        {plugin.trust === 'local' ? (
+          <Callout title={t('local.title')}>{t('local.body')}</Callout>
+        ) : null}
+        {plugin.signed ? (
+          <Callout color="gray" icon={<IconInfoCircle size={20} />}>
+            {t('signed')}
+          </Callout>
+        ) : null}
+
+        {canEnable ? (
+          <Callout color="cyan" icon={<IconInfoCircle size={20} />}>
+            {t('enable.note')}
+          </Callout>
         ) : null}
       </Stack>
 
-      {plugin.permissions ? (
-        <AsksSection permissions={plugin.permissions} title={t('asks.title')} />
-      ) : null}
-      {approvedPermissions ? (
-        <AsksSection permissions={approvedPermissions} title={t('asks.approvedTitle')} />
-      ) : null}
-
-      {plugin.hasConfig && plugin.discovery === 'available' ? (
-        <PluginSettings canManage={canManage} canReadVault={canReadVault} plugin={plugin} />
-      ) : null}
-
-      {plugin.sidecar !== null ? (
-        <SidecarSection canManage={canManage} onDialogChange={onNestedChange} plugin={plugin} />
-      ) : null}
-
-      {plugin.status === 'enabled' || plugin.runtime.state !== 'stopped' ? (
-        <RuntimeSection canManage={canManage} plugin={plugin} />
-      ) : null}
-
-      {plugin.trust === 'local' ? (
-        <Alert
-          color="yellow"
-          icon={<IconAlertTriangle size={16} />}
-          title={t('local.title')}
-          variant="light"
-        >
-          <Text fz="sm">{t('local.body')}</Text>
-        </Alert>
-      ) : null}
-      {plugin.signed ? (
-        <Alert color="gray" icon={<IconInfoCircle size={16} />} variant="light">
-          <Text fz="sm">{t('signed')}</Text>
-        </Alert>
-      ) : null}
-
-      {canEnable ? (
-        <Text c="dimmed" fz="xs">
-          {t('enable.note')}
-        </Text>
-      ) : null}
-      <ErrorNote error={enable.error} fallback={t('manageForbidden')} />
-      <Group justify="flex-end">
-        <Button onClick={onClose} variant="default">
-          {canEnable ? t('common:cancel') : t('common:close')}
-        </Button>
+      <ModalFooter>
         {canEnable ? (
           <Button
+            color="teal"
             leftSection={<IconPlayerPlay size={16} />}
             loading={enable.isPending}
             onClick={() => {
               enable.mutate(digest);
             }}
+            size="md"
+            variant="soft"
           >
             {t('enable.confirm')}
           </Button>
-        ) : null}
-      </Group>
-    </Stack>
+        ) : (
+          <Button color="teal" onClick={onClose} size="md" variant="light">
+            {t('common:close')}
+          </Button>
+        )}
+      </ModalFooter>
+    </>
   );
 }
 
@@ -865,14 +1044,26 @@ function ReviewDialog({
 }) {
   // A dialog opened over this one (the compose fragment) takes the Escape key for itself.
   const [nestedOpen, setNestedOpen] = useState(false);
+  const isMobile = useIsMobile();
   return (
     <Modal
-      centered
       closeOnEscape={!nestedOpen}
+      fullScreen={isMobile}
       onClose={onClose}
       opened={plugin !== undefined}
       size="lg"
-      title={plugin ? displayName(plugin) : ''}
+      title={
+        plugin ? (
+          <OverlayHeader
+            icon={IconPuzzle}
+            iconColor="teal"
+            subtitle={plugin.name ? plugin.id : undefined}
+            title={displayName(plugin)}
+          />
+        ) : (
+          ''
+        )
+      }
     >
       {plugin ? (
         <ReviewBody
@@ -890,210 +1081,53 @@ function ReviewDialog({
   );
 }
 
-function DisableBody({
-  plugin,
-  onClose,
-  onDone,
-}: {
-  plugin: PluginView;
-  onClose: () => void;
-  onDone: (notice: Notice) => void;
-}) {
-  const { t } = useTranslation(['plugins', 'common']);
-  const step = useStepUp();
-  const mutation = useMutation({
-    mutationFn: () => step.run(() => disablePlugin(plugin.id)),
-    onSuccess: (disabled) => {
-      onDone({ kind: 'disabled', name: displayName(disabled) });
-    },
-  });
-  return (
-    <Stack gap="md">
-      <Text fz="sm">{t('disable.body')}</Text>
-      <ErrorNote error={mutation.error} fallback={t('manageForbidden')} />
-      <Group justify="flex-end">
-        <Button onClick={onClose} variant="default">
-          {t('common:cancel')}
-        </Button>
-        <Button
-          color="red"
-          leftSection={<IconPlayerPause size={16} />}
-          loading={mutation.isPending}
-          onClick={() => {
-            mutation.mutate();
-          }}
-        >
-          {t('disable.confirm')}
-        </Button>
-      </Group>
-    </Stack>
-  );
-}
-
-function DisableDialog({
-  plugin,
-  onClose,
-  onDone,
-}: {
-  plugin: PluginView | undefined;
-  onClose: () => void;
-  onDone: (notice: Notice) => void;
-}) {
-  const { t } = useTranslation('plugins');
-  return (
-    <Modal
-      centered
-      onClose={onClose}
-      opened={plugin !== undefined}
-      title={t('disable.title', { name: plugin ? displayName(plugin) : '' })}
-    >
-      {plugin ? (
-        <DisableBody key={plugin.id} onClose={onClose} onDone={onDone} plugin={plugin} />
-      ) : null}
-    </Modal>
-  );
-}
-
-/** The plugins as a table, scrolling sideways on a narrow screen like the other pages. */
-function PluginsTable({
-  plugins,
-  canManage,
-  onReview,
-  onDisable,
-}: {
-  plugins: readonly PluginView[];
-  canManage: boolean;
-  onReview: (plugin: PluginView) => void;
-  onDisable: (plugin: PluginView) => void;
-}) {
-  const { t } = useTranslation('plugins');
-  return (
-    <Table.ScrollContainer minWidth={960}>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th pl="md">{t('columns.plugin')}</Table.Th>
-            <Table.Th>{t('columns.version')}</Table.Th>
-            <Table.Th>{t('columns.trust')}</Table.Th>
-            <Table.Th>{t('columns.status')}</Table.Th>
-            <Table.Th>{t('columns.provides')}</Table.Th>
-            <Table.Th pr="md" />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {plugins.map((plugin) => {
-            const name = displayName(plugin);
-            const [problem] = plugin.problems;
-            return (
-              <Table.Tr key={plugin.id}>
-                <Table.Td pl="md">
-                  <Text fw={500} fz="sm">
-                    {name}
-                  </Text>
-                  {plugin.name ? (
-                    <Text c="dimmed" component="span" display="block" ff="monospace" fz="xs">
-                      {plugin.id}
-                    </Text>
-                  ) : null}
-                </Table.Td>
-                <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                  <Text fz="sm">{plugin.version ?? DASH}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <TrustBadge trust={plugin.trust} />
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={6} wrap="wrap">
-                    <PluginStatusBadge status={plugin.status} />
-                    {plugin.status === 'enabled' ? <RuntimeBadge runtime={plugin.runtime} /> : null}
-                  </Group>
-                  {plugin.status === 'unavailable' && problem !== undefined ? (
-                    <Text
-                      c="dimmed"
-                      fz="xs"
-                      maw={240}
-                      mt={4}
-                      title={plugin.problems.join('\n')}
-                      truncate="end"
-                    >
-                      {problem}
-                    </Text>
-                  ) : null}
-                </Table.Td>
-                <Table.Td>
-                  <KindBadges provides={plugin.provides} />
-                </Table.Td>
-                <Table.Td pr="md">
-                  <Group gap="xs" justify="flex-end" wrap="nowrap">
-                    <Button
-                      aria-label={t('actions.reviewAria', { name })}
-                      leftSection={<IconEye size={14} />}
-                      onClick={() => {
-                        onReview(plugin);
-                      }}
-                      size="xs"
-                      variant="default"
-                    >
-                      {t('actions.review')}
-                    </Button>
-                    {canManage && ENABLEABLE.includes(plugin.status) ? (
-                      <Button
-                        aria-label={t('actions.enableAria', { name })}
-                        leftSection={<IconPlayerPlay size={14} />}
-                        onClick={() => {
-                          onReview(plugin);
-                        }}
-                        size="xs"
-                      >
-                        {t('actions.enable')}
-                      </Button>
-                    ) : null}
-                    {canManage && plugin.status === 'enabled' ? (
-                      <Button
-                        aria-label={t('actions.disableAria', { name })}
-                        color="red"
-                        leftSection={<IconPlayerPause size={14} />}
-                        onClick={() => {
-                          onDisable(plugin);
-                        }}
-                        size="xs"
-                      >
-                        {t('actions.disable')}
-                      </Button>
-                    ) : null}
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            );
-          })}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
-  );
-}
-
-/** The empty page: an icon, a title and what to do about it. */
-function EmptyCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card padding="lg">
-      <Group align="flex-start" gap="md" wrap="nowrap">
-        <ThemeIcon size="xl" variant="soft">
-          <IconPuzzle size={22} />
-        </ThemeIcon>
-        <Stack gap={4}>
-          <Text fw={600}>{title}</Text>
-          <Text c="dimmed" fz="sm">
-            {children}
-          </Text>
-        </Stack>
-      </Group>
-    </Card>
-  );
-}
-
 /** How to point the server at its plugin directories: the two variables, in code spans. */
 function NoDirectoriesText() {
   return <Trans components={{ code: <Code /> }} i18nKey="directories.none" ns="plugins" />;
+}
+
+/**
+ * The empty page, as the panel draws an empty plugin list: a warning that plugins are code, a large gray icon, what
+ * is wrong, and (when no directory is set) how to point the server at one.
+ */
+function PluginsEmpty({ configured }: { configured: boolean }) {
+  const { t } = useTranslation('plugins');
+  return (
+    <SectionCard.Root p="xl">
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconAlertTriangle}
+          iconColor="orange"
+          subtitle={t('empty.warning')}
+          title={t('empty.warningTitle')}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Center py="xl">
+          <Stack align="center" gap="lg">
+            <ThemeIcon aria-hidden color="gray" radius="xl" size={64} variant="soft">
+              <IconPuzzle size={32} />
+            </ThemeIcon>
+            <Stack align="center" gap="xs">
+              <Text fw={600} size="lg" ta="center">
+                {configured ? t('directories.emptyTitle') : t('directories.noneTitle')}
+              </Text>
+              {configured ? (
+                <Text c="dimmed" maw={400} size="sm" ta="center">
+                  {t('directories.empty')}
+                </Text>
+              ) : null}
+            </Stack>
+            {configured ? null : (
+              <Callout color="blue" icon={<IconInfoCircle size={20} />} maw={520}>
+                <NoDirectoriesText />
+              </Callout>
+            )}
+          </Stack>
+        </Center>
+      </SectionCard.Section>
+    </SectionCard.Root>
+  );
 }
 
 /**
@@ -1103,23 +1137,51 @@ function NoDirectoriesText() {
 export function PluginsPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['plugins', 'common']);
   const queryClient = useQueryClient();
+  const step = useStepUp();
+  const fail = usePluginFailure();
   const canManage = permissions.includes('plugins:manage');
   const canReadVault = permissions.includes('vault:read');
   const [reviewing, setReviewing] = useState<PluginView | undefined>(undefined);
-  const [disabling, setDisabling] = useState<PluginView | undefined>(undefined);
-  const [notice, setNotice] = useState<Notice | undefined>(undefined);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const list = useQuery({ queryKey: ['plugins'], queryFn: listPlugins, retry: false });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['plugins'] });
   const done = (result: Notice) => {
     setReviewing(undefined);
-    setDisabling(undefined);
-    setNotice(result);
+    notifySuccess(
+      t(`notice.${result.kind}Title`),
+      t(`notice.${result.kind}`, { name: result.name }),
+    );
     void refresh();
   };
+  const disable = useMutation({
+    mutationFn: (plugin: PluginView) => step.run(() => disablePlugin(plugin.id)),
+    onSuccess: (disabled) => {
+      done({ kind: 'disabled', name: displayName(disabled) });
+    },
+    onError: (error) => {
+      fail(t('disable.confirm'), error, t('manageForbidden'));
+    },
+  });
+  const askDisable = (plugin: PluginView) => {
+    confirmAction({
+      title: t('disable.title', { name: displayName(plugin) }),
+      message: t('disable.body'),
+      confirmLabel: t('disable.confirm'),
+      cancelLabel: t('common:cancel'),
+      onConfirm: () => {
+        disable.mutate(plugin);
+      },
+    });
+  };
 
-  const plugins = list.data?.plugins ?? [];
-  const liveReviewing = reviewing ? plugins.find((item) => item.id === reviewing.id) : undefined;
+  const plugins = list.data?.plugins;
+  const rows = useMemo(
+    () => (plugins ?? []).map((plugin) => ({ plugin, tags: filtersOf(plugin) })),
+    [plugins],
+  );
+  const visible = filterByTag(rows, activeTag);
+  const liveReviewing = reviewing ? plugins?.find((item) => item.id === reviewing.id) : undefined;
   const configured = list.data
     ? list.data.directories.official ||
       list.data.directories.local ||
@@ -1130,69 +1192,68 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
     <>
       <PageHeader
         actions={
-          <Button
-            leftSection={<IconRefresh size={16} />}
-            loading={list.isRefetching}
-            onClick={() => void list.refetch()}
-            variant="default"
-          >
-            {t('common:refresh')}
-          </Button>
+          <HeaderActions>
+            <HeaderAction
+              color="lime"
+              href={PLUGINS_DOCS_URL}
+              icon={IconBook}
+              label={t('header.docs')}
+              target="_blank"
+            />
+            <HeaderAction
+              icon={IconRefresh}
+              label={t('common:refresh')}
+              loading={list.isRefetching}
+              onClick={() => void list.refetch()}
+            />
+          </HeaderActions>
         }
         description={t('header.description')}
-        icon={<IconPuzzle size={22} />}
+        icon={<IconPuzzle size={24} />}
         title={t('header.title')}
       />
 
-      {notice ? (
-        <NoticeAlert
-          notice={notice}
-          onClose={() => {
-            setNotice(undefined);
-          }}
-        />
-      ) : null}
-
       {list.isPending ? (
-        <Card padding={0}>
-          <Stack gap="xs" p="md">
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
-        </Card>
+        <LoadingScreen height="60vh" />
       ) : list.isError ? (
-        <Alert color="red" variant="light">
-          {describeError(t, list.error, t('signInAgain'), t('loadFailed'))}
-        </Alert>
+        <FailureCard
+          message={describeError(t, list.error, t('signInAgain'), t('loadFailed'))}
+          onRetry={() => void list.refetch()}
+          retrying={list.isRefetching}
+          title={t('loadFailedTitle')}
+        />
       ) : (
         <>
-          {!configured && plugins.length === 0 ? (
-            <EmptyCard title={t('directories.noneTitle')}>
+          {!configured && rows.length > 0 ? (
+            <Callout color="blue" icon={<IconInfoCircle size={20} />} mb="md">
               <NoDirectoriesText />
-            </EmptyCard>
+            </Callout>
           ) : null}
-          {!configured && plugins.length > 0 ? (
-            <Alert color="blue" icon={<IconInfoCircle size={16} />} mb="md" variant="light">
-              <Text fz="sm">
-                <NoDirectoriesText />
-              </Text>
-            </Alert>
-          ) : null}
-          {configured && plugins.length === 0 ? (
-            <EmptyCard title={t('directories.emptyTitle')}>{t('directories.empty')}</EmptyCard>
-          ) : null}
-          {plugins.length > 0 ? (
-            <Card padding={0}>
-              <PluginsTable
-                canManage={canManage}
-                onDisable={setDisabling}
-                onReview={setReviewing}
-                plugins={plugins}
+          {rows.length === 0 ? <PluginsEmpty configured={configured} /> : null}
+          {rows.length > 0 ? (
+            <>
+              <TagFilterBar
+                activeTag={activeTag}
+                allLabel={t('filter.all')}
+                items={rows}
+                onChange={setActiveTag}
+                tagLabel={(tag) => t(`filter.${filterOfTag(tag)}`)}
+                untaggedLabel={t('filter.inactive')}
               />
-              <Text c="dimmed" fz="xs" p="md">
-                {t('table.summary', { count: plugins.length })}
-              </Text>
-            </Card>
+              <Box style={{ paddingInline: 'calc(var(--mantine-spacing-md) - 4px)' }}>
+                <SimpleGrid cols={{ base: 1, '1000px': 2 }} p={4} spacing={8} type="container">
+                  {visible.map(({ plugin }) => (
+                    <PluginCard
+                      canManage={canManage}
+                      key={plugin.id}
+                      onDisable={askDisable}
+                      onReview={setReviewing}
+                      plugin={plugin}
+                    />
+                  ))}
+                </SimpleGrid>
+              </Box>
+            </>
           ) : null}
         </>
       )}
@@ -1206,13 +1267,6 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
         }}
         onDone={done}
         plugin={reviewing}
-      />
-      <DisableDialog
-        onClose={() => {
-          setDisabling(undefined);
-        }}
-        onDone={done}
-        plugin={disabling}
       />
     </>
   );
