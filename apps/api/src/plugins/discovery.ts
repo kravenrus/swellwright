@@ -3,8 +3,10 @@ import { join, sep } from 'node:path';
 
 import { SECRET_TYPES } from '@swellwright/contracts';
 import {
+  checkDriverAgainstPlugin,
   type ConfigSchemaFile,
   ConfigSchemaFileSchema,
+  type Driver,
   MANIFEST_FILE,
   PluginManifestSchema,
   referencedFiles,
@@ -14,6 +16,7 @@ import {
 import semver from 'semver';
 
 import { digestPlugin } from './digest.js';
+import { readDriver } from './driver-file.js';
 
 /** Where a plugin directory comes from, which decides how far it is trusted (ADR 0008). */
 export type TrustLevel = 'official' | 'local';
@@ -41,6 +44,8 @@ export interface DiscoveredPlugin {
   readonly digest: string | undefined;
   /** What its settings look like (the file named by `config.schema`), when it has any and it is sound. */
   readonly configSchema: ConfigSchemaFile | undefined;
+  /** Its declarative drivers by extension kind, when it has any and they are sound (ADR 0030). */
+  readonly drivers: Readonly<Record<string, Driver>>;
   readonly problems: readonly string[];
 }
 
@@ -178,6 +183,41 @@ async function readConfigSchema(
   return { schema: problems.length === 0 ? parsed.data : undefined, problems };
 }
 
+/** The declarative drivers of a plugin: each read, checked, and tied to what the manifest asks for. */
+async function readDrivers(
+  directory: string,
+  manifest: PluginManifest,
+  schema: ConfigSchemaFile | undefined,
+): Promise<{ drivers: Record<string, Driver>; problems: string[] }> {
+  const drivers: Record<string, Driver> = {};
+  const problems: string[] = [];
+  for (const provided of manifest.provides) {
+    if (provided.driver === undefined) {
+      continue;
+    }
+    const file = provided.driver.replace(/^\.\//u, '');
+    const read = await readDriver(join(directory, file), file);
+    problems.push(...read.problems);
+    if (read.driver === undefined) {
+      continue;
+    }
+    if (read.driver.kind !== provided.kind) {
+      problems.push(
+        `${file}: is a driver for ${read.driver.kind} but the manifest gives it as ${provided.kind}`,
+      );
+      continue;
+    }
+    const mismatch = checkDriverAgainstPlugin(read.driver, manifest, schema).map(
+      (p) => `${file}: ${p}`,
+    );
+    problems.push(...mismatch);
+    if (mismatch.length === 0) {
+      drivers[provided.kind] = read.driver;
+    }
+  }
+  return { drivers, problems };
+}
+
 async function inspect(
   root: PluginRoot,
   folder: string,
@@ -190,6 +230,7 @@ async function inspect(
     manifest?: PluginManifest,
     digest?: string,
     configSchema?: ConfigSchemaFile,
+    drivers: Readonly<Record<string, Driver>> = {},
   ): DiscoveredPlugin => ({
     folder,
     directory,
@@ -198,6 +239,7 @@ async function inspect(
     manifest,
     digest,
     configSchema,
+    drivers,
     problems,
   });
 
@@ -235,6 +277,8 @@ async function inspect(
   problems.push(...secretKindProblems(manifest));
   const settings = await readConfigSchema(directory, manifest);
   problems.push(...settings.problems);
+  const declarative = await readDrivers(directory, manifest, settings.schema);
+  problems.push(...declarative.problems);
   if (semver.validRange(manifest.engines.swellwright) === null) {
     problems.push(`engines.swellwright "${manifest.engines.swellwright}" is not a valid range`);
   }
@@ -252,9 +296,10 @@ async function inspect(
       manifest,
       digest.digest,
       settings.schema,
+      declarative.drivers,
     );
   }
-  return done('available', [], manifest, digest.digest, settings.schema);
+  return done('available', [], manifest, digest.digest, settings.schema, declarative.drivers);
 }
 
 /**

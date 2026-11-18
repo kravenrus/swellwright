@@ -1,0 +1,14 @@
+{
+  "id": "notify-telegram",
+  "version": "0.1.0",
+  "name": "Telegram notifications",
+  "description": "Sends messages through a Telegram bot. A declarative driver: no code of its own.",
+  "engines": { "swellwright": ">=0.0.0-0 <2" },
+  "provides": [{ "kind": "NotificationChannel", "driver": "driver.yaml" }],
+  "permissions": {
+    "network": ["api.telegram.org:443"],
+    "secrets": ["telegram"]
+  },
+  "config": { "schema": "config.schema.json" },
+  "license": "AGPL-3.0-only"
+}

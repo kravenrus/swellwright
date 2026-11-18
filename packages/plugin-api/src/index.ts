@@ -31,6 +31,19 @@ export {
   type PluginStorage,
 } from './module.js';
 export {
+  checkDriverAgainstPlugin,
+  DRIVER_LIMITS,
+  DriverError,
+  DriverSchema,
+  driverHosts,
+  parseDriver,
+  runOperation,
+  type Driver,
+  type DriverResponse,
+  type DriverServices,
+  type Operation,
+} from './driver.js';
+export {
   ConfigFieldSchema,
   ConfigSchemaFileSchema,
   MAX_CONFIG_FIELDS,
