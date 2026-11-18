@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 
 import {
+  AuditOutcome,
   Database,
   DatabaseNotReadyError,
   Prisma,
@@ -190,5 +191,60 @@ describe('users against a migrated database', { skip: !databaseUrl }, () => {
         INSERT INTO users (id, username, role, updated_at)
         VALUES (gen_random_uuid(), ${`${prefix}-badrole`}, 'root'::user_role, now())`,
     );
+  });
+
+  it('keeps the audit log append-only, and keeps an event after its user is gone', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const user = await client.user.create({
+        data: { username: `${prefix}-audited`, role: UserRole.operator },
+      });
+      const event = await client.auditEvent.create({
+        data: {
+          seq: 1n,
+          occurredAt: new Date(),
+          actorId: user.id,
+          actorName: user.username,
+          action: 'auth.login.succeeded',
+          outcome: AuditOutcome.success,
+          prevHash: '0'.repeat(64),
+          hash: 'f'.repeat(64),
+        },
+      });
+      assert.equal(event.details, '{}');
+      const refused = (error: unknown): boolean =>
+        error instanceof Error && error.message.includes('audit_events is append-only');
+      await assert.rejects(
+        client.auditEvent.update({ where: { seq: 1n }, data: { action: 'changed' } }),
+        refused,
+      );
+      await assert.rejects(client.auditEvent.delete({ where: { seq: 1n } }), refused);
+      await assert.rejects(client.auditEvent.deleteMany(), refused);
+      // Raw SQL is not qualified by the client: name the schema of this test.
+      await assert.rejects(
+        client.$executeRawUnsafe(`TRUNCATE "${isolated.schema}"."audit_events"`),
+        refused,
+      );
+      // No foreign key: removing the user neither fails nor removes the record.
+      await client.user.delete({ where: { id: user.id } });
+      const kept = await client.auditEvent.findUniqueOrThrow({ where: { seq: 1n } });
+      assert.equal(kept.actorName, `${prefix}-audited`);
+      // One hash, one place in the chain.
+      await assert.rejects(
+        client.auditEvent.create({
+          data: {
+            seq: 2n,
+            occurredAt: new Date(),
+            action: 'auth.logout',
+            outcome: AuditOutcome.success,
+            prevHash: 'f'.repeat(64),
+            hash: 'f'.repeat(64),
+          },
+        }),
+      );
+    } finally {
+      await isolated.drop();
+    }
   });
 });

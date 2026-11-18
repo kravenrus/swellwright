@@ -6,8 +6,10 @@ import type { SessionInfo } from '@swellwright/contracts';
 import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
 import { AuthGate } from './auth/gate.js';
-import { NAV_SECTIONS } from './nav.js';
+import { navFor } from './nav.js';
 import { Overview } from './overview.js';
+import { AuditPage } from './security/audit-page.js';
+import { RolesPage } from './security/roles-page.js';
 
 function AccountMenu({
   session,
@@ -47,6 +49,7 @@ function AccountMenu({
 
 function Console({ session, signOut }: { session: SessionInfo; signOut: () => Promise<void> }) {
   const [activeId, setActiveId] = useState('overview');
+  const { permissions } = session;
   return (
     <>
       <AppHeader
@@ -59,9 +62,17 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
           </>
         }
         onNavigate={setActiveId}
-        sections={NAV_SECTIONS}
+        sections={navFor(permissions)}
       />
-      <main className="sw-page">{activeId === 'overview' ? <Overview /> : null}</main>
+      <main className="sw-page">
+        {activeId === 'overview' ? <Overview /> : null}
+        {activeId === 'roles' && permissions.includes('roles:read') ? (
+          <RolesPage currentRole={session.user.role} />
+        ) : null}
+        {activeId === 'audit' && permissions.includes('audit:read') ? (
+          <AuditPage permissions={permissions} />
+        ) : null}
+      </main>
     </>
   );
 }

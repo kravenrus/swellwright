@@ -179,7 +179,11 @@ export function AuthGate({
           <EnrollmentStep
             onConfirmed={(result) => {
               setRecoveryCodes(result.recoveryCodes);
-              signedIn({ user: result.user, expiresAt: result.expiresAt });
+              signedIn({
+                user: result.user,
+                permissions: result.permissions,
+                expiresAt: result.expiresAt,
+              });
             }}
           />
         </AuthLayout>

@@ -1,9 +1,8 @@
-import 'reflect-metadata';
+﻿import 'reflect-metadata';
 
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 
-import type { NestExpressApplication } from '@nestjs/platform-express';
 import {
   ApiErrorSchema,
   PendingSessionSchema,
@@ -13,139 +12,25 @@ import {
   TotpEnrollmentSchema,
 } from '@swellwright/contracts';
 import { SessionStage } from '@swellwright/db';
-import { createIsolatedDatabase, type IsolatedDatabase } from '@swellwright/db/testing';
 
 import { createApp } from '../bootstrap.js';
 import { loadConfig } from '../config.js';
-import { base32Decode, base32Encode, timeStep, totpCode } from './totp.js';
-
-const databaseUrl = process.env['SW_TEST_DATABASE_URL'];
-const SETUP_TOKEN = 'test-setup-token-0123456789';
-const PASSWORD = 'correct horse battery staple';
-const CHEAP = { memory: 256, passes: 1, parallelism: 1 } as const;
-const AUTH_KEY = Buffer.alloc(32, 1).toString('base64');
-
-interface Reply {
-  readonly status: number;
-  readonly body: unknown;
-  readonly headers: Headers;
-  readonly setCookie: string[];
-}
-
-/** A browser stand-in: keeps the session cookie between calls. */
-class Client {
-  cookie: string | undefined;
-
-  constructor(private readonly base: string) {}
-
-  async call(
-    method: string,
-    path: string,
-    body?: unknown,
-    headers: Record<string, string> = {},
-  ): Promise<Reply> {
-    const res = await fetch(`${this.base}${path}`, {
-      method,
-      headers: {
-        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
-        ...(this.cookie ? { cookie: this.cookie } : {}),
-        ...headers,
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    const setCookie = res.headers.getSetCookie();
-    for (const line of setCookie) {
-      const [pair] = line.split(';');
-      const [name, value] = (pair ?? '').split('=');
-      if (name === 'sw_session') {
-        this.cookie = value ? `sw_session=${value}` : undefined;
-      }
-    }
-    const text = await res.text();
-    return {
-      status: res.status,
-      body: text ? (JSON.parse(text) as unknown) : undefined,
-      headers: res.headers,
-      setCookie,
-    };
-  }
-
-  get(path: string): Promise<Reply> {
-    return this.call('GET', path);
-  }
-
-  post(path: string, body?: unknown, headers?: Record<string, string>): Promise<Reply> {
-    return this.call('POST', path, body, headers);
-  }
-}
-
-const errorCode = (reply: Reply): string => ApiErrorSchema.parse(reply.body).error.code;
-/** A code for the current step, or a step further on when the current one was used already. */
-const codeFor = (secret: string, stepsAhead = 0): string =>
-  totpCode(base32Decode(secret), timeStep(Date.now()) + stepsAhead);
-
-interface Instance {
-  app: NestExpressApplication;
-  base: string;
-  isolated: IsolatedDatabase;
-  client: () => Client;
-}
-
-async function start(env: Record<string, string> = {}): Promise<Instance> {
-  const isolated = await createIsolatedDatabase(databaseUrl ?? '');
-  const config = loadConfig(
-    {
-      SW_LOG_LEVEL: 'silent',
-      NODE_ENV: 'test',
-      SW_AUTH_KEY: AUTH_KEY,
-      SW_SETUP_TOKEN: SETUP_TOKEN,
-      SW_LOCKOUT_ATTEMPTS: '3',
-      ...env,
-    },
-    '0.0.0-test',
-  );
-  const app = await createApp(config, {
-    readinessChecks: [],
-    passwordParams: CHEAP,
-    database: isolated.database,
-  });
-  await app.listen(0, '127.0.0.1');
-  const { port } = app.getHttpServer().address() as { port: number };
-  const base = `http://127.0.0.1:${String(port)}/api/v1`;
-  return { app, base, isolated, client: () => new Client(base) };
-}
-
-async function stop(instance: Instance): Promise<void> {
-  await instance.app.close();
-  await instance.isolated.drop();
-}
-
-/** Creates the owner and finishes the enrollment. Returns what a later sign-in needs. */
-async function createOwner(
-  instance: Instance,
-  username = 'owner',
-): Promise<{ secret: string; recoveryCodes: string[] }> {
-  const client = instance.client();
-  const created = await client.post('/setup/owner', {
-    setupToken: SETUP_TOKEN,
-    username,
-    password: PASSWORD,
-  });
-  assert.equal(created.status, 200);
-  const enrollment = TotpEnrollmentSchema.parse((await client.post('/auth/totp/enrollment')).body);
-  const confirmed = await client.post('/auth/totp/confirm', { code: codeFor(enrollment.secret) });
-  assert.equal(confirmed.status, 200);
-  return {
-    secret: enrollment.secret,
-    recoveryCodes: TotpConfirmedSchema.parse(confirmed.body).recoveryCodes,
-  };
-}
-
-/** Lets the same authenticator code be used again: a test has no 30-second wait. */
-async function forgetLastStep(instance: Instance): Promise<void> {
-  await instance.isolated.database.client.credential.updateMany({ data: { totpLastStep: null } });
-}
-
+import {
+  AUTH_KEY,
+  Client,
+  codeFor,
+  createOwner,
+  databaseUrl,
+  errorCode,
+  forgetLastStep,
+  type Instance,
+  PASSWORD,
+  type Reply,
+  SETUP_TOKEN,
+  start,
+  stop,
+} from '../test-support.js';
+import { base32Decode, base32Encode } from './totp.js';
 describe('first-run setup', { skip: !databaseUrl }, () => {
   let instance: Instance;
   before(async () => {

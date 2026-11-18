@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AuditPageSchema, AuditQuerySchema, ChainVerificationSchema } from './audit.js';
 import {
   LoginRequestSchema,
   PendingSessionSchema,
@@ -11,6 +12,7 @@ import {
   TotpEnrollmentSchema,
 } from './auth.js';
 import { ApiErrorSchema } from './errors.js';
+import { type Permission, RoleCatalogSchema } from './roles.js';
 import { HealthResponseSchema, ReadyResponseSchema, VersionResponseSchema } from './system.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
@@ -40,6 +42,11 @@ export interface RouteDef {
   readonly summary: string;
   readonly description?: string;
   readonly auth: RouteAuth;
+  /**
+   * What the caller's role must allow (ADR 0015). Required for a signed-in route, except the few that every
+   * signed-in user may call (`ROUTES_OPEN_TO_ANY_SESSION`).
+   */
+  readonly permission?: Permission;
   readonly request?: {
     readonly params?: z.ZodObject<Record<string, z.ZodType>>;
     readonly query?: z.ZodObject<Record<string, z.ZodType>>;
@@ -204,6 +211,48 @@ export const meRoute = defineRoute({
   responses: { 200: { description: 'The current session.', schema: SessionInfoSchema } },
 });
 
+export const rolesRoute = defineRoute({
+  operationId: 'getRoles',
+  method: 'get',
+  path: '/roles',
+  tags: ['roles'],
+  summary: 'The roles and the permission catalogue',
+  description:
+    'The built-in roles with the permissions each holds, and every permission with its meaning.',
+  auth: 'session',
+  permission: 'roles:read',
+  responses: { 200: { description: 'The catalogue.', schema: RoleCatalogSchema } },
+});
+
+export const listAuditRoute = defineRoute({
+  operationId: 'listAudit',
+  method: 'get',
+  path: '/audit',
+  tags: ['audit'],
+  summary: 'Read the audit log',
+  description: 'Newest first. Page back with `cursor`. Filters combine.',
+  auth: 'session',
+  permission: 'audit:read',
+  request: { query: AuditQuerySchema },
+  responses: { 200: { description: 'One page of events.', schema: AuditPageSchema } },
+});
+
+export const verifyAuditChainRoute = defineRoute({
+  operationId: 'verifyAuditChain',
+  method: 'post',
+  path: '/audit/verify-chain',
+  tags: ['audit'],
+  summary: 'Verify the integrity of the audit chain',
+  description:
+    'Reads the whole log and checks the numbering, every link and every hash. The run is itself recorded. A broken chain is a normal answer (`ok: false`), not an error.',
+  auth: 'session',
+  permission: 'audit:verify',
+  responses: { 200: { description: 'The result.', schema: ChainVerificationSchema } },
+});
+
+/** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
+export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe'];
+
 /** Every route of the public API. The server binds its handlers to these definitions. */
 export const routes = [
   healthRoute,
@@ -218,6 +267,9 @@ export const routes = [
   totpConfirmRoute,
   logoutRoute,
   meRoute,
+  rolesRoute,
+  listAuditRoute,
+  verifyAuditChainRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */
