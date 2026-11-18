@@ -21,18 +21,32 @@ export const users = {
     disabled: 'Disabled',
   },
 
+  /** The counters above the list. The API pages the list, so they count what has been loaded so far. */
+  metrics: {
+    total: 'Total',
+    loadedSoFar: 'Loaded so far',
+  },
+
+  /** The title of a toast after something worked; the text says what. */
+  toast: {
+    success: 'Success',
+  },
+
   table: {
     state: 'State',
     lastSignIn: 'Last sign-in',
     you: 'you',
     invitationUntil: 'invitation until {{when}}',
+    actions: 'Actions',
     actionsFor: 'Actions for {{username}}',
+    empty: 'No users.',
     loadMore: 'Load more',
     loadFailed: 'Your role may not see the users.',
   },
 
   menu: {
     change: 'Change',
+    dangerZone: 'Danger zone',
     resetCredentials: 'Reset credentials',
     deleteUser: 'Delete user',
   },
@@ -53,6 +67,7 @@ export const users = {
     roleSelf: 'You cannot change your own role.',
     statusSelf: 'You cannot disable yourself.',
     statusHint: 'A disabled user is signed out at once and cannot sign in.',
+    done: '{{username}} was updated.',
     forbidden: 'Your role may not change users.',
   },
 

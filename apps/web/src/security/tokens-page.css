@@ -1,0 +1,235 @@
+/*
+ * The API-token list and dialogs of the Tokens page.
+ *
+ * Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only):
+ * src/widgets/remnawave-settings/api-tokens-card/api-token-card.module.css. Changes: the CSS module became `sw-*`
+ * classes; the one-time notice is `Callout` of the UI package; the token table hides the expiry column with the
+ * same media query that changes its grid (the panel hides it with `visibleFrom="sm"`, 40em, while its grid changes at
+ * 48em, which leaves a broken row between the two); the endpoint rows of the panel are permission rows here.
+ */
+
+/* ---- The token list: a grid of rows in a bordered box ------------------------------------------------------------ */
+
+.sw-token-table {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sw-token-header-row,
+.sw-token-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 44px;
+  gap: 16px;
+  align-items: center;
+  padding: 11px 16px;
+}
+
+@media (max-width: 48em) {
+  .sw-token-header-row,
+  .sw-token-row {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 44px;
+    gap: 10px;
+  }
+
+  .sw-token-expires {
+    display: none;
+  }
+}
+
+.sw-token-header-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sw-token-col-label {
+  font-size: 11px;
+  font-family: var(--mantine-font-family-monospace);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dark-2);
+}
+
+.sw-token-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background-color 120ms ease;
+}
+
+.sw-token-row:last-child {
+  border-bottom: none;
+}
+
+.sw-token-row:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.sw-token-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ---- Permission rows: one per resource, with Read and Actions pills and a list that opens ------------------------- */
+
+.sw-perm-row {
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.sw-perm-header {
+  padding: 7px 9px;
+}
+
+.sw-perm-trigger {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.sw-perm-trigger:focus-visible,
+.sw-kind-pill:focus-visible {
+  outline: 2px solid var(--mantine-color-cyan-outline);
+  outline-offset: 2px;
+}
+
+.sw-perm-chevron {
+  flex: none;
+  color: var(--mantine-color-dark-2);
+  transition: transform 150ms ease;
+}
+
+.sw-perm-chevron--open {
+  transform: rotate(90deg);
+}
+
+.sw-perm-name {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  font-family: var(--mantine-font-family-monospace);
+  color: var(--mantine-color-gray-2);
+}
+
+.sw-perm-list {
+  padding: 2px 4px 4px;
+  border-top: 1px solid var(--mantine-color-dark-5);
+}
+
+.sw-perm-item {
+  padding: 5px 8px;
+  border-radius: var(--mantine-radius-sm);
+  transition: background-color 120ms ease;
+}
+
+.sw-perm-item:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.sw-perm-item[data-checked] {
+  background-color: var(--mantine-color-cyan-light);
+}
+
+.sw-perm-id {
+  font-size: 12.5px;
+  font-family: var(--mantine-font-family-monospace);
+  color: var(--mantine-color-gray-3);
+}
+
+.sw-kind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-dark-4);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--mantine-color-dark-1);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--mantine-font-family-monospace);
+  white-space: nowrap;
+  user-select: none;
+  transition: all 120ms ease;
+}
+
+.sw-kind-pill[data-readonly] {
+  cursor: default;
+}
+
+.sw-kind-pill--active {
+  background: rgba(45, 212, 168, 0.05);
+  border-color: var(--mantine-color-teal-9);
+  color: var(--mantine-color-teal-4);
+}
+
+/* ---- The facts of a token, in a bordered grid (the panel's `.metaGrid`) ------------------------------------------ */
+
+.sw-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sw-meta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sw-meta-cell:nth-child(3n) {
+  border-right: none;
+}
+
+.sw-meta-cell:nth-last-child(-n + 3) {
+  border-bottom: none;
+}
+
+@media (max-width: 48em) {
+  .sw-meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sw-meta-cell {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .sw-meta-cell:nth-last-child(-n + 3) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .sw-meta-cell:last-child {
+    border-bottom: none;
+  }
+}
+
+.sw-meta-value {
+  font-size: var(--mantine-font-size-sm);
+}
+
+.sw-meta-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sw-meta-id-text {
+  font-size: 12.5px;
+  font-family: var(--mantine-font-family-monospace);
+  color: var(--mantine-color-gray-3);
+}
