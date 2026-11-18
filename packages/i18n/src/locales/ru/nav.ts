@@ -28,6 +28,7 @@ export const nav = {
   users: 'Пользователи',
   roles: 'Роли',
   sessions: 'Сессии',
+  tokens: 'Токены',
   audit: 'Аудит',
 
   settings: 'Настройки',
