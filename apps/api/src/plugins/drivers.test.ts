@@ -226,6 +226,17 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
       .call('notify-telegram', 'NotificationChannel', method, params);
   const events = async (action: string) =>
     (await auditEvents(instance)).filter((e) => e.action === action);
+  /** A note is written in the background, so it may land a moment after the call that caused it. */
+  const settled = async (action: string, count = 1) => {
+    for (let i = 0; i < 60; i++) {
+      const found = await events(action);
+      if (found.length >= count) {
+        return found;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return events(action);
+  };
 
   before(async () => {
     instance = await start(
@@ -288,7 +299,7 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
   });
 
   it('sends a message: the request goes to Telegram with the token in the path and the text in a JSON body', async () => {
-    const result = await call('send', { text: 'Node NL-01 is back <b>up</b>', silent: true });
+    const result = await call('send', { text: 'Plugin check <b>passed</b>', silent: true });
     assert.deepEqual(result, { messageId: 9 });
     const request = found(sent.at(-1), 'the request');
     assert.equal(request.host, 'api.telegram.org');
@@ -298,10 +309,10 @@ describe('the Telegram plugin that ships with Swellwright', { skip: !databaseUrl
     assert.equal(request.headers['content-type'], 'application/json');
     assert.deepEqual(JSON.parse(request.body ?? ''), {
       chat_id: '-100123',
-      text: 'Node NL-01 is back <b>up</b>',
+      text: 'Plugin check <b>passed</b>',
       disable_notification: true,
     });
-    const used = await events('plugin.secret.used');
+    const used = await settled('plugin.secret.used');
     assert.equal(used.length, 1);
     assert.equal(JSON.stringify(await auditEvents(instance)).includes('ABC-def'), false);
   });

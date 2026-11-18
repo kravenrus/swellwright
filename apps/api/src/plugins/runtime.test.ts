@@ -227,7 +227,10 @@ describe('running approved plugins', { skip: !databaseUrl }, () => {
     const failed = await view('dns-example');
     assert.equal(failed.runtime.state, 'failed');
     assert.match(failed.runtime.lastError ?? '', /took longer than/u);
-    const note = found((await events('plugin.failed')).at(-1), 'the record of the failure');
+    const note = await eventually(
+      async () => (await events('plugin.failed')).at(-1),
+      'the record of the failure',
+    );
     assert.equal(note.outcome, 'failure');
     assert.deepEqual(note.details, { reason: 'timeout', method: 'loop' });
     await eventually(

@@ -86,6 +86,17 @@ describe('the settings and secrets of a plugin', { skip: !databaseUrl }, () => {
   };
   const events = async (action: string) =>
     (await auditEvents(instance)).filter((e) => e.action === action);
+  /** A note is written in the background, so it may land a moment after the call that caused it. */
+  const settled = async (action: string, count = 1) => {
+    for (let i = 0; i < 60; i++) {
+      const found = await events(action);
+      if (found.length >= count) {
+        return found;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return events(action);
+  };
   const put = (id: string, values: Record<string, unknown>) =>
     owner.call('PUT', `/plugins/${id}/config`, { values });
   const call = (id: string, method: string, params: unknown = null) =>
@@ -261,7 +272,7 @@ describe('the settings and secrets of a plugin', { skip: !databaseUrl }, () => {
   it('hands the plugin the secret bound to a setting, only while the vault is open, and records its use once', async () => {
     assert.equal(await call('dns-settings', 'secret', { field: 'credentials' }), SECRET_VALUE);
     assert.equal(await call('dns-settings', 'secret', { field: 'credentials' }), SECRET_VALUE);
-    const used = await events('plugin.secret.used');
+    const used = await settled('plugin.secret.used');
     assert.equal(used.length, 1, 'once per window, however often it is asked for');
     const record = found(used[0], 'the record');
     assert.equal(record.actor, null);
