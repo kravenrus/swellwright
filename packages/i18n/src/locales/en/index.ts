@@ -7,6 +7,7 @@ import { overview } from './overview.js';
 import { plugins } from './plugins.js';
 import { roles } from './roles.js';
 import { sessions } from './sessions.js';
+import { shell } from './shell.js';
 import { tokens } from './tokens.js';
 import { users } from './users.js';
 import { vault } from './vault.js';
@@ -15,6 +16,7 @@ import { vault } from './vault.js';
 export const en = {
   common,
   nav,
+  shell,
   errors,
   auth,
   users,

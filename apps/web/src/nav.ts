@@ -9,190 +9,267 @@ import {
   IconDevices,
   IconHexagon,
   IconKey,
-  IconLayoutDashboard,
   IconListCheck,
   IconPlayerPlay,
   IconPuzzle,
   IconRadar2,
   IconReportAnalytics,
   IconRoute,
-  IconServer,
   IconSettings,
   IconShieldLock,
   IconUserShield,
-  IconUsers,
   IconWorldWww,
 } from '@tabler/icons-react';
 import type { TFunction } from 'i18next';
+import type { ElementType } from 'react';
+import { HiServer } from 'react-icons/hi';
+import { PiUsers } from 'react-icons/pi';
+import { TbStar } from 'react-icons/tb';
 
 import type { Permission } from '@swellwright/contracts';
 import type { Namespace } from '@swellwright/i18n';
-import type { NavLink, NavSection } from '@swellwright/ui';
 
-/** A page and the permission that opens it. Without one, every signed-in user sees it. */
-type GatedLink = NavLink & { permission?: Permission };
-type GatedSection = Omit<NavSection, 'links'> & {
-  permission?: Permission;
-  links?: readonly GatedLink[];
-};
+import { ROUTES } from './routes.js';
+
+/** A page of the navigation. A page that is planned but not built yet is shown and disabled. */
+export interface NavItem {
+  id: string;
+  name: string;
+  href: string;
+  icon: ElementType;
+  planned?: boolean;
+}
+
+/** A tab of the header: a single page, or a menu of pages (as the sections of the panel's menu). */
+export interface NavSection {
+  id: string;
+  header: string;
+  icon: ElementType;
+  items: readonly NavItem[];
+}
+
+type GatedItem = NavItem & { permission?: Permission };
+interface GatedSection extends Omit<NavSection, 'items'> {
+  items: readonly GatedItem[];
+}
 
 /**
- * The navigation planned in docs/en/design/07-ui-ux.md. Pages that are not built yet are shown and disabled,
- * so the structure is visible from the first slice. A page the role cannot open is not shown at all.
- * The labels are in the language of the console, so the list is made for the current `t`.
+ * The navigation planned in docs/en/design/07-ui-ux.md, in the form of the panel's menu sections: a section with
+ * one page is a tab that links to it, a section with several is a tab with a menu. Pages that are not built yet are
+ * shown and disabled, so the structure is visible from the first slice. A page the role cannot open is not shown at
+ * all. The labels are in the language of the console, so the list is made for the current `t`.
  */
 const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
-  { id: 'overview', label: t('nav:overview'), icon: IconLayoutDashboard },
+  {
+    id: 'overview',
+    header: t('nav:overview'),
+    icon: TbStar,
+    items: [{ id: 'overview', name: t('nav:overview'), href: ROUTES.DASHBOARD.HOME, icon: TbStar }],
+  },
   {
     id: 'fleet',
-    label: t('nav:fleet'),
-    icon: IconServer,
-    links: [
+    header: t('nav:fleet'),
+    icon: HiServer,
+    items: [
       {
         id: 'servers',
-        label: t('nav:servers'),
-        icon: IconServer,
-        disabled: true,
+        name: t('nav:servers'),
+        href: ROUTES.DASHBOARD.FLEET.SERVERS,
+        icon: HiServer,
+        planned: true,
         permission: 'servers:read',
       },
       {
         id: 'nodes',
-        label: t('nav:nodes'),
+        name: t('nav:nodes'),
+        href: ROUTES.DASHBOARD.FLEET.NODES,
         icon: IconHexagon,
-        disabled: true,
+        planned: true,
         permission: 'servers:read',
       },
       {
         id: 'chains',
-        label: t('nav:chains'),
+        name: t('nav:chains'),
+        href: ROUTES.DASHBOARD.FLEET.CHAINS,
         icon: IconCirclesRelation,
-        disabled: true,
+        planned: true,
         permission: 'servers:read',
       },
       {
         id: 'dns',
-        label: t('nav:dns'),
+        name: t('nav:dns'),
+        href: ROUTES.DASHBOARD.FLEET.DNS,
         icon: IconWorldWww,
-        disabled: true,
+        planned: true,
         permission: 'servers:read',
       },
       {
         id: 'certificates',
-        label: t('nav:certificates'),
+        name: t('nav:certificates'),
+        href: ROUTES.DASHBOARD.FLEET.CERTIFICATES,
         icon: IconCertificate,
-        disabled: true,
+        planned: true,
         permission: 'servers:read',
       },
     ],
   },
   {
     id: 'operations',
-    label: t('nav:operations'),
+    header: t('nav:operations'),
     icon: IconListCheck,
-    links: [
+    items: [
       {
         id: 'runs',
-        label: t('nav:runs'),
+        name: t('nav:runs'),
+        href: ROUTES.DASHBOARD.OPERATIONS.RUNS,
         icon: IconPlayerPlay,
-        disabled: true,
+        planned: true,
         permission: 'runs:read',
       },
       {
         id: 'scenarios',
-        label: t('nav:scenarios'),
+        name: t('nav:scenarios'),
+        href: ROUTES.DASHBOARD.OPERATIONS.SCENARIOS,
         icon: IconRoute,
-        disabled: true,
+        planned: true,
         permission: 'runs:read',
       },
       {
         id: 'schedules',
-        label: t('nav:schedules'),
+        name: t('nav:schedules'),
+        href: ROUTES.DASHBOARD.OPERATIONS.SCHEDULES,
         icon: IconCalendarTime,
-        disabled: true,
+        planned: true,
         permission: 'runs:read',
       },
     ],
   },
   {
     id: 'monitoring',
-    label: t('nav:monitoring'),
+    header: t('nav:monitoring'),
     icon: IconRadar2,
-    links: [
-      { id: 'probes', label: t('nav:probes'), icon: IconRadar2, disabled: true },
-      { id: 'alerts', label: t('nav:alerts'), icon: IconBell, disabled: true },
-      { id: 'reports', label: t('nav:reports'), icon: IconReportAnalytics, disabled: true },
+    items: [
+      {
+        id: 'probes',
+        name: t('nav:probes'),
+        href: ROUTES.DASHBOARD.MONITORING.PROBES,
+        icon: IconRadar2,
+        planned: true,
+      },
+      {
+        id: 'alerts',
+        name: t('nav:alerts'),
+        href: ROUTES.DASHBOARD.MONITORING.ALERTS,
+        icon: IconBell,
+        planned: true,
+      },
+      {
+        id: 'reports',
+        name: t('nav:reports'),
+        href: ROUTES.DASHBOARD.MONITORING.REPORTS,
+        icon: IconReportAnalytics,
+        planned: true,
+      },
     ],
   },
   {
     id: 'panel',
-    label: t('nav:panel'),
+    header: t('nav:panel'),
     icon: IconHexagon,
-    links: [
+    items: [
       {
         id: 'profiles',
-        label: t('nav:profiles'),
+        name: t('nav:profiles'),
+        href: ROUTES.DASHBOARD.PANEL.PROFILES,
         icon: IconHexagon,
-        disabled: true,
+        planned: true,
         permission: 'panel:read',
       },
       {
         id: 'api-console',
-        label: t('nav:apiConsole'),
+        name: t('nav:apiConsole'),
+        href: ROUTES.DASHBOARD.PANEL.API_CONSOLE,
         icon: IconApi,
-        disabled: true,
+        planned: true,
         permission: 'panel:read',
       },
     ],
   },
   {
     id: 'security',
-    label: t('nav:security'),
+    header: t('nav:security'),
     icon: IconShieldLock,
-    links: [
-      { id: 'vault', label: t('nav:vault'), icon: IconKey, permission: 'vault:read' },
-      { id: 'users', label: t('nav:users'), icon: IconUsers, permission: 'users:read' },
-      { id: 'roles', label: t('nav:roles'), icon: IconUserShield, permission: 'roles:read' },
-      { id: 'sessions', label: t('nav:sessions'), icon: IconDevices },
-      { id: 'tokens', label: t('nav:tokens'), icon: IconApiApp },
-      { id: 'audit', label: t('nav:audit'), icon: IconBook, permission: 'audit:read' },
+    items: [
+      {
+        id: 'vault',
+        name: t('nav:vault'),
+        href: ROUTES.DASHBOARD.SECURITY.VAULT,
+        icon: IconKey,
+        permission: 'vault:read',
+      },
+      {
+        id: 'users',
+        name: t('nav:users'),
+        href: ROUTES.DASHBOARD.SECURITY.USERS,
+        icon: PiUsers,
+        permission: 'users:read',
+      },
+      {
+        id: 'roles',
+        name: t('nav:roles'),
+        href: ROUTES.DASHBOARD.SECURITY.ROLES,
+        icon: IconUserShield,
+        permission: 'roles:read',
+      },
+      {
+        id: 'sessions',
+        name: t('nav:sessions'),
+        href: ROUTES.DASHBOARD.SECURITY.SESSIONS,
+        icon: IconDevices,
+      },
+      {
+        id: 'tokens',
+        name: t('nav:tokens'),
+        href: ROUTES.DASHBOARD.SECURITY.TOKENS,
+        icon: IconApiApp,
+      },
+      {
+        id: 'audit',
+        name: t('nav:audit'),
+        href: ROUTES.DASHBOARD.SECURITY.AUDIT,
+        icon: IconBook,
+        permission: 'audit:read',
+      },
     ],
   },
   {
     id: 'settings',
-    label: t('nav:settings'),
+    header: t('nav:settings'),
     icon: IconSettings,
-    links: [
-      { id: 'plugins', label: t('nav:plugins'), icon: IconPuzzle, permission: 'plugins:read' },
+    items: [
+      {
+        id: 'plugins',
+        name: t('nav:plugins'),
+        href: ROUTES.DASHBOARD.SETTINGS.PLUGINS,
+        icon: IconPuzzle,
+        permission: 'plugins:read',
+      },
     ],
   },
 ];
-
-const pageOf = (link: GatedLink): NavLink => ({
-  id: link.id,
-  label: link.label,
-  icon: link.icon,
-  ...(link.disabled ? { disabled: true } : {}),
-});
 
 /** The navigation for a user: only what their permissions open. A section left without pages is dropped. */
 export function navFor(
   permissions: readonly Permission[],
   t: TFunction<Namespace[]>,
 ): NavSection[] {
-  const allowed = (permission: Permission | undefined): boolean =>
-    permission === undefined || permissions.includes(permission);
   const sections: NavSection[] = [];
-  for (const { permission, links, ...section } of navigation(t)) {
-    if (!allowed(permission)) {
-      continue;
-    }
-    if (!links) {
-      sections.push(section);
-      continue;
-    }
-    const visible = links.filter((link) => allowed(link.permission));
-    if (visible.length > 0) {
-      sections.push({ ...section, links: visible.map(pageOf) });
+  for (const section of navigation(t)) {
+    const items = section.items
+      .filter((item) => item.permission === undefined || permissions.includes(item.permission))
+      .map(({ permission: _permission, ...item }) => item);
+    if (items.length > 0) {
+      sections.push({ ...section, items });
     }
   }
   return sections;
