@@ -1,19 +1,10 @@
-import {
-  Alert,
-  Anchor,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  ThemeIcon,
-} from '@mantine/core';
+import { SimpleGrid, Stack, Text } from '@mantine/core';
 import {
   IconApi,
+  IconBook,
   IconDatabase,
+  IconDatabaseOff,
+  IconHeartbeat,
   IconLayoutDashboard,
   IconRefresh,
   IconServer,
@@ -21,35 +12,21 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { PageHeader, StatusBadge, StatusText } from '@swellwright/ui';
+import {
+  EmptyPageLayout,
+  ErrorMessageBlock,
+  HeaderAction,
+  HeaderActions,
+  MetricCard,
+  OverlayHeader,
+  PageHeader,
+  SectionCard,
+  StatRow,
+  StatusBadge,
+} from '@swellwright/ui';
 
 import { ApiUnreachableError, loadSystemStatus } from './api.js';
-
-function StatCard({
-  icon,
-  label,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card padding="md">
-      <Group gap="md" wrap="nowrap">
-        <ThemeIcon size={40} variant="soft">
-          {icon}
-        </ThemeIcon>
-        <Stack gap={2}>
-          <Text c="dimmed" fw={500} fz="sm">
-            {label}
-          </Text>
-          {children}
-        </Stack>
-      </Group>
-    </Card>
-  );
-}
+import { QueryErrorCard } from './security/query-error.js';
 
 export function Overview() {
   const { t } = useTranslation(['overview', 'common']);
@@ -62,17 +39,24 @@ export function Overview() {
   const header = (
     <PageHeader
       actions={
-        <Button
-          leftSection={<IconRefresh size={16} />}
-          loading={isFetching}
-          onClick={() => void refetch()}
-          variant="default"
-        >
-          {t('common:refresh')}
-        </Button>
+        <HeaderActions>
+          <HeaderAction
+            color="lime"
+            href="/api/v1/openapi.json"
+            icon={IconBook}
+            label={t('checks.apiDescription')}
+            target="_blank"
+          />
+          <HeaderAction
+            icon={IconRefresh}
+            label={t('common:refresh')}
+            loading={isFetching}
+            onClick={() => void refetch()}
+          />
+        </HeaderActions>
       }
       description={t('description')}
-      icon={<IconLayoutDashboard size={22} />}
+      icon={<IconLayoutDashboard size={24} />}
       title={t('title')}
     />
   );
@@ -81,10 +65,22 @@ export function Overview() {
     return (
       <>
         {header}
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-          <Skeleton h={92} radius="md" />
-          <Skeleton h={92} radius="md" />
-          <Skeleton h={92} radius="md" />
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs">
+          <MetricCard icon={IconApi} iconColor="teal" isLoading title={t('stats.api')} value="" />
+          <MetricCard
+            icon={IconDatabase}
+            iconColor="teal"
+            isLoading
+            title={t('stats.dependencies')}
+            value=""
+          />
+          <MetricCard
+            icon={IconServer}
+            iconColor="cyan"
+            isLoading
+            title={t('stats.version')}
+            value=""
+          />
         </SimpleGrid>
       </>
     );
@@ -95,100 +91,96 @@ export function Overview() {
     return (
       <>
         {header}
-        <Alert
-          color="red"
-          icon={<IconApi size={18} />}
+        <QueryErrorCard
+          icon={IconApi}
+          message={unreachable ? t('error.unreachableText') : t('error.unexpectedText')}
+          onRetry={() => void refetch()}
           title={unreachable ? t('error.unreachableTitle') : t('error.unexpectedTitle')}
-          variant="light"
-        >
-          <Stack gap="xs">
-            <Text fz="sm">
-              {unreachable ? t('error.unreachableText') : t('error.unexpectedText')}
-            </Text>
-            <Group>
-              <Button onClick={() => void refetch()} size="xs" variant="default">
-                {t('common:retry')}
-              </Button>
-            </Group>
-          </Stack>
-        </Alert>
+        />
       </>
     );
   }
 
   const { ready, version } = data;
   const checks = Object.entries(ready.checks);
+  const up = checks.filter(([, check]) => check.status === 'up').length;
 
   return (
     <>
       {header}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-        <StatCard icon={<IconApi size={20} />} label={t('stats.api')}>
-          <StatusBadge kind="ok">{t('stats.alive')}</StatusBadge>
-        </StatCard>
-        <StatCard icon={<IconDatabase size={20} />} label={t('stats.dependencies')}>
-          {ready.status === 'ready' ? (
-            <StatusBadge kind="ok">{t('stats.ready')}</StatusBadge>
-          ) : (
-            <StatusBadge kind="err">{t('stats.notReady')}</StatusBadge>
-          )}
-        </StatCard>
-        <StatCard icon={<IconServer size={20} />} label={t('stats.version')}>
-          <Text fw={600} fz="lg">
-            {version.version}
-            {version.commit ? (
-              <Text c="dimmed" component="span" ff="monospace" fz="xs" ml="xs">
-                {version.commit.slice(0, 7)}
-              </Text>
-            ) : null}
-          </Text>
-        </StatCard>
-      </SimpleGrid>
+      <Stack gap="md">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs">
+          <MetricCard
+            icon={IconApi}
+            iconColor="teal"
+            title={t('stats.api')}
+            value={t('stats.alive')}
+          />
+          <MetricCard
+            icon={IconDatabase}
+            iconColor={ready.status === 'ready' ? 'teal' : 'red'}
+            title={t('stats.dependencies')}
+            value={ready.status === 'ready' ? t('stats.ready') : t('stats.notReady')}
+            {...(checks.length === 0
+              ? {}
+              : { subtitle: t('stats.dependenciesSummary', { up, total: checks.length }) })}
+          />
+          <MetricCard
+            icon={IconServer}
+            iconColor="cyan"
+            title={t('stats.version')}
+            value={version.version}
+            {...(version.commit ? { subtitle: version.commit.slice(0, 7) } : {})}
+          />
+        </SimpleGrid>
 
-      <Card mt="md" padding={0}>
-        <Group justify="space-between" p="md">
-          <Text fw={600}>{t('checks.title')}</Text>
-          <Anchor fz="sm" href="/api/v1/openapi.json" rel="noreferrer" target="_blank">
-            {t('checks.apiDescription')}
-          </Anchor>
-        </Group>
         {checks.length === 0 ? (
-          <Text c="dimmed" fz="sm" px="md" pb="md">
-            {t('checks.none')}
-          </Text>
+          <EmptyPageLayout
+            description={t('checks.none')}
+            icon={<IconDatabaseOff size="3rem" />}
+            title={t('checks.noneTitle')}
+          />
         ) : (
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th pl="md">{t('checks.dependency')}</Table.Th>
-                <Table.Th>{t('checks.state')}</Table.Th>
-                <Table.Th ta="right">{t('checks.latency')}</Table.Th>
-                <Table.Th pr="md">{t('checks.reason')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {checks.map(([name, check]) => (
-                <Table.Tr key={name}>
-                  <Table.Td fw={500} pl="md">
-                    {name}
-                  </Table.Td>
-                  <Table.Td>
-                    <StatusText kind={check.status === 'up' ? 'ok' : 'err'}>
-                      {check.status === 'up' ? t('checks.up') : t('checks.down')}
-                    </StatusText>
-                  </Table.Td>
-                  <Table.Td ta="right">
-                    {t('checks.latencyValue', { ms: check.latencyMs })}
-                  </Table.Td>
-                  <Table.Td c="dimmed" pr="md">
-                    {check.error ?? ''}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+          <SectionCard.Root>
+            <SectionCard.Section>
+              <OverlayHeader
+                icon={IconHeartbeat}
+                iconColor="cyan"
+                title={t('checks.title')}
+                titleOrder={5}
+              />
+            </SectionCard.Section>
+            <SectionCard.Section>
+              <Stack gap="xs">
+                {checks.map(([name, check]) => (
+                  <Stack gap="xs" key={name}>
+                    <StatRow
+                      label={name}
+                      trailing={
+                        <>
+                          <Text c="dimmed" ff="monospace" size="xs">
+                            {t('checks.latencyValue', { ms: check.latencyMs })}
+                          </Text>
+                          <StatusBadge kind={check.status === 'up' ? 'ok' : 'err'}>
+                            {check.status === 'up' ? t('checks.up') : t('checks.down')}
+                          </StatusBadge>
+                        </>
+                      }
+                    />
+                    {check.error ? (
+                      <ErrorMessageBlock
+                        copiedLabel={t('common:copied')}
+                        copyLabel={t('common:copy')}
+                        message={check.error}
+                      />
+                    ) : null}
+                  </Stack>
+                ))}
+              </Stack>
+            </SectionCard.Section>
+          </SectionCard.Root>
         )}
-      </Card>
+      </Stack>
     </>
   );
 }

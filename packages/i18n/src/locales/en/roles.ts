@@ -11,6 +11,14 @@ export const roles = {
     description: 'Built-in roles and the permissions each one holds',
   },
 
+  matrix: {
+    title: 'Roles and permissions',
+    subtitle: 'Which role holds which permission',
+  },
+  descriptions: {
+    title: 'What each role is for',
+  },
+
   permissionColumn: 'Permission',
   you: 'you',
   held: 'The role {{role}} has the permission {{permission}}',
