@@ -188,6 +188,11 @@ export function ListTable<T>({
         classNames={{ root: 'sw-list-table-scroll' }}
         onScrollPositionChange={handleScroll}
         viewportRef={viewportRef}
+        // A maximum height alone does not make the viewport scroll (its `height: 100%` has no definite height to
+        // resolve against), so the limit is repeated on the scroll area and handed down to the viewport.
+        {...(maxHeight === undefined || height !== undefined
+          ? {}
+          : { style: { maxHeight }, viewportProps: { style: { maxHeight: 'inherit' } } })}
       >
         <Table
           className="sw-list-table-table"

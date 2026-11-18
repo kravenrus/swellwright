@@ -22,6 +22,7 @@ export * from './section-card.js';
 export * from './settings-card.js';
 export * from './shimmer-skeleton.js';
 export * from './single-row-overflow-list.js';
+export * from './stat-row.js';
 export * from './status.js';
 export * from './tag-filter-bar.js';
 export * from './theme.js';
