@@ -27,6 +27,7 @@ export const nav = {
   vault: 'Vault',
   users: 'Users',
   roles: 'Roles',
+  sessions: 'Sessions',
   audit: 'Audit',
 
   settings: 'Settings',

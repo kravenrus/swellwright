@@ -54,5 +54,11 @@ export const roles = {
     rolesRead: 'See the roles and the permission catalogue.',
     auditRead: 'Read the audit log.',
     auditVerify: 'Verify the integrity of the audit chain.',
+    auditExport: 'Export the audit log and make checkpoints of it.',
+    sessionsRead: 'See the signed-in sessions of every user.',
+    sessionsRevoke: 'End the sessions of other users.',
+    tokensCreate: 'Create API tokens in your own name.',
+    tokensRead: 'See the API tokens of every user, never their values.',
+    tokensRevoke: 'Revoke the API tokens of other users.',
   },
 } as const;
