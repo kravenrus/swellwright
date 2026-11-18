@@ -1,4 +1,5 @@
 import { TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 
 export const CODE_LENGTH = 6;
 
@@ -16,9 +17,10 @@ export function CodeInput({
   /** A request is in flight. The field stays focused (a disabled one would lose focus) but takes no input. */
   busy?: boolean;
 }) {
+  const { t } = useTranslation('auth');
   return (
     <TextInput
-      aria-label="Six-digit code"
+      aria-label={t('totp.codeInputLabel')}
       autoComplete="one-time-code"
       autoFocus
       inputMode="numeric"

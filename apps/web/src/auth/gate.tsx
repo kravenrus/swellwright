@@ -2,6 +2,7 @@ import { Alert, Button, Group, Loader, Stack, Text } from '@mantine/core';
 import { IconApi } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { PendingSession, SessionInfo } from '@swellwright/contracts';
 
@@ -32,6 +33,7 @@ export function AuthGate({
 }: {
   children: (session: SessionInfo, signOut: () => Promise<void>) => ReactNode;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ME_KEY, queryFn: getMe, retry: false });
   const signedOut = me.data === null;
@@ -69,10 +71,7 @@ export function AuthGate({
 
   if (recoveryCodes) {
     return (
-      <AuthLayout
-        description="Your authenticator works. Save the recovery codes before you go on."
-        title="Recovery codes"
-      >
+      <AuthLayout description={t('recoveryCodes.description')} title={t('recoveryCodes.title')}>
         <RecoveryCodes
           codes={recoveryCodes}
           onDone={() => {
@@ -92,13 +91,11 @@ export function AuthGate({
   if (me.isError) {
     const unreachable = me.error instanceof ApiUnreachableError;
     return (
-      <AuthLayout title={unreachable ? 'The API does not answer' : 'Something is wrong'}>
+      <AuthLayout title={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}>
         <Alert color="red" icon={<IconApi size={18} />} variant="light">
           <Stack gap="xs">
             <Text fz="sm">
-              {unreachable
-                ? 'Start the API (pnpm --filter @swellwright/api start) or check the reverse proxy, then try again.'
-                : 'The API answered with something unexpected. The API and the console are probably from different versions.'}
+              {unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
             </Text>
             <Group>
               <Button
@@ -108,7 +105,7 @@ export function AuthGate({
                 size="xs"
                 variant="default"
               >
-                Try again
+                {t('common:retry')}
               </Button>
             </Group>
           </Stack>
@@ -131,13 +128,9 @@ export function AuthGate({
   if (setup.isError) {
     const noDatabase = setup.error instanceof ApiRequestError && setup.error.code === 'not_ready';
     return (
-      <AuthLayout title={noDatabase ? 'No database yet' : 'The API does not answer'}>
+      <AuthLayout title={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}>
         <Alert color="red" icon={<IconApi size={18} />} variant="light">
-          <Text fz="sm">
-            {noDatabase
-              ? 'The server is running without a database, so nobody can sign in yet. Set SW_DATABASE_URL, apply the migrations and restart it.'
-              : 'Check that the server is running, then reload this page.'}
-          </Text>
+          <Text fz="sm">{noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}</Text>
         </Alert>
       </AuthLayout>
     );
@@ -147,10 +140,7 @@ export function AuthGate({
   switch (current) {
     case 'invite':
       return (
-        <AuthLayout
-          description="Choose a password for your account. You will set up an authenticator next."
-          title="Accept the invitation"
-        >
+        <AuthLayout description={t('invitation.description')} title={t('invitation.title')}>
           <AcceptInvitationForm
             initialToken={invitation}
             onAccepted={() => {
@@ -164,10 +154,7 @@ export function AuthGate({
       );
     case 'setup':
       return (
-        <AuthLayout
-          description="No one owns this instance yet. Create the owner account, then set up an authenticator."
-          title="First-run setup"
-        >
+        <AuthLayout description={t('setup.description')} title={t('setup.title')}>
           <SetupForm
             onCreated={() => {
               setStep('enroll');
@@ -177,25 +164,19 @@ export function AuthGate({
       );
     case 'login':
       return (
-        <AuthLayout description="Sign in to the Swellwright console." title="Sign in">
+        <AuthLayout description={t('login.description')} title={t('login.title')}>
           <LoginForm onNext={next} />
         </AuthLayout>
       );
     case 'totp':
       return (
-        <AuthLayout
-          description="Enter the code from your authenticator app, or a recovery code."
-          title="Two-step verification"
-        >
+        <AuthLayout description={t('totp.description')} title={t('totp.title')}>
           <TotpForm onBack={backToPassword} onSignedIn={signedIn} />
         </AuthLayout>
       );
     case 'enroll':
       return (
-        <AuthLayout
-          description="Sign-in needs a second step. Set up an authenticator app now."
-          title="Set up two-step verification"
-        >
+        <AuthLayout description={t('enrollment.description')} title={t('enrollment.title')}>
           <EnrollmentStep
             onConfirmed={(result) => {
               setRecoveryCodes(result.recoveryCodes);

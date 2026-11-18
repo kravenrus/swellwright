@@ -27,10 +27,18 @@ export interface AppHeaderProps {
   onNavigate?: (id: string) => void;
   /** Controls on the right of the brand row. */
   controls?: ReactNode;
+  /** The accessible name of the navigation, in the language of the page. */
+  navLabel?: string;
 }
 
 /** The panel's compact layout: a brand row with controls and a navigation row with grouped sections. */
-export function AppHeader({ sections, activeId, onNavigate, controls }: AppHeaderProps) {
+export function AppHeader({
+  sections,
+  activeId,
+  onNavigate,
+  controls,
+  navLabel = 'Main',
+}: AppHeaderProps) {
   const go = (id: string) => () => {
     onNavigate?.(id);
   };
@@ -43,7 +51,7 @@ export function AppHeader({ sections, activeId, onNavigate, controls }: AppHeade
         </Group>
       </div>
       <div className="sw-nav-row">
-        <nav aria-label="Main" className="sw-nav">
+        <nav aria-label={navLabel} className="sw-nav">
           {sections.map((section) => {
             const Icon = section.icon;
             const active =

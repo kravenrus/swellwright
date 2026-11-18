@@ -19,6 +19,7 @@ import {
   IconServer,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { PageHeader, StatusBadge, StatusText } from '@swellwright/ui';
 
@@ -51,6 +52,7 @@ function StatCard({
 }
 
 export function Overview() {
+  const { t } = useTranslation(['overview', 'common']);
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: ['system', 'status'],
     queryFn: loadSystemStatus,
@@ -66,12 +68,12 @@ export function Overview() {
           onClick={() => void refetch()}
           variant="default"
         >
-          Refresh
+          {t('common:refresh')}
         </Button>
       }
-      description="Fleet health, runs and approvals at a glance"
+      description={t('description')}
       icon={<IconLayoutDashboard size={22} />}
-      title="Overview"
+      title={t('title')}
     />
   );
 
@@ -96,20 +98,16 @@ export function Overview() {
         <Alert
           color="red"
           icon={<IconApi size={18} />}
-          title={
-            unreachable ? 'The API does not answer' : 'The API answered with something unexpected'
-          }
+          title={unreachable ? t('error.unreachableTitle') : t('error.unexpectedTitle')}
           variant="light"
         >
           <Stack gap="xs">
             <Text fz="sm">
-              {unreachable
-                ? 'Start the API (pnpm --filter @swellwright/api start) or check the reverse proxy, then try again.'
-                : 'The response does not match the API contract. The API and the console are probably from different versions.'}
+              {unreachable ? t('error.unreachableText') : t('error.unexpectedText')}
             </Text>
             <Group>
               <Button onClick={() => void refetch()} size="xs" variant="default">
-                Try again
+                {t('common:retry')}
               </Button>
             </Group>
           </Stack>
@@ -125,17 +123,17 @@ export function Overview() {
     <>
       {header}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-        <StatCard icon={<IconApi size={20} />} label="API">
-          <StatusBadge kind="ok">Alive</StatusBadge>
+        <StatCard icon={<IconApi size={20} />} label={t('stats.api')}>
+          <StatusBadge kind="ok">{t('stats.alive')}</StatusBadge>
         </StatCard>
-        <StatCard icon={<IconDatabase size={20} />} label="Dependencies">
+        <StatCard icon={<IconDatabase size={20} />} label={t('stats.dependencies')}>
           {ready.status === 'ready' ? (
-            <StatusBadge kind="ok">Ready</StatusBadge>
+            <StatusBadge kind="ok">{t('stats.ready')}</StatusBadge>
           ) : (
-            <StatusBadge kind="err">Not ready</StatusBadge>
+            <StatusBadge kind="err">{t('stats.notReady')}</StatusBadge>
           )}
         </StatCard>
-        <StatCard icon={<IconServer size={20} />} label="Version">
+        <StatCard icon={<IconServer size={20} />} label={t('stats.version')}>
           <Text fw={600} fz="lg">
             {version.version}
             {version.commit ? (
@@ -149,24 +147,23 @@ export function Overview() {
 
       <Card mt="md" padding={0}>
         <Group justify="space-between" p="md">
-          <Text fw={600}>Dependency checks</Text>
+          <Text fw={600}>{t('checks.title')}</Text>
           <Anchor fz="sm" href="/api/v1/openapi.json" rel="noreferrer" target="_blank">
-            API description
+            {t('checks.apiDescription')}
           </Anchor>
         </Group>
         {checks.length === 0 ? (
           <Text c="dimmed" fz="sm" px="md" pb="md">
-            No dependencies are configured yet. Set SW_DATABASE_URL and SW_VALKEY_URL to have them
-            checked here.
+            {t('checks.none')}
           </Text>
         ) : (
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th pl="md">Dependency</Table.Th>
-                <Table.Th>State</Table.Th>
-                <Table.Th ta="right">Latency</Table.Th>
-                <Table.Th pr="md">Reason</Table.Th>
+                <Table.Th pl="md">{t('checks.dependency')}</Table.Th>
+                <Table.Th>{t('checks.state')}</Table.Th>
+                <Table.Th ta="right">{t('checks.latency')}</Table.Th>
+                <Table.Th pr="md">{t('checks.reason')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -177,10 +174,12 @@ export function Overview() {
                   </Table.Td>
                   <Table.Td>
                     <StatusText kind={check.status === 'up' ? 'ok' : 'err'}>
-                      {check.status === 'up' ? 'Up' : 'Down'}
+                      {check.status === 'up' ? t('checks.up') : t('checks.down')}
                     </StatusText>
                   </Table.Td>
-                  <Table.Td ta="right">{check.latencyMs} ms</Table.Td>
+                  <Table.Td ta="right">
+                    {t('checks.latencyValue', { ms: check.latencyMs })}
+                  </Table.Td>
                   <Table.Td c="dimmed" pr="md">
                     {check.error ?? ''}
                   </Table.Td>

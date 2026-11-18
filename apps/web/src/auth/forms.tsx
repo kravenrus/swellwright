@@ -2,6 +2,7 @@ import { Alert, Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@m
 import { IconAlertCircle, IconKey, IconShieldLock } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   PASSWORD_MIN_LENGTH,
@@ -27,6 +28,7 @@ function ErrorNote({ message }: { message: string | undefined }) {
 }
 
 export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) => void }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const mutation = useMutation({
@@ -46,7 +48,7 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
         <TextInput
           autoComplete="username"
           autoFocus
-          label="Login name"
+          label={t('shared.loginName')}
           onChange={(e) => {
             setUsername(e.currentTarget.value);
           }}
@@ -55,7 +57,7 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
         />
         <PasswordInput
           autoComplete="current-password"
-          label="Password"
+          label={t('shared.password')}
           onChange={(e) => {
             setPassword(e.currentTarget.value);
           }}
@@ -65,7 +67,7 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
         <ErrorNote
           message={
             mutation.error
-              ? describeError(mutation.error, 'Wrong login name or password.')
+              ? describeError(t, mutation.error, t('login.wrongCredentials'))
               : undefined
           }
         />
@@ -75,14 +77,12 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
           loading={mutation.isPending}
           type="submit"
         >
-          Continue
+          {t('common:continue')}
         </Button>
       </Stack>
     </form>
   );
 }
-
-const RECOVERY_HINT = 'A recovery code looks like ABCD-EFGH-JKLM. It works once.';
 
 /** The second step: six digits from the authenticator, or one recovery code. */
 export function TotpForm({
@@ -92,6 +92,7 @@ export function TotpForm({
   onSignedIn: (session: SessionInfo) => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [code, setCode] = useState('');
   const [recovery, setRecovery] = useState(false);
   const mutation = useMutation({
@@ -121,8 +122,8 @@ export function TotpForm({
           <TextInput
             autoComplete="off"
             autoFocus
-            description={RECOVERY_HINT}
-            label="Recovery code"
+            description={t('totp.recoveryHint')}
+            label={t('totp.recoveryLabel')}
             onChange={(e) => {
               setCode(e.currentTarget.value);
             }}
@@ -132,7 +133,7 @@ export function TotpForm({
         ) : (
           <Stack gap={6}>
             <Text fw={500} fz="sm">
-              Code from your authenticator
+              {t('totp.codeLabel')}
             </Text>
             <CodeInput busy={isPending} onChange={setCode} value={code} />
           </Stack>
@@ -141,10 +142,9 @@ export function TotpForm({
           message={
             mutation.error
               ? describeError(
+                  t,
                   mutation.error,
-                  recovery
-                    ? 'That recovery code is not valid, or was used already.'
-                    : 'That code is not right. Wait for the next one and try again.',
+                  recovery ? t('totp.recoveryInvalid') : t('totp.codeWrong'),
                 )
               : undefined
           }
@@ -155,7 +155,7 @@ export function TotpForm({
           loading={mutation.isPending}
           type="submit"
         >
-          Sign in
+          {t('totp.submit')}
         </Button>
         <Stack align="center" gap={4}>
           <Anchor
@@ -168,10 +168,10 @@ export function TotpForm({
             }}
             type="button"
           >
-            {recovery ? 'Use the authenticator instead' : 'Use a recovery code'}
+            {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
           </Anchor>
           <Anchor c="dimmed" component="button" fz="sm" onClick={onBack} type="button">
-            Back to the password
+            {t('totp.backToPassword')}
           </Anchor>
         </Stack>
       </Stack>
@@ -180,6 +180,7 @@ export function TotpForm({
 }
 
 export function SetupForm({ onCreated }: { onCreated: () => void }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [setupToken, setSetupToken] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -213,8 +214,8 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
         <TextInput
           autoComplete="off"
           autoFocus
-          description="The server printed it to its log when it started."
-          label="Setup token"
+          description={t('setup.tokenHint')}
+          label={t('setup.tokenLabel')}
           onChange={(e) => {
             setSetupToken(e.currentTarget.value.trim());
           }}
@@ -223,9 +224,9 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
         />
         <TextInput
           autoComplete="username"
-          description="Lower-case letters, digits, dot, dash or underscore. 2 to 32 characters."
-          error={touched && !usernameCheck.success ? 'This login name is not allowed.' : undefined}
-          label="Login name"
+          description={t('setup.usernameHint')}
+          error={touched && !usernameCheck.success ? t('setup.usernameInvalid') : undefined}
+          label={t('shared.loginName')}
           onChange={(e) => {
             setUsername(e.currentTarget.value);
           }}
@@ -234,9 +235,9 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
         />
         <PasswordInput
           autoComplete="new-password"
-          description={`At least ${String(PASSWORD_MIN_LENGTH)} characters. A passphrase is fine.`}
-          error={touched && !passwordCheck.success ? 'The password is too short.' : undefined}
-          label="Password"
+          description={t('shared.passwordHint', { count: PASSWORD_MIN_LENGTH })}
+          error={touched && !passwordCheck.success ? t('shared.passwordTooShort') : undefined}
+          label={t('shared.password')}
           onChange={(e) => {
             setPassword(e.currentTarget.value);
           }}
@@ -245,8 +246,8 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
         />
         <PasswordInput
           autoComplete="new-password"
-          error={mismatch ? 'The passwords differ.' : undefined}
-          label="Repeat the password"
+          error={mismatch ? t('shared.passwordsDiffer') : undefined}
+          label={t('shared.repeatPassword')}
           onChange={(e) => {
             setRepeat(e.currentTarget.value);
           }}
@@ -256,16 +257,12 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
         <ErrorNote
           message={
             mutation.error
-              ? describeError(
-                  mutation.error,
-                  'Sign in again to continue.',
-                  'The setup token is not right.',
-                )
+              ? describeError(t, mutation.error, t('shared.signInAgain'), t('setup.tokenWrong'))
               : undefined
           }
         />
         <Button fullWidth loading={mutation.isPending} type="submit">
-          Create the owner
+          {t('setup.submit')}
         </Button>
       </Stack>
     </form>

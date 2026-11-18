@@ -38,7 +38,8 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type SyntheticEvent, useEffect, useState } from 'react';
+import { type SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   CreateSecretRequestSchema,
@@ -65,50 +66,55 @@ import {
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
+import { useDateTime } from '../format.js';
 
 const HIDE_AFTER_SECONDS = 30;
 const SOON_MS = 30 * 24 * 3_600_000;
 
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-const dayOnly = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+/** A date without the time (`12 Nov 2026`), in the language of the console. An expiry is a day, not a moment. */
+function useDay(): (value: string | number | Date) => string {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
+  return useMemo(() => {
+    const format = new Intl.DateTimeFormat(language, { dateStyle: 'medium' });
+    return (value) => format.format(new Date(value));
+  }, [language]);
+}
 
-const TYPE_LABEL: Record<SecretType, string> = {
-  panel_token: 'Panel token',
-  ssh_key: 'SSH key',
-  ssh_password: 'SSH password',
-  ssh_ca: 'SSH CA',
-  dns_oauth: 'DNS OAuth',
-  provider_token: 'Provider token',
-  telegram: 'Telegram',
-  generic: 'Generic',
-};
-const typeOptions = SECRET_TYPES.map((value) => ({ value, label: TYPE_LABEL[value] }));
+/** The kinds of secret for a select, named in the language of the console. */
+function useTypeOptions() {
+  const { t } = useTranslation('vault');
+  return SECRET_TYPES.map((value) => ({ value, label: t(`types.${value}`) }));
+}
+
 const asType = (value: string | null): SecretType | null =>
   SECRET_TYPES.find((known) => known === value) ?? null;
 
 function ErrorNote({
   error,
   fallback,
-  unauthorized = 'Sign in again to continue.',
+  unauthorized,
 }: {
   error: unknown;
-  /** What a refusal for lack of permission says. */
+  /** What a refusal for lack of permission says, already translated. */
   fallback: string;
-  /** What a 401 says: on most calls the session ended, when unsealing it is a wrong passphrase. */
+  /** What a 401 says, already translated: on most calls the session ended, when unsealing it is a wrong passphrase. */
   unauthorized?: string;
 }) {
+  const { t } = useTranslation('vault');
   if (!error) {
     return null;
   }
   return (
     <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(error, unauthorized, fallback)}
+      {describeError(t, error, unauthorized ?? t('signInAgain'), fallback)}
     </Alert>
   );
 }
 
 /** Length is what counts (docs/en/design/05-security.md): a bar for how far the passphrase is from comfortable. */
 function Strength({ length }: { length: number }) {
+  const { t } = useTranslation('vault');
   const percent = Math.min(100, Math.round((length / 24) * 100));
   const color = length < VAULT_PASSPHRASE_MIN_LENGTH ? 'red' : length < 24 ? 'yellow' : 'teal';
   return (
@@ -116,16 +122,17 @@ function Strength({ length }: { length: number }) {
       <Progress color={color} size="xs" value={percent} />
       <Text c="dimmed" fz="xs">
         {length < VAULT_PASSPHRASE_MIN_LENGTH
-          ? `At least ${String(VAULT_PASSPHRASE_MIN_LENGTH)} characters. Words in a row are fine.`
+          ? t('strength.tooShort', { count: VAULT_PASSPHRASE_MIN_LENGTH })
           : length < 24
-            ? 'Acceptable. A longer phrase is better.'
-            : 'Long enough.'}
+            ? t('strength.acceptable')
+            : t('strength.long')}
       </Text>
     </Stack>
   );
 }
 
 function SetupVault({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation(['vault', 'common']);
   const step = useStepUp();
   const [passphrase, setPassphrase] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -153,14 +160,10 @@ function SetupVault({ onDone }: { onDone: () => void }) {
           <Alert
             color="yellow"
             icon={<IconKey size={18} />}
-            title="Save the recovery key now"
+            title={t('recoveryKey.title')}
             variant="light"
           >
-            <Text fz="sm">
-              It opens the vault if you lose the passphrase, and nothing else can. It is shown once
-              and kept nowhere on this server. Write it down or put it in a password manager, away
-              from this machine.
-            </Text>
+            <Text fz="sm">{t('recoveryKey.warning')}</Text>
           </Alert>
           <Code block style={{ fontSize: 'var(--mantine-font-size-md)', wordBreak: 'break-all' }}>
             {created.recoveryKey}
@@ -172,20 +175,20 @@ function SetupVault({ onDone }: { onDone: () => void }) {
                 onClick={copy}
                 variant="default"
               >
-                {copied ? 'Copied' : 'Copy the key'}
+                {copied ? t('common:copied') : t('recoveryKey.copy')}
               </Button>
             )}
           </CopyButton>
           <Checkbox
             checked={saved}
-            label="I have stored the recovery key outside this server"
+            label={t('recoveryKey.storedLabel')}
             onChange={(e) => {
               setSaved(e.currentTarget.checked);
             }}
           />
           <Group justify="flex-end">
             <Button disabled={!saved} onClick={onDone}>
-              Open the vault
+              {t('recoveryKey.open')}
             </Button>
           </Group>
         </Stack>
@@ -197,16 +200,14 @@ function SetupVault({ onDone }: { onDone: () => void }) {
     <Card padding="lg">
       <form onSubmit={submit}>
         <Stack gap="md">
-          <Text fw={600}>Set up the vault</Text>
+          <Text fw={600}>{t('setup.title')}</Text>
           <Text c="dimmed" fz="sm">
-            Choose a passphrase. It protects every secret Swellwright keeps. The vault starts sealed
-            after every restart, and you open it with this passphrase. There is no way to recover it
-            except the recovery key you get next.
+            {t('setup.intro')}
           </Text>
           <PasswordInput
             autoComplete="new-password"
             data-autofocus
-            label="Passphrase"
+            label={t('setup.passphraseLabel')}
             onChange={(e) => {
               setPassphrase(e.currentTarget.value);
             }}
@@ -216,17 +217,15 @@ function SetupVault({ onDone }: { onDone: () => void }) {
           <Strength length={passphrase.length} />
           <PasswordInput
             autoComplete="new-password"
-            error={
-              repeat.length > 0 && repeat !== passphrase ? 'The passphrases differ.' : undefined
-            }
-            label="Repeat the passphrase"
+            error={repeat.length > 0 && repeat !== passphrase ? t('setup.mismatch') : undefined}
+            label={t('setup.repeatLabel')}
             onChange={(e) => {
               setRepeat(e.currentTarget.value);
             }}
             required
             value={repeat}
           />
-          <ErrorNote error={mutation.error} fallback="Your role may not set the vault up." />
+          <ErrorNote error={mutation.error} fallback={t('setup.forbidden')} />
           <Group justify="flex-end">
             <Button
               leftSection={<IconLock size={16} />}
@@ -234,7 +233,7 @@ function SetupVault({ onDone }: { onDone: () => void }) {
               disabled={!valid}
               type="submit"
             >
-              Create the vault
+              {t('setup.submit')}
             </Button>
           </Group>
         </Stack>
@@ -244,6 +243,7 @@ function SetupVault({ onDone }: { onDone: () => void }) {
 }
 
 function Unseal({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation('vault');
   const step = useStepUp();
   const [recovery, setRecovery] = useState(false);
   const [text, setText] = useState('');
@@ -267,16 +267,8 @@ function Unseal({ onDone }: { onDone: () => void }) {
 
   return (
     <Stack gap="md">
-      <Alert
-        color="yellow"
-        icon={<IconLock size={18} />}
-        title="The vault is sealed"
-        variant="light"
-      >
-        <Text fz="sm">
-          Runs that use a secret, and anything scheduled, wait until the vault is unsealed. The list
-          below shows names and dates only.
-        </Text>
+      <Alert color="yellow" icon={<IconLock size={18} />} title={t('sealed.title')} variant="light">
+        <Text fz="sm">{t('unseal.notice')}</Text>
       </Alert>
       <Card padding="lg">
         <form onSubmit={submit}>
@@ -285,8 +277,8 @@ function Unseal({ onDone }: { onDone: () => void }) {
               <TextInput
                 autoComplete="off"
                 data-autofocus
-                description="Thirteen groups of four, like ABCD-EFGH-…"
-                label="Recovery key"
+                description={t('unseal.recoveryKeyDescription')}
+                label={t('unseal.recoveryKeyLabel')}
                 onChange={(e) => {
                   setText(e.currentTarget.value);
                 }}
@@ -296,7 +288,7 @@ function Unseal({ onDone }: { onDone: () => void }) {
               <PasswordInput
                 autoComplete="off"
                 data-autofocus
-                label="Vault passphrase"
+                label={t('unseal.passphraseLabel')}
                 onChange={(e) => {
                   setText(e.currentTarget.value);
                 }}
@@ -305,12 +297,8 @@ function Unseal({ onDone }: { onDone: () => void }) {
             )}
             <ErrorNote
               error={mutation.error}
-              fallback="Your role may not unseal the vault."
-              unauthorized={
-                recovery
-                  ? 'That recovery key is not right.'
-                  : 'That passphrase is not right. Ten wrong attempts in a quarter of an hour lock unsealing for everyone.'
-              }
+              fallback={t('unseal.forbidden')}
+              unauthorized={recovery ? t('unseal.wrongRecoveryKey') : t('unseal.wrongPassphrase')}
             />
             <Group justify="space-between">
               <Anchor
@@ -323,16 +311,14 @@ function Unseal({ onDone }: { onDone: () => void }) {
                 }}
                 type="button"
               >
-                {recovery
-                  ? 'Use the passphrase instead'
-                  : 'Lost the passphrase? Use the recovery key'}
+                {recovery ? t('unseal.usePassphrase') : t('unseal.useRecoveryKey')}
               </Anchor>
               <Button
                 leftSection={<IconLockOpen size={16} />}
                 loading={mutation.isPending}
                 type="submit"
               >
-                Unseal
+                {t('unseal.submit')}
               </Button>
             </Group>
           </Stack>
@@ -350,6 +336,7 @@ function RevealDialog({
   secret: SecretView | undefined;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['vault', 'common']);
   const step = useStepUp();
   // The moment the value is hidden again, counted from when it arrived.
   const [deadline, setDeadline] = useState<number | undefined>(undefined);
@@ -405,22 +392,22 @@ function RevealDialog({
                     onClick={copy}
                     variant="default"
                   >
-                    {copied ? 'Copied' : 'Copy'}
+                    {copied ? t('common:copied') : t('common:copy')}
                   </Button>
                 )}
               </CopyButton>
               <Text c="dimmed" fz="sm">
-                Hidden in {Math.max(left, 0)} s. This was recorded in the audit log.
+                {t('reveal.hiddenIn', { count: Math.max(left, 0) })}
               </Text>
             </Group>
           </>
         ) : mutation.error ? (
-          <ErrorNote error={mutation.error} fallback="Your role may not reveal secrets." />
+          <ErrorNote error={mutation.error} fallback={t('reveal.forbidden')} />
         ) : (
           <Skeleton h={60} />
         )}
         <Group justify="flex-end">
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{t('common:close')}</Button>
         </Group>
       </Stack>
     </Modal>
@@ -436,6 +423,8 @@ function SecretForm({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['vault', 'common']);
+  const typeOptions = useTypeOptions();
   const step = useStepUp();
   const [name, setName] = useState(secret?.name ?? '');
   const [type, setType] = useState<SecretType>(secret?.type ?? 'generic');
@@ -485,7 +474,7 @@ function SecretForm({
         <TextInput
           autoComplete="off"
           data-autofocus
-          label="Name"
+          label={t('form.name')}
           onChange={(e) => {
             setName(e.currentTarget.value);
           }}
@@ -495,9 +484,9 @@ function SecretForm({
         <Select
           allowDeselect={false}
           data={typeOptions}
-          description={secret ? 'The kind cannot change.' : undefined}
+          description={secret ? t('form.kindLocked') : undefined}
           disabled={secret !== undefined}
-          label="Kind"
+          label={t('form.kind')}
           onChange={(v) => {
             setType(asType(v) ?? 'generic');
           }}
@@ -506,12 +495,8 @@ function SecretForm({
         <Textarea
           autoComplete="off"
           autosize
-          description={
-            secret
-              ? 'Leave empty to keep the current value. A new one makes a new version.'
-              : 'Write-only: it can be revealed later, never listed.'
-          }
-          label={secret ? 'New value' : 'Value'}
+          description={secret ? t('form.valueHintEdit') : t('form.valueHintCreate')}
+          label={secret ? t('form.newValue') : t('form.value')}
           maxRows={8}
           minRows={3}
           onChange={(e) => {
@@ -522,28 +507,28 @@ function SecretForm({
           value={value}
         />
         <TextInput
-          label="Description"
+          label={t('form.description')}
           onChange={(e) => {
             setDescription(e.currentTarget.value);
           }}
           value={description}
         />
         <TextInput
-          description="Optional. The console warns before it."
-          label="Expires on"
+          description={t('form.expiresHint')}
+          label={t('form.expiresOn')}
           onChange={(e) => {
             setExpires(e.currentTarget.value);
           }}
           type="date"
           value={expires}
         />
-        <ErrorNote error={mutation.error} fallback="Your role may not change secrets." />
+        <ErrorNote error={mutation.error} fallback={t('form.forbidden')} />
         <Group justify="flex-end">
           <Button onClick={onClose} variant="default">
-            Cancel
+            {t('common:cancel')}
           </Button>
           <Button loading={mutation.isPending} type="submit">
-            {secret ? 'Save' : 'Store the secret'}
+            {secret ? t('common:save') : t('form.submitCreate')}
           </Button>
         </Group>
       </Stack>
@@ -560,6 +545,7 @@ function DeleteDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(['vault', 'common']);
   const step = useStepUp();
   const mutation = useMutation({
     mutationFn: (id: string) => step.run(() => deleteSecret(id)),
@@ -577,16 +563,14 @@ function DeleteDialog({
       centered
       onClose={close}
       opened={secret !== undefined}
-      title={`Delete ${secret?.name ?? ''}`}
+      title={t('delete.title', { name: secret?.name ?? '' })}
     >
       <Stack gap="md">
-        <Text fz="sm">
-          The secret and its value are gone for good. Anything that still uses it will stop working.
-        </Text>
-        <ErrorNote error={mutation.error} fallback="Your role may not delete secrets." />
+        <Text fz="sm">{t('delete.warning')}</Text>
+        <ErrorNote error={mutation.error} fallback={t('delete.forbidden')} />
         <Group justify="flex-end">
           <Button onClick={close} variant="default">
-            Cancel
+            {t('common:cancel')}
           </Button>
           <Button
             color="red"
@@ -598,7 +582,7 @@ function DeleteDialog({
               }
             }}
           >
-            Delete
+            {t('common:delete')}
           </Button>
         </Group>
       </Stack>
@@ -616,6 +600,9 @@ function expiryState(secret: SecretView): 'none' | 'ok' | 'soon' | 'expired' {
 
 /** The vault: set it up, unseal it, keep secrets. Values are write-only except through a recorded reveal. */
 export function VaultPage({ permissions }: { permissions: readonly Permission[] }) {
+  const { t } = useTranslation(['vault', 'common']);
+  const formatDay = useDay();
+  const formatTime = useDateTime('short');
   const queryClient = useQueryClient();
   const canManage = permissions.includes('vault:manage');
   const canReveal = permissions.includes('vault:reveal');
@@ -638,11 +625,11 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
 
   const stateBadge =
     status === undefined ? undefined : status.state === 'unsealed' ? (
-      <StatusBadge kind="ok">Unsealed</StatusBadge>
+      <StatusBadge kind="ok">{t('states.unsealed')}</StatusBadge>
     ) : status.state === 'sealed' ? (
-      <StatusBadge kind="warn">Sealed</StatusBadge>
+      <StatusBadge kind="warn">{t('states.sealed')}</StatusBadge>
     ) : (
-      <StatusBadge kind="wait">Not set up</StatusBadge>
+      <StatusBadge kind="wait">{t('states.uninitialized')}</StatusBadge>
     );
 
   const header = (
@@ -655,7 +642,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
             onClick={() => void refresh()}
             variant="default"
           >
-            Refresh
+            {t('common:refresh')}
           </Button>
           {canManage && open ? (
             <>
@@ -667,7 +654,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                 }}
                 variant="default"
               >
-                Seal now
+                {t('header.sealNow')}
               </Button>
               <Button
                 leftSection={<IconPlus size={16} />}
@@ -675,16 +662,16 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                   setAdding(true);
                 }}
               >
-                Add a secret
+                {t('header.addSecret')}
               </Button>
             </>
           ) : null}
         </>
       }
       badges={stateBadge}
-      description="Secrets are encrypted before they reach the database, and values are write-only"
+      description={t('header.description')}
       icon={<IconKey size={22} />}
-      title="Vault"
+      title={t('header.title')}
     />
   );
 
@@ -701,11 +688,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
       <>
         {header}
         <Alert color="red" variant="light">
-          {describeError(
-            state.error,
-            'Sign in again to continue.',
-            'Your role may not see the vault.',
-          )}
+          {describeError(t, state.error, t('signInAgain'), t('list.statusFailed'))}
         </Alert>
       </>
     );
@@ -722,7 +705,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           />
         ) : (
           <Alert color="gray" variant="light">
-            The vault is not set up yet. An owner has to set it up.
+            {t('setup.ownerNeeded')}
           </Alert>
         )}
       </>
@@ -735,7 +718,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
       {header}
       {seal.error ? (
         <div style={{ marginBottom: 'var(--mantine-spacing-md)' }}>
-          <ErrorNote error={seal.error} fallback="Your role may not seal the vault." />
+          <ErrorNote error={seal.error} fallback={t('seal.forbidden')} />
         </div>
       ) : null}
       {status.state === 'sealed' ? (
@@ -749,10 +732,10 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           <Alert
             color="yellow"
             icon={<IconLock size={18} />}
-            title="The vault is sealed"
+            title={t('sealed.title')}
             variant="light"
           >
-            An owner has to unseal it before anything that uses a secret can run.
+            {t('sealed.ownerNeeded')}
           </Alert>
         )
       ) : null}
@@ -770,7 +753,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
             </ThemeIcon>
             <Stack gap={2}>
               <Text c="dimmed" fw={500} fz="sm">
-                Secrets
+                {t('summary.secrets')}
               </Text>
               <Text fw={600} fz="lg">
                 {status.secretCount}
@@ -785,7 +768,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
             </ThemeIcon>
             <Stack gap={2}>
               <Text c="dimmed" fw={500} fz="sm">
-                Key version
+                {t('summary.keyVersion')}
               </Text>
               <Text fw={600} fz="lg">
                 {status.kekVersion ?? '—'}
@@ -800,10 +783,10 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
             </ThemeIcon>
             <Stack gap={2}>
               <Text c="dimmed" fw={500} fz="sm">
-                Set up
+                {t('summary.setUp')}
               </Text>
               <Text fw={600} fz="lg">
-                {status.createdAt ? dayOnly.format(new Date(status.createdAt)) : '—'}
+                {status.createdAt ? formatDay(status.createdAt) : '—'}
               </Text>
             </Stack>
           </Group>
@@ -818,32 +801,29 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           </Stack>
         ) : secrets.isError ? (
           <Alert color="red" m="md" variant="light">
-            {describeError(
-              secrets.error,
-              'Sign in again to continue.',
-              'Your role may not see the secrets.',
-            )}
+            {describeError(t, secrets.error, t('signInAgain'), t('list.loadFailed'))}
           </Alert>
         ) : list.length === 0 ? (
           <Text c="dimmed" fz="sm" p="md">
-            No secrets yet.{canManage && open ? ' Add the first one.' : ''}
+            {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
           </Text>
         ) : (
           <Table.ScrollContainer minWidth={720}>
             <Table>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th pl="md">Name</Table.Th>
-                  <Table.Th>Kind</Table.Th>
-                  <Table.Th>Version</Table.Th>
-                  <Table.Th>Expires</Table.Th>
-                  <Table.Th>Value changed</Table.Th>
+                  <Table.Th pl="md">{t('list.name')}</Table.Th>
+                  <Table.Th>{t('list.kind')}</Table.Th>
+                  <Table.Th>{t('list.version')}</Table.Th>
+                  <Table.Th>{t('list.expires')}</Table.Th>
+                  <Table.Th>{t('list.valueChanged')}</Table.Th>
                   <Table.Th pr="md" w={48} />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {list.map((secret) => {
                   const expiry = expiryState(secret);
+                  const expiresDay = secret.expiresAt ? formatDay(secret.expiresAt) : '';
                   return (
                     <Table.Tr key={secret.id}>
                       <Table.Td pl="md">
@@ -858,7 +838,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                       </Table.Td>
                       <Table.Td>
                         <Badge color="gray" variant="light">
-                          {TYPE_LABEL[secret.type]}
+                          {t(`types.${secret.type}`)}
                         </Badge>
                       </Table.Td>
                       <Table.Td c="dimmed" fz="sm">
@@ -867,7 +847,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                       <Table.Td fz="sm">
                         {expiry === 'none' ? (
                           <Text c="dimmed" component="span">
-                            never
+                            {t('common:never')}
                           </Text>
                         ) : (
                           <Text
@@ -878,24 +858,23 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                                 : {})}
                             component="span"
                           >
-                            {secret.expiresAt ? dayOnly.format(new Date(secret.expiresAt)) : ''}
                             {expiry === 'expired'
-                              ? ' (expired)'
+                              ? t('list.expired', { date: expiresDay })
                               : expiry === 'soon'
-                                ? ' (soon)'
-                                : ''}
+                                ? t('list.soon', { date: expiresDay })
+                                : expiresDay}
                           </Text>
                         )}
                       </Table.Td>
                       <Table.Td c="dimmed" fz="sm">
-                        {when.format(new Date(secret.valueChangedAt))}
+                        {formatTime(secret.valueChangedAt)}
                       </Table.Td>
                       <Table.Td pr="md">
                         {canManage || canReveal ? (
                           <Menu position="bottom-end" shadow="md" withinPortal>
                             <Menu.Target>
                               <ActionIcon
-                                aria-label={`Actions for ${secret.name}`}
+                                aria-label={t('list.actionsFor', { name: secret.name })}
                                 color="gray"
                                 variant="subtle"
                               >
@@ -911,7 +890,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                                     setRevealing(secret);
                                   }}
                                 >
-                                  Reveal
+                                  {t('menu.reveal')}
                                 </Menu.Item>
                               ) : null}
                               {canManage ? (
@@ -922,7 +901,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                                       setEditing(secret);
                                     }}
                                   >
-                                    Change
+                                    {t('menu.change')}
                                   </Menu.Item>
                                   <Menu.Item
                                     color="red"
@@ -931,7 +910,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
                                       setDeleting(secret);
                                     }}
                                   >
-                                    Delete
+                                    {t('common:delete')}
                                   </Menu.Item>
                                 </>
                               ) : null}
@@ -954,7 +933,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           setAdding(false);
         }}
         opened={adding}
-        title="Add a secret"
+        title={t('form.addTitle')}
       >
         {adding ? (
           <SecretForm
@@ -972,7 +951,7 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           setEditing(undefined);
         }}
         opened={editing !== undefined}
-        title={`Change ${editing?.name ?? ''}`}
+        title={t('form.editTitle', { name: editing?.name ?? '' })}
       >
         {editing ? (
           <SecretForm

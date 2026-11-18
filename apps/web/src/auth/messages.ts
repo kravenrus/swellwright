@@ -1,16 +1,24 @@
+import type { TFunction } from 'i18next';
+
+import type { Namespace } from '@swellwright/i18n';
+
 import { ApiRequestError, ApiUnreachableError, StepUpCancelledError } from '../api.js';
 
-/** What the person sees for a failed call. `unauthorized` reads differently on each screen. */
+/**
+ * What the person sees for a failed call, in the language of the console. `unauthorized` reads differently on
+ * each screen, so the caller says what it means there (already translated).
+ */
 export function describeError(
+  t: TFunction<Namespace[]>,
   error: unknown,
   whenUnauthorized: string,
-  whenForbidden = 'The server refused this request.',
+  whenForbidden?: string,
 ): string {
   if (error instanceof ApiUnreachableError) {
-    return 'The API does not answer. Check that the server is running.';
+    return t('errors:unreachable');
   }
   if (error instanceof StepUpCancelledError) {
-    return 'You did not confirm with a code, so nothing was changed.';
+    return t('errors:stepUpCancelled');
   }
   if (error instanceof ApiRequestError) {
     switch (error.code) {
@@ -20,25 +28,24 @@ export function describeError(
         const minutes = error.retryAfterSeconds
           ? Math.ceil(error.retryAfterSeconds / 60)
           : undefined;
-        return minutes
-          ? `Too many failed attempts. Try again in about ${String(minutes)} minute${minutes === 1 ? '' : 's'}.`
-          : 'Too many attempts. Try again in a moment.';
+        return minutes ? t('errors:rateLimited', { count: minutes }) : t('errors:rateLimitedShort');
       }
       case 'forbidden':
-        return whenForbidden;
+        return whenForbidden ?? t('errors:forbidden');
       case 'vault_sealed':
-        return 'The vault is sealed. Unseal it with the passphrase first.';
+        return t('errors:vaultSealed');
       case 'step_up_required':
-        return 'Confirm with a code from your authenticator, then try again.';
+        return t('errors:stepUpRequired');
       case 'not_ready':
-        return 'The server cannot sign anyone in yet: it has no database.';
+        return t('errors:notReady');
       case 'conflict':
+        // The server says what is in the way (a name that is taken, the last owner); it speaks English.
         return error.message;
       case 'validation_failed':
-        return 'Some of the values are not valid.';
+        return t('errors:validation');
       default:
-        return 'Something went wrong on the server. Try again.';
+        return t('errors:server');
     }
   }
-  return 'Something went wrong. Try again.';
+  return t('errors:generic');
 }

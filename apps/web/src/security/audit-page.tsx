@@ -13,6 +13,7 @@ import {
 import { IconBook, IconRefresh, IconShieldCheck } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 
 import {
   AUDIT_ACTIONS,
@@ -26,22 +27,15 @@ import { PageHeader, StatusText, type StatusKind } from '@swellwright/ui';
 
 import { listAudit, verifyAuditChain } from '../api.js';
 import { describeError } from '../auth/messages.js';
+import { useDateTime } from '../format.js';
 
 const PAGE_SIZE = 50;
 
-const OUTCOME: Record<AuditOutcome, { kind: StatusKind; label: string }> = {
-  success: { kind: 'ok', label: 'Success' },
-  failure: { kind: 'err', label: 'Failure' },
-  denied: { kind: 'warn', label: 'Denied' },
+const OUTCOME_KIND: Record<AuditOutcome, StatusKind> = {
+  success: 'ok',
+  failure: 'err',
+  denied: 'warn',
 };
-
-const PROBLEM_TEXT: Record<NonNullable<ChainVerification['problem']>['reason'], string> = {
-  missing: 'is missing or repeated',
-  link: 'does not point at the event before it',
-  content: 'was changed after it was written',
-};
-
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
 
 const shortHash = (hash: string): string => `${hash.slice(0, 12)}…${hash.slice(-6)}`;
 
@@ -52,25 +46,29 @@ function detailsText(event: AuditEvent): string {
 }
 
 function Verification({ result }: { result: ChainVerification }) {
+  const { t } = useTranslation(['audit', 'common']);
   if (result.ok) {
     return (
       <Alert
         color="teal"
         icon={<IconShieldCheck size={18} />}
-        title="The chain is intact"
+        title={t('verification.intactTitle')}
         variant="light"
       >
         <Stack gap={4}>
           <Text fz="sm">
             {result.checked === 0
-              ? 'The log is empty.'
-              : `All ${String(result.checked)} events check out: numbering, links and hashes.`}
+              ? t('verification.emptyLog')
+              : t('verification.allChecked', { count: result.checked })}
           </Text>
           {result.head ? (
             <Text c="dimmed" fz="sm">
-              Head: event {result.head.seq}, <Code>{shortHash(result.head.hash)}</Code>. Note it
-              somewhere outside the database: if events are cut off the end later, the head of a
-              later check will be older than this one.
+              <Trans
+                components={{ code: <Code /> }}
+                i18nKey="verification.head"
+                t={t}
+                values={{ seq: result.head.seq, hash: shortHash(result.head.hash) }}
+              />
             </Text>
           ) : null}
         </Stack>
@@ -81,13 +79,16 @@ function Verification({ result }: { result: ChainVerification }) {
     <Alert
       color="red"
       icon={<IconShieldCheck size={18} />}
-      title="The chain does not check out"
+      title={t('verification.brokenTitle')}
       variant="light"
     >
       <Text fz="sm">
         {result.problem
-          ? `Event ${String(result.problem.seq)} ${PROBLEM_TEXT[result.problem.reason]}. ${String(result.checked)} events before it are intact.`
-          : 'The check failed.'}
+          ? [
+              t(`verification.problem.${result.problem.reason}`, { seq: result.problem.seq }),
+              t('verification.intactBefore', { count: result.checked }),
+            ].join(' ')
+          : t('verification.failed')}
       </Text>
     </Alert>
   );
@@ -95,6 +96,8 @@ function Verification({ result }: { result: ChainVerification }) {
 
 /** The audit log: newest first, filters, and the integrity check for those who may run it. */
 export function AuditPage({ permissions }: { permissions: readonly Permission[] }) {
+  const { t } = useTranslation(['audit', 'common']);
+  const formatTime = useDateTime('medium');
   const queryClient = useQueryClient();
   const [action, setAction] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<AuditOutcome | null>(null);
@@ -132,7 +135,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
               onClick={() => void log.refetch()}
               variant="default"
             >
-              Refresh
+              {t('common:refresh')}
             </Button>
             {canVerify ? (
               <Button
@@ -142,14 +145,14 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
                   verify.mutate();
                 }}
               >
-                Verify chain
+                {t('verifyChain')}
               </Button>
             ) : null}
           </>
         }
-        description="Append-only record of sign-ins, refusals and changes, chained by hashes"
+        description={t('description')}
         icon={<IconBook size={22} />}
-        title="Audit log"
+        title={t('title')}
       />
 
       {verify.data ? (
@@ -159,34 +162,30 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       ) : null}
       {verify.error ? (
         <Alert color="red" mb="md" variant="light">
-          {describeError(
-            verify.error,
-            'Sign in again to continue.',
-            'Your role may not verify the chain.',
-          )}
+          {describeError(t, verify.error, t('signInAgain'), t('verifyForbidden'))}
         </Alert>
       ) : null}
 
       <Card padding={0}>
         <Group gap="sm" p="md">
           <Select
-            aria-label="Action"
+            aria-label={t('filters.actionLabel')}
             clearable
             data={[...AUDIT_ACTIONS]}
             onChange={setAction}
-            placeholder="Any action"
+            placeholder={t('filters.actionPlaceholder')}
             searchable
             value={action}
             w={240}
           />
           <Select
-            aria-label="Outcome"
+            aria-label={t('filters.outcomeLabel')}
             clearable
-            data={AUDIT_OUTCOMES.map((value) => ({ value, label: OUTCOME[value].label }))}
+            data={AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) }))}
             onChange={(value) => {
               setOutcome(AUDIT_OUTCOMES.find((known) => known === value) ?? null);
             }}
-            placeholder="Any outcome"
+            placeholder={t('filters.outcomePlaceholder')}
             value={outcome}
             w={180}
           />
@@ -200,15 +199,11 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
           </Stack>
         ) : log.isError ? (
           <Alert color="red" m="md" variant="light">
-            {describeError(
-              log.error,
-              'Sign in again to continue.',
-              'Your role may not read the audit log.',
-            )}
+            {describeError(t, log.error, t('signInAgain'), t('readForbidden'))}
           </Alert>
         ) : events.length === 0 ? (
           <Text c="dimmed" fz="sm" px="md" pb="md">
-            Nothing recorded yet{action || outcome ? ' for these filters' : ''}.
+            {action || outcome ? t('emptyFiltered') : t('empty')}
           </Text>
         ) : (
           <Table.ScrollContainer minWidth={760}>
@@ -216,11 +211,11 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th pl="md">#</Table.Th>
-                  <Table.Th>Time</Table.Th>
-                  <Table.Th>Who</Table.Th>
-                  <Table.Th>What</Table.Th>
-                  <Table.Th>Outcome</Table.Th>
-                  <Table.Th pr="md">Address</Table.Th>
+                  <Table.Th>{t('columns.time')}</Table.Th>
+                  <Table.Th>{t('columns.who')}</Table.Th>
+                  <Table.Th>{t('columns.what')}</Table.Th>
+                  <Table.Th>{t('columns.outcome')}</Table.Th>
+                  <Table.Th pr="md">{t('columns.address')}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -230,12 +225,12 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
                       {event.seq}
                     </Table.Td>
                     <Table.Td title={event.occurredAt} style={{ whiteSpace: 'nowrap' }}>
-                      {when.format(new Date(event.occurredAt))}
+                      {formatTime(event.occurredAt)}
                     </Table.Td>
                     <Table.Td>
                       {event.actor?.name ?? (
                         <Text c="dimmed" component="span">
-                          nobody identified
+                          {t('nobody')}
                         </Text>
                       )}
                     </Table.Td>
@@ -253,8 +248,8 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <StatusText kind={OUTCOME[event.outcome].kind}>
-                        {OUTCOME[event.outcome].label}
+                      <StatusText kind={OUTCOME_KIND[event.outcome]}>
+                        {t(`outcome.${event.outcome}`)}
                       </StatusText>
                     </Table.Td>
                     <Table.Td ff="monospace" fz="sm" pr="md">
@@ -274,7 +269,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
               onClick={() => void log.fetchNextPage()}
               variant="default"
             >
-              Load older events
+              {t('loadOlder')}
             </Button>
           </Group>
         ) : null}
