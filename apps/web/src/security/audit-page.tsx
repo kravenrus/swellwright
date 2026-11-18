@@ -1,35 +1,34 @@
 import {
-  Alert,
+  ActionIcon,
+  Box,
   Button,
-  Card,
-  Code,
-  CopyButton,
+  DataList,
   Group,
-  Loader,
   Modal,
+  Progress,
   Select,
-  Skeleton,
   Stack,
-  Table,
   Text,
   Textarea,
+  Tooltip,
+  VisuallyHidden,
 } from '@mantine/core';
 import {
-  IconAlertCircle,
-  IconAlertTriangle,
   IconBook,
   IconBookmark,
   IconCheck,
-  IconCopy,
+  IconChevronDown,
   IconDownload,
+  IconFilterOff,
   IconListCheck,
+  IconListDetails,
   IconRefresh,
   IconShieldCheck,
   IconShieldX,
 } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import {
   AUDIT_ACTIONS,
@@ -43,7 +42,25 @@ import {
   type ChainVerification,
   type Permission,
 } from '@swellwright/contracts';
-import { PageHeader, StatusText, type StatusKind } from '@swellwright/ui';
+import {
+  Callout,
+  CopyableCodeBlock,
+  CopyableDataListItem,
+  DataTableCard,
+  EmptyPageLayout,
+  HeaderAction,
+  HeaderActions,
+  ListTable,
+  type ListTableColumn,
+  LoadingScreen,
+  ModalFooter,
+  OverlayHeader,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+  StatusText,
+  type StatusKind,
+} from '@swellwright/ui';
 
 import {
   createAuditCheckpoint,
@@ -54,7 +71,10 @@ import {
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime } from '../format.js';
+import { notifyError, notifySuccess } from '../shell/feedback.js';
+import { FilterPopover } from './filter-popover.js';
+import { QueryErrorCard } from './query-error.js';
+import { useTimeFirst } from './time-first.js';
 
 const PAGE_SIZE = 50;
 /** Events per request when the log is exported: fewer requests, and each one is recorded in the log. */
@@ -68,11 +88,16 @@ const OUTCOME_KIND: Record<AuditOutcome, StatusKind> = {
   denied: 'warn',
 };
 
-const shortHash = (hash: string): string => `${hash.slice(0, 12)}…${hash.slice(-6)}`;
-
 function detailsText(event: AuditEvent): string {
   return Object.entries(event.details)
     .map(([key, value]) => `${key}: ${String(value)}`)
+    .join(' · ');
+}
+
+/** What an event is about and the facts it carries, on one line: the second line of the "What" cell. */
+function eventSummary(event: AuditEvent): string {
+  return [event.object ? `${event.object.type} ${event.object.id}` : '', detailsText(event)]
+    .filter(Boolean)
     .join(' · ');
 }
 
@@ -89,52 +114,72 @@ function saveFile(content: Blob, name: string): void {
   }, 60_000);
 }
 
-function Verification({ result }: { result: ChainVerification }) {
+/** The words for what a chain check found: the headline of a toast and the body of the result card. */
+function useVerificationText() {
+  const { t } = useTranslation('audit');
+  return (result: ChainVerification): string => {
+    if (result.ok) {
+      return result.checked === 0
+        ? t('verification.emptyLog')
+        : t('verification.allChecked', { count: result.checked });
+    }
+    return result.problem
+      ? [
+          t(`verification.problem.${result.problem.reason}`, { seq: result.problem.seq }),
+          t('verification.intactBefore', { count: result.checked }),
+        ].join(' ')
+      : t('verification.failed');
+  };
+}
+
+/** What the check of the whole chain came to, as a card of its own under the page header. */
+function VerificationResult({ result }: { result: ChainVerification }) {
   const { t } = useTranslation(['audit', 'common']);
-  if (result.ok) {
-    return (
-      <Alert
-        color="teal"
-        icon={<IconShieldCheck size={18} />}
-        title={t('verification.intactTitle')}
-        variant="light"
-      >
-        <Stack gap={4}>
-          <Text fz="sm">
-            {result.checked === 0
-              ? t('verification.emptyLog')
-              : t('verification.allChecked', { count: result.checked })}
-          </Text>
-          {result.head ? (
-            <Text c="dimmed" fz="sm">
-              <Trans
-                components={{ code: <Code /> }}
-                i18nKey="verification.head"
-                t={t}
-                values={{ seq: result.head.seq, hash: shortHash(result.head.hash) }}
-              />
-            </Text>
-          ) : null}
-        </Stack>
-      </Alert>
-    );
-  }
+  const describe = useVerificationText();
   return (
-    <Alert
-      color="red"
-      icon={<IconShieldCheck size={18} />}
-      title={t('verification.brokenTitle')}
-      variant="light"
-    >
-      <Text fz="sm">
-        {result.problem
-          ? [
-              t(`verification.problem.${result.problem.reason}`, { seq: result.problem.seq }),
-              t('verification.intactBefore', { count: result.checked }),
-            ].join(' ')
-          : t('verification.failed')}
-      </Text>
-    </Alert>
+    <SectionCard.Root mb="md" role="status">
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={result.ok ? IconShieldCheck : IconShieldX}
+          iconColor={result.ok ? 'teal' : 'red'}
+          title={result.ok ? t('verification.intactTitle') : t('verification.brokenTitle')}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Text size="sm">{describe(result)}</Text>
+      </SectionCard.Section>
+      {result.ok && result.head ? (
+        <SectionCard.Section>
+          <Stack gap="xs">
+            <Text c="dimmed" size="sm">
+              {t('verification.head', { seq: result.head.seq })}
+            </Text>
+            <CopyableCodeBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('common:copy')}
+              inputWrapperProps={{ label: t('verification.headLabel') }}
+              size="small"
+              value={result.head.hash}
+            />
+          </Stack>
+        </SectionCard.Section>
+      ) : null}
+    </SectionCard.Root>
+  );
+}
+
+/** The command that checks a downloaded file anywhere, shown before and after the export. */
+function VerifyCommand() {
+  const { t } = useTranslation(['audit', 'common']);
+  return (
+    <CopyableCodeBlock
+      copiedLabel={t('common:copied')}
+      copyLabel={t('common:copy')}
+      inputWrapperProps={{ label: t('export.verifyHint') }}
+      size="small"
+      value={VERIFY_COMMAND}
+    />
   );
 }
 
@@ -143,19 +188,6 @@ interface ExportDone {
   readonly file: string;
   readonly count: number;
   readonly head: { readonly seq: number; readonly hash: string } | null;
-}
-
-/** The command that checks a downloaded file anywhere, shown before and after the export. */
-function VerifyCommand() {
-  const { t } = useTranslation(['audit', 'common']);
-  return (
-    <Stack gap={4}>
-      <Text c="dimmed" fz="sm">
-        {t('export.verifyHint')}
-      </Text>
-      <Code block>{VERIFY_COMMAND}</Code>
-    </Stack>
-  );
 }
 
 /**
@@ -221,6 +253,20 @@ function ExportDialog({ opened, onClose }: { opened: boolean; onClose: () => voi
       saveFile(new Blob(parts, { type: 'application/x-ndjson' }), file);
       return { file, count, head: last ? { seq: last.seq, hash: last.hash } : null };
     },
+    onSuccess: (finished) => {
+      if (finished) {
+        notifySuccess(
+          t('export.doneTitle'),
+          t('export.done', { count: finished.count, file: finished.file }),
+        );
+      }
+    },
+    onError: (error) => {
+      notifyError(
+        t('export.title'),
+        describeError(t, error, t('signInAgain'), t('exportForbidden')),
+      );
+    },
     // The export itself is recorded, page by page, even when it stops half way.
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['audit'] });
@@ -239,78 +285,80 @@ function ExportDialog({ opened, onClose }: { opened: boolean; onClose: () => voi
 
   return (
     <Modal
-      centered
       closeOnClickOutside={!exportLog.isPending}
       closeOnEscape={!exportLog.isPending}
       onClose={close}
       opened={opened}
       size="lg"
-      title={t('export.title')}
+      title={<OverlayHeader icon={IconDownload} iconColor="teal" title={t('export.title')} />}
     >
       <Stack gap="md">
         {done ? (
-          <Alert
-            color="teal"
-            icon={<IconCheck size={18} />}
-            role="status"
-            title={t('export.doneTitle')}
-            variant="light"
-          >
-            <Stack gap={4}>
-              <Text fz="sm">{t('export.done', { count: done.count, file: done.file })}</Text>
-              {done.head ? (
-                <Text c="dimmed" fz="sm">
-                  <Trans
-                    components={{ code: <Code /> }}
-                    i18nKey="export.head"
-                    t={t}
-                    values={{ seq: done.head.seq, hash: shortHash(done.head.hash) }}
-                  />
-                </Text>
-              ) : null}
-            </Stack>
-          </Alert>
+          <SectionCard.Root role="status">
+            <SectionCard.Section>
+              <OverlayHeader
+                icon={IconCheck}
+                iconColor="teal"
+                title={t('export.doneTitle')}
+                titleOrder={5}
+              />
+            </SectionCard.Section>
+            <SectionCard.Section>
+              <Stack gap="xs">
+                <Text size="sm">{t('export.done', { count: done.count, file: done.file })}</Text>
+                {done.head ? (
+                  <>
+                    <Text c="dimmed" size="sm">
+                      {t('export.head', { seq: done.head.seq })}
+                    </Text>
+                    <CopyableCodeBlock
+                      copiedLabel={t('common:copied')}
+                      copyLabel={t('common:copy')}
+                      inputWrapperProps={{ label: t('export.headLabel') }}
+                      size="small"
+                      value={done.head.hash}
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            </SectionCard.Section>
+          </SectionCard.Root>
         ) : (
           <>
-            <Text fz="sm">{t('export.intro')}</Text>
-            <Text c="dimmed" fz="sm">
+            <Text size="sm">{t('export.intro')}</Text>
+            <Text c="dimmed" size="sm">
               {t('export.stepUp')}
             </Text>
           </>
         )}
         <VerifyCommand />
         {exportLog.isPending ? (
-          <Group gap="xs" role="status">
-            <Loader size="xs" />
-            <Text fz="sm">{t('export.progress', { count: fetched })}</Text>
-          </Group>
+          <Stack gap="xs" role="status">
+            <Text size="sm">{t('export.progress', { count: fetched })}</Text>
+            <Progress animated color="cyan" radius="xs" size="sm" striped value={100} />
+          </Stack>
         ) : null}
-        {exportLog.error ? (
-          <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-            {describeError(t, exportLog.error, t('signInAgain'), t('exportForbidden'))}
-          </Alert>
-        ) : null}
-        <Group justify="flex-end">
-          {done ? (
-            <Button onClick={close}>{t('common:close')}</Button>
-          ) : (
-            <>
-              <Button onClick={close} variant="default">
-                {t('common:cancel')}
-              </Button>
-              <Button
-                leftSection={<IconDownload size={16} />}
-                loading={exportLog.isPending}
-                onClick={() => {
-                  exportLog.mutate();
-                }}
-              >
-                {t('export.submit')}
-              </Button>
-            </>
-          )}
-        </Group>
       </Stack>
+      <ModalFooter>
+        {done ? (
+          <Button color="teal" onClick={close} size="md" variant="light">
+            {t('common:close')}
+          </Button>
+        ) : (
+          <Button
+            color="teal"
+            leftSection={<IconDownload size={16} />}
+            loading={exportLog.isPending}
+            onClick={() => {
+              exportLog.mutate();
+            }}
+            size="md"
+            variant="soft"
+          >
+            {t('export.submit')}
+          </Button>
+        )}
+      </ModalFooter>
     </Modal>
   );
 }
@@ -326,59 +374,43 @@ function CheckpointDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation(['audit', 'common']);
-  const formatTime = useDateTime('medium');
+  const formatTime = useTimeFirst();
   return (
     <Modal
-      centered
       onClose={onClose}
       opened={opened && checkpoint !== undefined}
       size="lg"
-      title={t('checkpoint.title')}
+      title={<OverlayHeader icon={IconBookmark} iconColor="orange" title={t('checkpoint.title')} />}
     >
       {checkpoint ? (
-        <Stack gap="md">
-          <Text fz="sm">
-            {t('checkpoint.made', {
-              seq: checkpoint.seq,
-              when: formatTime(checkpoint.issuedAt),
-            })}
-          </Text>
-          <Alert
-            color="yellow"
-            icon={<IconAlertTriangle size={18} />}
-            title={t('checkpoint.warningTitle')}
-            variant="light"
-          >
-            <Text fz="sm">{t('checkpoint.warning')}</Text>
-          </Alert>
-          <Textarea
-            autosize
-            description={t('checkpoint.valueDescription')}
-            label={t('checkpoint.valueLabel')}
-            maxRows={6}
-            minRows={2}
-            onFocus={(e) => {
-              e.currentTarget.select();
-            }}
-            readOnly
-            styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
-            value={checkpoint.checkpoint}
-          />
-          <Group justify="space-between">
-            <CopyButton timeout={2000} value={checkpoint.checkpoint}>
-              {({ copied, copy }) => (
-                <Button
-                  leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                  onClick={copy}
-                  variant="default"
-                >
-                  {copied ? t('common:copied') : t('checkpoint.copy')}
-                </Button>
-              )}
-            </CopyButton>
-            <Button onClick={onClose}>{t('common:close')}</Button>
-          </Group>
-        </Stack>
+        <>
+          <Stack gap="md">
+            <Text size="sm">
+              {t('checkpoint.made', {
+                seq: checkpoint.seq,
+                when: formatTime(checkpoint.issuedAt),
+              })}
+            </Text>
+            <Callout color="yellow" title={t('checkpoint.warningTitle')}>
+              {t('checkpoint.warning')}
+            </Callout>
+            <CopyableCodeBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('common:copy')}
+              inputWrapperProps={{
+                label: t('checkpoint.valueLabel'),
+                description: t('checkpoint.valueDescription'),
+              }}
+              size="small"
+              value={checkpoint.checkpoint}
+            />
+          </Stack>
+          <ModalFooter>
+            <Button color="teal" onClick={onClose} size="md" variant="light">
+              {t('common:close')}
+            </Button>
+          </ModalFooter>
+        </>
       ) : null}
     </Modal>
   );
@@ -387,42 +419,50 @@ function CheckpointDialog({
 /** What a check against a checkpoint found, in words for an administrator. */
 function CheckpointResult({ result }: { result: AuditCheckpointVerification }) {
   const { t } = useTranslation(['audit', 'common']);
-  const formatTime = useDateTime('medium');
+  const formatTime = useTimeFirst();
   const kind = result.result;
   if (kind === 'ok') {
     return (
-      <Alert
-        color="teal"
-        icon={<IconShieldCheck size={18} />}
-        role="status"
-        title={t('check.okTitle')}
-        variant="light"
-      >
-        <Stack gap={4}>
-          {result.seq !== null && result.issuedAt !== null ? (
-            <Text fz="sm">
-              {t('check.ok', { seq: result.seq, when: formatTime(result.issuedAt) })}
-            </Text>
-          ) : null}
-          {result.eventsSince !== null ? (
-            <Text c="dimmed" fz="sm">
-              {t('check.added', { count: result.eventsSince })}
-            </Text>
-          ) : null}
-        </Stack>
-      </Alert>
+      <SectionCard.Root role="status">
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={IconShieldCheck}
+            iconColor="teal"
+            title={t('check.okTitle')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap={4}>
+            {result.seq !== null && result.issuedAt !== null ? (
+              <Text size="sm">
+                {t('check.ok', { seq: result.seq, when: formatTime(result.issuedAt) })}
+              </Text>
+            ) : null}
+            {result.eventsSince !== null ? (
+              <Text c="dimmed" size="sm">
+                {t('check.added', { count: result.eventsSince })}
+              </Text>
+            ) : null}
+          </Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
     );
   }
   return (
-    <Alert
-      color="red"
-      icon={<IconShieldX size={18} />}
-      role="alert"
-      title={t('check.failedTitle')}
-      variant="light"
-    >
-      <Text fz="sm">{t(`check.result.${kind}`, { seq: result.seq ?? '?' })}</Text>
-    </Alert>
+    <SectionCard.Root role="alert">
+      <SectionCard.Section>
+        <OverlayHeader
+          icon={IconShieldX}
+          iconColor="red"
+          title={t('check.failedTitle')}
+          titleOrder={5}
+        />
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <Text size="sm">{t(`check.result.${kind}`, { seq: result.seq ?? '?' })}</Text>
+      </SectionCard.Section>
+    </SectionCard.Root>
   );
 }
 
@@ -430,12 +470,25 @@ function CheckpointResult({ result }: { result: AuditCheckpointVerification }) {
 function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void }) {
   const { t } = useTranslation(['audit', 'common']);
   const queryClient = useQueryClient();
+  const formatTime = useTimeFirst();
   const [text, setText] = useState('');
   const check = useMutation({
     mutationFn: verifyAuditCheckpoint,
     // A check is recorded, so the list has a new event whatever the answer was.
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result.result === 'ok' && result.seq !== null && result.issuedAt !== null) {
+        notifySuccess(
+          t('check.okTitle'),
+          t('check.ok', { seq: result.seq, when: formatTime(result.issuedAt) }),
+        );
+      }
       void queryClient.invalidateQueries({ queryKey: ['audit'] });
+    },
+    onError: (error) => {
+      notifyError(
+        t('check.title'),
+        describeError(t, error, t('signInAgain'), t('checkpointForbidden')),
+      );
     },
   });
 
@@ -454,10 +507,15 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
   };
 
   return (
-    <Modal centered onClose={close} opened={opened} size="lg" title={t('check.title')}>
+    <Modal
+      onClose={close}
+      opened={opened}
+      size="lg"
+      title={<OverlayHeader icon={IconListCheck} iconColor="cyan" title={t('check.title')} />}
+    >
       <form onSubmit={submit}>
         <Stack gap="md">
-          <Text c="dimmed" fz="sm">
+          <Text c="dimmed" size="sm">
             {t('check.intro')}
           </Text>
           <Textarea
@@ -480,26 +538,140 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
             value={text}
           />
           {check.data ? <CheckpointResult result={check.data} /> : null}
-          {check.error ? (
-            <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-              {describeError(t, check.error, t('signInAgain'), t('checkpointForbidden'))}
-            </Alert>
-          ) : null}
-          <Group justify="flex-end">
-            <Button onClick={close} variant="default">
+        </Stack>
+        <ModalFooter>
+          <Button
+            color="teal"
+            disabled={value.length === 0}
+            leftSection={<IconListCheck size={16} />}
+            loading={check.isPending}
+            size="md"
+            type="submit"
+            variant="soft"
+          >
+            {t('check.submit')}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
+}
+
+/** One event in full: every field the hashes cover, each copyable, and the two hashes that chain it. */
+function EventDialog({
+  event,
+  opened,
+  onClose,
+}: {
+  event: AuditEvent | undefined;
+  opened: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation(['audit', 'common']);
+  const formatTime = useTimeFirst();
+  const copy = { copiedLabel: t('common:copied'), copyLabel: t('common:copy') };
+  return (
+    <Modal
+      onClose={onClose}
+      opened={opened && event !== undefined}
+      size="lg"
+      title={
+        <OverlayHeader
+          icon={IconListDetails}
+          iconColor="cyan"
+          subtitle={event?.action ?? ''}
+          title={t('event.title', { seq: event?.seq ?? 0 })}
+        />
+      }
+    >
+      {event ? (
+        <>
+          <SectionCard.Root>
+            <SectionCard.Section>
+              <DataList orientation="vertical" size="xs" withDivider>
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('columns.time')}
+                  monospace
+                  value={formatTime(event.occurredAt)}
+                  {...copy}
+                />
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('columns.who')}
+                  value={event.actor?.name ?? t('nobody')}
+                  {...copy}
+                />
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('columns.what')}
+                  monospace
+                  value={event.action}
+                  {...copy}
+                />
+                <DataList.Item>
+                  <DataList.ItemLabel>{t('columns.outcome')}</DataList.ItemLabel>
+                  <DataList.ItemValue>
+                    <StatusBadge kind={OUTCOME_KIND[event.outcome]}>
+                      {t(`outcome.${event.outcome}`)}
+                    </StatusBadge>
+                  </DataList.ItemValue>
+                </DataList.Item>
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('event.object')}
+                  monospace
+                  value={event.object ? `${event.object.type} ${event.object.id}` : null}
+                  {...copy}
+                />
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('columns.address')}
+                  monospace
+                  value={event.ip}
+                  {...copy}
+                />
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('event.requestId')}
+                  monospace
+                  value={event.requestId}
+                  {...copy}
+                />
+                {Object.entries(event.details).map(([key, value]) => (
+                  <CopyableDataListItem
+                    emptyValue="–"
+                    key={key}
+                    label={key}
+                    monospace
+                    value={value === null ? null : String(value)}
+                    {...copy}
+                  />
+                ))}
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('event.prevHash')}
+                  monospace
+                  value={event.prevHash}
+                  {...copy}
+                />
+                <CopyableDataListItem
+                  emptyValue="–"
+                  label={t('event.hash')}
+                  monospace
+                  value={event.hash}
+                  {...copy}
+                />
+              </DataList>
+            </SectionCard.Section>
+          </SectionCard.Root>
+          <ModalFooter>
+            <Button color="teal" onClick={onClose} size="md" variant="light">
               {t('common:close')}
             </Button>
-            <Button
-              disabled={value.length === 0}
-              leftSection={<IconListCheck size={16} />}
-              loading={check.isPending}
-              type="submit"
-            >
-              {t('check.submit')}
-            </Button>
-          </Group>
-        </Stack>
-      </form>
+          </ModalFooter>
+        </>
+      ) : null}
     </Modal>
   );
 }
@@ -507,15 +679,19 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
 /** The audit log: newest first, filters, and the integrity check for those who may run it. */
 export function AuditPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['audit', 'common']);
-  const formatTime = useDateTime('medium');
+  const formatTime = useTimeFirst();
   const queryClient = useQueryClient();
   const [action, setAction] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<AuditOutcome | null>(null);
   const [exporting, setExporting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
+  // The event stays after its dialog is closed, so the text does not vanish mid-fade.
+  const [viewed, setViewed] = useState<AuditEvent | undefined>(undefined);
+  const [viewing, setViewing] = useState(false);
   const canVerify = permissions.includes('audit:verify');
   const canExport = permissions.includes('audit:export');
+  const describeVerification = useVerificationText();
 
   const log = useInfiniteQuery({
     queryKey: ['audit', action, outcome],
@@ -533,7 +709,20 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
 
   const verify = useMutation({
     mutationFn: verifyAuditChain,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['audit'] }),
+    onSuccess: (result) => {
+      if (result.ok) {
+        notifySuccess(t('verification.intactTitle'), describeVerification(result));
+      } else {
+        notifyError(t('verification.brokenTitle'), describeVerification(result));
+      }
+      return queryClient.invalidateQueries({ queryKey: ['audit'] });
+    },
+    onError: (error) => {
+      notifyError(
+        t('verifyChain'),
+        describeError(t, error, t('signInAgain'), t('verifyForbidden')),
+      );
+    },
   });
 
   // The checkpoint stays in the mutation after the dialog is closed, so its text does not vanish mid-fade.
@@ -543,198 +732,283 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       setShowCheckpoint(true);
       return queryClient.invalidateQueries({ queryKey: ['audit'] });
     },
+    onError: (error) => {
+      notifyError(
+        t('checkpoint.button'),
+        describeError(t, error, t('signInAgain'), t('checkpointForbidden')),
+      );
+    },
   });
 
   const events = log.data?.pages.flatMap((p) => p.events) ?? [];
+  const filtersActive = action !== null || outcome !== null;
+  const open = (event: AuditEvent) => {
+    setViewed(event);
+    setViewing(true);
+  };
+  const loadOlder = () => {
+    if (log.hasNextPage && !log.isFetchingNextPage) {
+      void log.fetchNextPage();
+    }
+  };
+
+  const columns: ListTableColumn<AuditEvent>[] = [
+    {
+      accessor: 'seq',
+      title: '#',
+      width: 90,
+      render: (event) => (
+        <Text c="dimmed" ff="monospace" size="sm">
+          {event.seq}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'occurredAt',
+      title: t('columns.time'),
+      width: 260,
+      render: (event) => (
+        <Text ff="monospace" size="sm" title={event.occurredAt}>
+          {formatTime(event.occurredAt)}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'actor',
+      title: t('columns.who'),
+      width: 170,
+      render: (event) =>
+        event.actor?.name ? (
+          <Text fw={500} size="sm" truncate="end">
+            {event.actor.name}
+          </Text>
+        ) : (
+          <Text c="dimmed" size="sm">
+            {t('nobody')}
+          </Text>
+        ),
+    },
+    {
+      accessor: 'action',
+      title: t('columns.what'),
+      width: 440,
+      render: (event) => {
+        const summary = eventSummary(event);
+        return (
+          <Box>
+            <Text ff="monospace" size="sm" truncate="end">
+              {event.action}
+            </Text>
+            {summary ? (
+              <Text c="dimmed" size="xs" title={summary} truncate="end">
+                {summary}
+              </Text>
+            ) : null}
+          </Box>
+        );
+      },
+    },
+    {
+      accessor: 'outcome',
+      title: t('columns.outcome'),
+      width: 150,
+      render: (event) => (
+        <StatusText kind={OUTCOME_KIND[event.outcome]}>{t(`outcome.${event.outcome}`)}</StatusText>
+      ),
+    },
+    {
+      accessor: 'ip',
+      title: t('columns.address'),
+      width: 150,
+      render: (event) => (
+        <Text ff="monospace" size="sm">
+          {event.ip ?? '–'}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'actions',
+      title: <VisuallyHidden>{t('columns.actions')}</VisuallyHidden>,
+      width: 72,
+      pinned: 'right',
+      textAlign: 'right',
+      render: (event) => (
+        <Tooltip label={t('event.view')} withArrow>
+          <ActionIcon
+            aria-label={t('event.viewAria', { seq: event.seq })}
+            color="gray"
+            onClick={(click) => {
+              click.stopPropagation();
+              open(event);
+            }}
+            size="input-sm"
+            variant="soft"
+          >
+            <IconListDetails size={22} />
+          </ActionIcon>
+        </Tooltip>
+      ),
+    },
+  ];
 
   return (
     <>
       <PageHeader
         actions={
-          <>
-            <Button
-              leftSection={<IconRefresh size={16} />}
+          <HeaderActions>
+            <HeaderAction
+              icon={IconRefresh}
+              label={t('common:refresh')}
               loading={log.isRefetching && !log.isFetchingNextPage}
               onClick={() => void log.refetch()}
-              variant="default"
-            >
-              {t('common:refresh')}
-            </Button>
+            />
             {canExport ? (
-              <Button
-                leftSection={<IconDownload size={16} />}
+              <HeaderAction
+                color="gray"
+                icon={IconDownload}
+                label={t('export.button')}
                 onClick={() => {
                   setExporting(true);
                 }}
-                variant="default"
-              >
-                {t('export.button')}
-              </Button>
+              />
             ) : null}
             {canVerify ? (
               <>
-                <Button
-                  leftSection={<IconBookmark size={16} />}
+                <HeaderAction
+                  color="gray"
+                  icon={IconBookmark}
+                  label={t('checkpoint.button')}
                   loading={noteHead.isPending}
                   onClick={() => {
                     noteHead.mutate();
                   }}
-                  variant="default"
-                >
-                  {t('checkpoint.button')}
-                </Button>
-                <Button
-                  leftSection={<IconListCheck size={16} />}
+                />
+                <HeaderAction
+                  color="gray"
+                  icon={IconListCheck}
+                  label={t('check.button')}
                   onClick={() => {
                     setChecking(true);
                   }}
-                  variant="default"
-                >
-                  {t('check.button')}
-                </Button>
-                <Button
-                  leftSection={<IconShieldCheck size={16} />}
+                />
+                <HeaderAction
+                  color="teal"
+                  icon={IconShieldCheck}
+                  label={t('verifyChain')}
                   loading={verify.isPending}
                   onClick={() => {
                     verify.mutate();
                   }}
-                >
-                  {t('verifyChain')}
-                </Button>
+                />
               </>
             ) : null}
-          </>
+          </HeaderActions>
         }
         description={t('description')}
-        icon={<IconBook size={22} />}
+        icon={<IconBook size={24} />}
         title={t('title')}
       />
 
-      {verify.data ? (
-        <div style={{ marginBottom: 'var(--mantine-spacing-md)' }}>
-          <Verification result={verify.data} />
-        </div>
-      ) : null}
-      {verify.error ? (
-        <Alert color="red" mb="md" variant="light">
-          {describeError(t, verify.error, t('signInAgain'), t('verifyForbidden'))}
-        </Alert>
-      ) : null}
-      {noteHead.error ? (
-        <Alert color="red" mb="md" variant="light">
-          {describeError(t, noteHead.error, t('signInAgain'), t('checkpointForbidden'))}
-        </Alert>
-      ) : null}
+      {verify.data ? <VerificationResult result={verify.data} /> : null}
 
-      <Card padding={0}>
-        <Group gap="sm" p="md">
-          <Select
-            aria-label={t('filters.actionLabel')}
-            clearable
-            data={[...AUDIT_ACTIONS]}
-            onChange={setAction}
-            placeholder={t('filters.actionPlaceholder')}
-            searchable
-            value={action}
-            w={240}
-          />
-          <Select
-            aria-label={t('filters.outcomeLabel')}
-            clearable
-            data={AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) }))}
-            onChange={(value) => {
-              setOutcome(AUDIT_OUTCOMES.find((known) => known === value) ?? null);
-            }}
-            placeholder={t('filters.outcomePlaceholder')}
-            value={outcome}
-            w={180}
-          />
+      <DataTableCard.Container>
+        <DataTableCard.Title
+          actions={
+            <HeaderActions>
+              <FilterPopover active={filtersActive} label={t('filters.title')}>
+                <Select
+                  clearable
+                  comboboxProps={{ withinPortal: false }}
+                  data={[...AUDIT_ACTIONS]}
+                  label={t('filters.actionLabel')}
+                  onChange={setAction}
+                  placeholder={t('filters.actionPlaceholder')}
+                  searchable
+                  value={action}
+                />
+                <Select
+                  clearable
+                  comboboxProps={{ withinPortal: false }}
+                  data={AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) }))}
+                  label={t('filters.outcomeLabel')}
+                  onChange={(value) => {
+                    setOutcome(AUDIT_OUTCOMES.find((known) => known === value) ?? null);
+                  }}
+                  placeholder={t('filters.outcomePlaceholder')}
+                  value={outcome}
+                />
+              </FilterPopover>
+              <HeaderAction
+                color="gray"
+                disabled={!filtersActive}
+                icon={IconFilterOff}
+                label={t('filters.clear')}
+                onClick={() => {
+                  setAction(null);
+                  setOutcome(null);
+                }}
+              />
+            </HeaderActions>
+          }
+          description={filtersActive ? t('list.descriptionFiltered') : t('list.description')}
+          icon={<IconBook size={24} />}
+          title={t('list.title')}
+        />
+        <DataTableCard.Content>
+          {log.isPending ? (
+            <LoadingScreen height="60vh" />
+          ) : log.isError ? (
+            <Box p="md">
+              <QueryErrorCard
+                message={describeError(t, log.error, t('signInAgain'), t('readForbidden'))}
+                onRetry={() => void log.refetch()}
+                title={t('title')}
+              />
+            </Box>
+          ) : events.length === 0 ? (
+            <Box p="md">
+              <EmptyPageLayout
+                icon={<IconBook size="3rem" />}
+                title={filtersActive ? t('emptyFiltered') : t('empty')}
+              />
+            </Box>
+          ) : (
+            <ListTable
+              aria-label={t('title')}
+              borderRadius={0}
+              columns={columns}
+              idAccessor="seq"
+              maxHeight="65vh"
+              onRowClick={open}
+              onScrollToBottom={loadOlder}
+              records={events}
+              withTableBorder={false}
+            />
+          )}
+        </DataTableCard.Content>
+      </DataTableCard.Container>
+
+      {log.hasNextPage ? (
+        <Group gap="xs" justify="right" mt="md">
+          <Button
+            leftSection={<IconChevronDown size={16} />}
+            loading={log.isFetchingNextPage}
+            onClick={loadOlder}
+            size="sm"
+            variant="default"
+          >
+            {t('loadOlder')}
+          </Button>
         </Group>
+      ) : null}
 
-        {log.isPending ? (
-          <Stack gap="xs" p="md">
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
-        ) : log.isError ? (
-          <Alert color="red" m="md" variant="light">
-            {describeError(t, log.error, t('signInAgain'), t('readForbidden'))}
-          </Alert>
-        ) : events.length === 0 ? (
-          <Text c="dimmed" fz="sm" px="md" pb="md">
-            {action || outcome ? t('emptyFiltered') : t('empty')}
-          </Text>
-        ) : (
-          <Table.ScrollContainer minWidth={760}>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th pl="md">#</Table.Th>
-                  <Table.Th>{t('columns.time')}</Table.Th>
-                  <Table.Th>{t('columns.who')}</Table.Th>
-                  <Table.Th>{t('columns.what')}</Table.Th>
-                  <Table.Th>{t('columns.outcome')}</Table.Th>
-                  <Table.Th pr="md">{t('columns.address')}</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {events.map((event) => (
-                  <Table.Tr key={event.seq}>
-                    <Table.Td c="dimmed" ff="monospace" pl="md">
-                      {event.seq}
-                    </Table.Td>
-                    <Table.Td title={event.occurredAt} style={{ whiteSpace: 'nowrap' }}>
-                      {formatTime(event.occurredAt)}
-                    </Table.Td>
-                    <Table.Td>
-                      {event.actor?.name ?? (
-                        <Text c="dimmed" component="span">
-                          {t('nobody')}
-                        </Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Text ff="monospace" fz="sm">
-                        {event.action}
-                      </Text>
-                      <Text c="dimmed" fz="xs">
-                        {[
-                          event.object ? `${event.object.type} ${event.object.id}` : '',
-                          detailsText(event),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <StatusText kind={OUTCOME_KIND[event.outcome]}>
-                        {t(`outcome.${event.outcome}`)}
-                      </StatusText>
-                    </Table.Td>
-                    <Table.Td ff="monospace" fz="sm" pr="md">
-                      {event.ip ?? ''}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
-
-        {log.hasNextPage ? (
-          <Group justify="center" p="md">
-            <Button
-              loading={log.isFetchingNextPage}
-              onClick={() => void log.fetchNextPage()}
-              variant="default"
-            >
-              {t('loadOlder')}
-            </Button>
-          </Group>
-        ) : null}
-      </Card>
-
+      <EventDialog
+        event={viewed}
+        onClose={() => {
+          setViewing(false);
+        }}
+        opened={viewing}
+      />
       {canExport ? (
         <ExportDialog
           onClose={() => {

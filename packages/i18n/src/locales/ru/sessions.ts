@@ -19,6 +19,7 @@ export const sessions = {
     address: 'Адрес',
     browser: 'Браузер',
     state: 'Состояние',
+    actions: 'Действия',
   },
 
   badges: {
@@ -36,6 +37,8 @@ export const sessions = {
     currentNote:
       'Чтобы завершить сессию, в которой вы работаете, выберите «Выйти» в меню учётной записи.',
     empty: 'Показывать нечего: сессий нет.',
+    browserOn: '{{browser}}, {{system}}',
+    unknownBrowser: 'Неизвестный браузер',
     endForbidden: 'Вы не можете завершить эту сессию.',
   },
 
@@ -51,6 +54,8 @@ export const sessions = {
     description: 'Все открытые сессии всех пользователей, сначала недавно активные',
     userFilterLabel: 'Фильтр по пользователю',
     userFilterPlaceholder: 'Все пользователи',
+    clearFilter: 'Сбросить фильтр',
+    filteredBy: 'Сессии пользователя {{username}}',
     empty: 'Ни у кого нет открытых сессий.',
     emptyFiltered: 'У этого пользователя нет открытых сессий.',
     loadFailed: 'Вашей роли не разрешено видеть сессии других пользователей.',

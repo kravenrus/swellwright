@@ -19,6 +19,7 @@ export const sessions = {
     address: 'Address',
     browser: 'Browser',
     state: 'State',
+    actions: 'Actions',
   },
 
   badges: {
@@ -35,6 +36,8 @@ export const sessions = {
     signOutAria: 'Sign out of the session started {{when}}',
     currentNote: 'To end the session you are using, choose “Sign out” in the account menu.',
     empty: 'There are no sessions to show.',
+    browserOn: '{{browser}} on {{system}}',
+    unknownBrowser: 'Unknown browser',
     endForbidden: 'You cannot end this session.',
   },
 
@@ -50,6 +53,8 @@ export const sessions = {
     description: 'Every signed-in session of every user, most recently active first',
     userFilterLabel: 'Filter by user',
     userFilterPlaceholder: 'All users',
+    clearFilter: 'Clear the filter',
+    filteredBy: 'Sessions of {{username}}',
     empty: 'Nobody is signed in.',
     emptyFiltered: 'This user has no signed-in sessions.',
     loadFailed: 'Your role may not see the sessions of other users.',

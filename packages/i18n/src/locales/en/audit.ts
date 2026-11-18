@@ -11,6 +11,8 @@ export const audit = {
   checkpointForbidden: 'Your role may not make or check checkpoints.',
 
   filters: {
+    title: 'Filters',
+    clear: 'Clear filters',
     actionLabel: 'Action',
     actionPlaceholder: 'Any action',
     outcomeLabel: 'Outcome',
@@ -29,8 +31,25 @@ export const audit = {
     what: 'What',
     outcome: 'Outcome',
     address: 'Address',
+    actions: 'Actions',
   },
   nobody: 'nobody identified',
+
+  list: {
+    title: 'Events',
+    description: 'Newest first',
+    descriptionFiltered: 'Newest first, filtered',
+  },
+
+  event: {
+    title: 'Event {{seq}}',
+    view: 'Event details',
+    viewAria: 'Show the details of event {{seq}}',
+    object: 'Object',
+    requestId: 'Request ID',
+    prevHash: 'Previous hash',
+    hash: 'Hash',
+  },
 
   empty: 'Nothing recorded yet.',
   emptyFiltered: 'Nothing recorded yet for these filters.',
@@ -41,7 +60,8 @@ export const audit = {
     emptyLog: 'The log is empty.',
     allChecked_one: 'The only event checks out: numbering, link and hash.',
     allChecked_other: 'All {{count}} events check out: numbering, links and hashes.',
-    head: 'Head: event {{seq}}, <code>{{hash}}</code>. Note it somewhere outside the database: if events are cut off the end later, the head of a later check will be older than this one.',
+    headLabel: 'Head of the chain',
+    head: 'Head: event {{seq}}. Note its hash somewhere outside the database: if events are cut off the end later, the head of a later check will be older than this one.',
     brokenTitle: 'The chain does not check out',
     problem: {
       missing: 'Event {{seq}} is missing or repeated.',
@@ -67,7 +87,8 @@ export const audit = {
     doneTitle: 'The file is ready',
     done_one: 'Saved {{count}} event to {{file}}.',
     done_other: 'Saved {{count}} events to {{file}}.',
-    head: 'The last event in the file is number {{seq}}, <code>{{hash}}</code>. Compare it with a checkpoint you noted earlier.',
+    headLabel: 'Last event in the file',
+    head: 'The last event in the file is number {{seq}}. Compare its hash with a checkpoint you noted earlier.',
   },
 
   checkpoint: {
@@ -80,7 +101,6 @@ export const audit = {
     valueLabel: 'Checkpoint',
     valueDescription:
       'It is signed with a key that is not in the database, so it cannot be made up. Later, “Check a checkpoint” proves that nothing up to this event was changed and that no end was cut off.',
-    copy: 'Copy the checkpoint',
   },
 
   check: {

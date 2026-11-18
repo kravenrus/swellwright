@@ -10,16 +10,14 @@ export const overview = {
     ready: 'Готов',
     notReady: 'Не готов',
     version: 'Версия',
+    dependenciesSummary: 'работает {{up}} из {{total}}',
   },
 
   checks: {
     title: 'Проверки зависимостей',
     apiDescription: 'Описание API',
+    noneTitle: 'Пока нечего проверять',
     none: 'Зависимости пока не настроены. Задайте SW_DATABASE_URL и SW_VALKEY_URL, чтобы они проверялись здесь.',
-    dependency: 'Зависимость',
-    state: 'Состояние',
-    latency: 'Задержка',
-    reason: 'Причина',
     up: 'Работает',
     down: 'Не работает',
     latencyValue: '{{ms}} мс',

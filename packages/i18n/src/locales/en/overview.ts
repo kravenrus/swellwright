@@ -10,16 +10,14 @@ export const overview = {
     ready: 'Ready',
     notReady: 'Not ready',
     version: 'Version',
+    dependenciesSummary: '{{up}} of {{total}} up',
   },
 
   checks: {
     title: 'Dependency checks',
     apiDescription: 'API description',
+    noneTitle: 'Nothing to check yet',
     none: 'No dependencies are configured yet. Set SW_DATABASE_URL and SW_VALKEY_URL to have them checked here.',
-    dependency: 'Dependency',
-    state: 'State',
-    latency: 'Latency',
-    reason: 'Reason',
     up: 'Up',
     down: 'Down',
     latencyValue: '{{ms}} ms',
