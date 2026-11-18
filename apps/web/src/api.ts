@@ -1,10 +1,13 @@
 import {
+  type AcceptInvitationRequest,
   type AuditPage,
   AuditPageSchema,
   type AuditQuery,
   ApiErrorSchema,
   type ChainVerification,
   ChainVerificationSchema,
+  type ChangePasswordRequest,
+  type CreateUserRequest,
   type ErrorCode,
   type HealthResponse,
   HealthResponseSchema,
@@ -24,6 +27,14 @@ import {
   TotpConfirmedSchema,
   type TotpEnrollment,
   TotpEnrollmentSchema,
+  type UpdateUserRequest,
+  type UserInvitation,
+  UserInvitationSchema,
+  type UserList,
+  type UserListQuery,
+  UserListSchema,
+  type UserView,
+  UserViewSchema,
   type VersionResponse,
   VersionResponseSchema,
 } from '@swellwright/contracts';
@@ -71,7 +82,7 @@ async function getJson<T>(path: string, schema: { parse: (data: unknown) => T })
  * `schema` is undefined for a response without a body.
  */
 async function send<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PATCH',
   path: string,
   body: unknown,
   schema: { parse: (data: unknown) => T } | undefined,
@@ -151,6 +162,24 @@ export const confirmTotpEnrollment = (code: string): Promise<TotpConfirmed> =>
   send('POST', '/auth/totp/confirm', { code }, TotpConfirmedSchema);
 
 export const logout = (): Promise<void> => send('POST', '/auth/logout', undefined, undefined);
+
+export const acceptInvitation = (request: AcceptInvitationRequest): Promise<PendingSession> =>
+  send('POST', '/auth/invitations/accept', request, PendingSessionSchema);
+
+export const changePassword = (request: ChangePasswordRequest): Promise<void> =>
+  send('POST', '/auth/password', request, undefined);
+
+export const listUsers = (query: UserListQuery): Promise<UserList> =>
+  send('GET', `/users${queryString(query)}`, undefined, UserListSchema);
+
+export const createUser = (request: CreateUserRequest): Promise<UserInvitation> =>
+  send('POST', '/users', request, UserInvitationSchema);
+
+export const updateUser = (id: string, request: UpdateUserRequest): Promise<UserView> =>
+  send('PATCH', `/users/${id}`, request, UserViewSchema);
+
+export const resetCredentials = (id: string): Promise<UserInvitation> =>
+  send('POST', `/users/${id}/reset-credentials`, undefined, UserInvitationSchema);
 
 export const getRoles = (): Promise<RoleCatalog> =>
   send('GET', '/roles', undefined, RoleCatalogSchema);

@@ -8,9 +8,10 @@ import type { PendingSession, SessionInfo } from '@swellwright/contracts';
 import { ApiRequestError, ApiUnreachableError, getMe, getSetupStatus, logout } from '../api.js';
 import { EnrollmentStep, RecoveryCodes } from './enrollment.js';
 import { LoginForm, SetupForm, TotpForm } from './forms.js';
+import { AcceptInvitationForm, takeInvitationFromAddress } from './invitation.js';
 import { AuthLayout } from './layout.js';
 
-type Step = 'login' | 'setup' | 'totp' | 'enroll';
+type Step = 'login' | 'setup' | 'totp' | 'enroll' | 'invite';
 
 const ME_KEY = ['auth', 'me'] as const;
 
@@ -40,7 +41,9 @@ export function AuthGate({
     enabled: signedOut,
     retry: false,
   });
-  const [step, setStep] = useState<Step | undefined>(undefined);
+  // A link with an invitation opens its screen first; the token leaves the address bar at once.
+  const [invitation] = useState(takeInvitationFromAddress);
+  const [step, setStep] = useState<Step | undefined>(invitation ? 'invite' : undefined);
   const [recoveryCodes, setRecoveryCodes] = useState<readonly string[] | undefined>(undefined);
 
   const signOut = async () => {
@@ -142,6 +145,23 @@ export function AuthGate({
 
   const current: Step = step ?? (setup.data.initialized ? 'login' : 'setup');
   switch (current) {
+    case 'invite':
+      return (
+        <AuthLayout
+          description="Choose a password for your account. You will set up an authenticator next."
+          title="Accept the invitation"
+        >
+          <AcceptInvitationForm
+            initialToken={invitation}
+            onAccepted={() => {
+              setStep('enroll');
+            }}
+            onBack={() => {
+              setStep('login');
+            }}
+          />
+        </AuthLayout>
+      );
     case 'setup':
       return (
         <AuthLayout

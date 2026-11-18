@@ -23,6 +23,9 @@ import {
 } from './readiness.js';
 import { RolesController } from './roles.controller.js';
 import { SystemController } from './system.controller.js';
+import { InvitationService } from './users/invitation.service.js';
+import { UsersController } from './users/users.controller.js';
+import { UsersService } from './users/users.service.js';
 
 export interface AppOptions {
   /** Replaces the checks built from the configuration (tests). */
@@ -64,6 +67,7 @@ export class AppModule implements OnApplicationShutdown {
         AuthController,
         RolesController,
         AuditController,
+        UsersController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -82,6 +86,8 @@ export class AppModule implements OnApplicationShutdown {
         AuditService,
         AuthService,
         SetupService,
+        InvitationService,
+        UsersService,
         // Guards run in this order: the origin check, then the session, then the role's permission.
         { provide: APP_GUARD, useClass: OriginGuard },
         { provide: APP_GUARD, useClass: AuthGuard },

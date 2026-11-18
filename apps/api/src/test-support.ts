@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import {
   ApiErrorSchema,
+  type AuditEvent,
   type UserRole,
   TotpConfirmedSchema,
   TotpEnrollmentSchema,
 } from '@swellwright/contracts';
 import { createIsolatedDatabase, type IsolatedDatabase } from '@swellwright/db/testing';
 
+import { toAuditEvent } from './audit/audit.service.js';
 import { PasswordHasher } from './auth/password.js';
 import { SecretBox } from './auth/secret-box.js';
 import { base32Decode, base32Encode, generateTotpSecret, timeStep, totpCode } from './auth/totp.js';
@@ -170,15 +172,45 @@ export async function createUser(
   return { id: created.id, secret: base32Encode(secret) };
 }
 
+/** A value that must be there, or a failed test. Keeps later lines free of `?.` that the type no longer needs. */
+export function found<T>(value: T | undefined, what: string): T {
+  assert.ok(value !== undefined, `${what} was not found`);
+  return value;
+}
+
+/** Every audit event in the instance's database, oldest first, as the API would show it. */
+export async function auditEvents(instance: Instance): Promise<AuditEvent[]> {
+  const rows = await instance.isolated.database.client.auditEvent.findMany({
+    orderBy: { seq: 'asc' },
+  });
+  return rows.map(toAuditEvent);
+}
+
+/** Takes an invitation through the password and the authenticator, as the invitee would. */
+export async function acceptInvitation(
+  instance: Instance,
+  token: string,
+  password: string,
+): Promise<{ client: Client; secret: string }> {
+  const client = instance.client();
+  const accepted = await client.post('/auth/invitations/accept', { token, password });
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  const enrollment = TotpEnrollmentSchema.parse((await client.post('/auth/totp/enrollment')).body);
+  const confirmed = await client.post('/auth/totp/confirm', { code: codeFor(enrollment.secret) });
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
+  return { client, secret: enrollment.secret };
+}
+
 /** A client signed in as the user: password, then an authenticator code. */
 export async function signInAs(
   instance: Instance,
   username: string,
   secret: string,
+  password = PASSWORD,
 ): Promise<Client> {
   await forgetLastStep(instance);
   const client = instance.client();
-  const login = await client.post('/auth/login', { username, password: PASSWORD });
+  const login = await client.post('/auth/login', { username, password });
   assert.equal(login.status, 200);
   const done = await client.post('/auth/totp', { code: codeFor(secret) });
   assert.equal(done.status, 200);

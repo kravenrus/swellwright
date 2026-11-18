@@ -95,6 +95,7 @@ Residual risk on a shared host: the kernel and the host are shared, so a host co
 | Situation | Actions |
 |---|---|
 | Vault password lost | restore from the recovery kit (Shamir); without a kit the vault is lost: reissue all secrets and reconnect the panel and the servers (the nodes stay alive, access through the emergency key) |
+| Nobody can sign in (the owner lost the password and the authenticator) | on the Swellwright host, with the environment of the server: `node dist/admin.js reset-credentials <login name>` deletes the credentials of that account, ends its sessions and prints a one-time invitation; open the console with it, choose a password, set up the authenticator again. `node dist/admin.js users` lists the accounts. Recorded in the audit chain as `user.credentials.reset` with `via: cli` (ADR 0016) |
 | Swellwright server lost | bring up a new machine, restore the database from a backup, unseal the vault, recreate the agent tokens, verify access |
 | Database corrupted | restore from the latest backup, resync the panel and the servers, mark the runs as "undetermined state" and reconcile them against snapshots |
 | Swellwright compromised | revoke the panel tokens, rotate the SSH CA and keys, rotate the DNS secrets, audit, reissue (wizard N28) |

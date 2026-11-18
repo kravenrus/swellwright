@@ -10,7 +10,9 @@ import {
   ChainVerificationSchema,
 } from './audit.js';
 import {
+  AcceptInvitationRequestSchema,
   AuthNextStepSchema,
+  ChangePasswordRequestSchema,
   LoginRequestSchema,
   PendingSessionSchema,
   SessionInfoSchema,
@@ -31,6 +33,16 @@ import {
 } from './roles.js';
 import { type RouteDef, routes } from './routes.js';
 import {
+  CreateUserRequestSchema,
+  InvitationSchema,
+  UpdateUserRequestSchema,
+  UserInvitationSchema,
+  UserListSchema,
+  UserStateSchema,
+  UserStatusSchema,
+  UserViewSchema,
+} from './users.js';
+import {
   CheckResultSchema,
   HealthResponseSchema,
   ReadyResponseSchema,
@@ -38,7 +50,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.3.0';
+export const OPENAPI_INFO_VERSION = '0.4.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -70,6 +82,16 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   AuditPageSchema,
   ChainProblemSchema,
   ChainVerificationSchema,
+  AcceptInvitationRequestSchema,
+  ChangePasswordRequestSchema,
+  UserStatusSchema,
+  UserStateSchema,
+  UserViewSchema,
+  InvitationSchema,
+  UserInvitationSchema,
+  UserListSchema,
+  CreateUserRequestSchema,
+  UpdateUserRequestSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -195,6 +217,7 @@ export function buildOpenApi(): Json {
       { name: 'system', description: 'Probes, version and the API description.' },
       { name: 'setup', description: 'First-run setup of a new instance.' },
       { name: 'auth', description: 'Sign-in with a password and an authenticator, sessions.' },
+      { name: 'users', description: 'Users, their roles, invitations and credential resets.' },
       { name: 'roles', description: 'Built-in roles and the permission catalogue.' },
       { name: 'audit', description: 'The append-only audit log and its integrity check.' },
     ],
