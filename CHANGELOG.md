@@ -10,5 +10,6 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - Annotated UI wireframes: overview, server card, plan and approval, run card, sealed vault, vault, first-run setup and phone layouts.
 - Phase 0 monorepo skeleton: pnpm workspaces, Turborepo, strict TypeScript, ESLint, Prettier and a CI build job.
 - Phase 1 first slice: route registry and OpenAPI 3.1 generator (`packages/contracts`), NestJS 12 API with health, readiness, version and the API description (`apps/api`), the Remnawave panel theme and application shell (`packages/ui`, `apps/web`), development compose file, ADR 0012.
+- Phase 1 data layer: Prisma 7 with the first model `User` and its migration (`packages/db`), a shared `Database` client, `/ready` that also requires the migrations to be applied, a checksum check of the Prisma schema engine, database commands and CI steps, ADR 0013.
 - Repository hygiene checks (secrets, personal e-mail addresses, public IP addresses, forbidden patterns) and DCO check.
 - Brand assets (animated banner, workflow and overview diagrams, logo, social preview), English and Russian README, support policy, release-notes categories.

@@ -14,21 +14,20 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"dist/**/*.test.js\"",
     "start": "node dist/main.js",
-    "dev": "node --watch --env-file-if-exists=.env dist/main.js"
+    "dev": "node --watch --env-file-if-exists=../../.env dist/main.js"
   },
   "dependencies": {
     "@nestjs/common": "12.5.0",
     "@nestjs/core": "12.5.0",
     "@nestjs/platform-express": "12.5.0",
     "@swellwright/contracts": "workspace:*",
+    "@swellwright/db": "workspace:*",
     "iovalkey": "0.4.0",
-    "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/express": "5.0.6",
-    "@types/pg": "8.23.1"
+    "@types/express": "5.0.6"
   }
 }

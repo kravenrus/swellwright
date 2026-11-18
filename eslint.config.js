@@ -5,7 +5,14 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', 'assets/**', 'docs/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.turbo/**',
+      '**/src/generated/**',
+      'assets/**',
+      'docs/**',
+    ],
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -36,6 +43,8 @@ export default defineConfig(
   {
     files: ['**/*.{js,mjs}'],
     extends: [js.configs.recommended],
-    languageOptions: { globals: { URL: 'readonly', console: 'readonly' } },
+    languageOptions: {
+      globals: { URL: 'readonly', console: 'readonly', process: 'readonly' },
+    },
   },
 );

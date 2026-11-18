@@ -1,0 +1,7 @@
+{
+  "engine": "d1b3f377ca835d73fd50954a5e22128b9ebdd6b8",
+  "sha256": {
+    "debian-openssl-3.0.x": "7116e00278a793ee13db6f0a732c1aaec10f795a37bc02e3a7df3b06b2f1311f",
+    "windows": "e6c4bb89d31f39f7ac601e264c998c0382c069df8485fb8810d0ba8fa806ea4a"
+  }
+}

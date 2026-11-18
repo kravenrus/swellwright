@@ -2,7 +2,7 @@
 
 > English translation of the [Russian design document](../../ru/design/02-data-model.md).
 
-The Prisma schema is built from this description. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
+The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is built from this description, entity by entity; so far `User` is implemented. Sensitive fields are encrypted at the application level (the `vault`), not only at the disk level. Data classes: **S** secret (vault only), **P** personal or sensitive (masked by default), **N** normal.
 
 ## 1. Access and audit
 | Entity | Fields | Class |

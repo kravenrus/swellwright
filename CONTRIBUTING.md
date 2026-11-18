@@ -35,9 +35,22 @@ Run the first slice locally (Node.js 26 and Docker):
 cp .env.example .env
 docker compose -f deploy/compose/docker-compose.dev.yml up -d   # Postgres and Valkey on 127.0.0.1
 pnpm run build
+pnpm run db:migrate:deploy                # create the schema; /ready says not_ready until it is applied
 pnpm --filter @swellwright/api dev        # http://127.0.0.1:3000/api/v1/ready
 pnpm --filter @swellwright/web dev        # http://127.0.0.1:5173, proxies /api to the API
 ```
+
+The integration tests need the same database. Point `SW_TEST_DATABASE_URL` (and `SW_TEST_VALKEY_URL`) at the compose services after `db:migrate:deploy`; without them those tests are skipped, and CI always runs them.
+
+### Changing the database schema
+
+The schema is `packages/db/prisma/schema.prisma`, with committed SQL migrations next to it ([ADR 0013](docs/adr/0013-prisma-for-the-data-layer.md)).
+
+1. Edit the schema and run `pnpm run db:migrate:dev -- --name what_changed` (needs the compose database). It writes a new directory under `packages/db/prisma/migrations/`.
+2. Read the generated SQL and commit it together with the schema. Never edit or delete a migration that has been merged.
+3. `pnpm run db:schema:check` fails when the schema and the migrations disagree; CI runs it.
+
+Migration commands first check the Prisma schema engine binary against `packages/db/engine-checksums.json`. After upgrading Prisma, pin the new binaries as described in `packages/db/README.md`.
 
 The workspace is `apps/*` and `packages/*` (pnpm workspaces plus Turborepo); the layout and the reasons are in [ADR 0009](docs/adr/0009-monorepo-and-tooling.md).
 

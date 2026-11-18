@@ -5,7 +5,7 @@
 | Layer | Choice |
 |---|---|
 | Backend | NestJS 12 (the panel uses 11), TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (route registry, ADR 0012), CQRS, `@nestjs/schedule`, Terminus, Prometheus |
-| Database | PostgreSQL with Prisma (major chosen with the first model, ADR 0012) and Kysely for heavy queries |
+| Database | PostgreSQL with Prisma 7 (ADR 0013) and Kysely for heavy queries |
 | Queues and locks | BullMQ on a Redis-compatible store (Valkey); Redlock and PostgreSQL advisory locks |
 | SSH | `ssh2`: pooling, detached steps, sudo, PTY terminal, SFTP, certificates |
 | Panel client | `@remnawave/backend-contract` pinned per panel version |
