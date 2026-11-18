@@ -1,5 +1,6 @@
 pnpm-lock.yaml
 dist
+generated
 .turbo
 node_modules
 # Documentation and assets are hand-written; formatting them would only add noise.

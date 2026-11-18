@@ -1,0 +1,51 @@
+// Swellwright data model. The design is docs/en/design/02-data-model.md; this file grows entity by entity.
+// Tables and columns are snake_case in the database and camelCase in the client.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+  generatedFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Built-in roles (docs/en/design/05-security.md). Custom roles and permission sets come with the RBAC work.
+enum UserRole {
+  owner
+  operator
+  observer
+  terminal
+  auditor
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  active
+  disabled
+
+  @@map("user_status")
+}
+
+model User {
+  id          String     @id @default(uuid(7)) @db.Uuid
+  /// Login name. Stored lower-case: the application normalizes it before every write.
+  username    String     @unique @db.VarChar(32)
+  displayName String?    @map("display_name") @db.VarChar(100)
+  /// Optional. Stored lower-case, like the username.
+  email       String?    @unique @db.VarChar(254)
+  role        UserRole
+  status      UserStatus @default(active)
+  language    String     @default("en") @db.VarChar(16)
+  theme       String     @default("dark") @db.VarChar(16)
+  lastLoginAt DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("users")
+}

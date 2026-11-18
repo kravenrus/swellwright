@@ -1,0 +1,35 @@
+{
+  "name": "@swellwright/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Prisma schema, migrations and the database client shared by the API and the worker",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "generate": "node scripts/prisma.mjs generate",
+    "build": "node scripts/prisma.mjs generate && tsc -p tsconfig.json",
+    "typecheck": "node scripts/prisma.mjs generate && tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"dist/**/*.test.js\"",
+    "migrate:deploy": "node --env-file-if-exists=../../.env scripts/prisma.mjs migrate deploy",
+    "migrate:dev": "node --env-file-if-exists=../../.env scripts/prisma.mjs migrate dev",
+    "migrate:status": "node --env-file-if-exists=../../.env scripts/prisma.mjs migrate status",
+    "schema:check": "node --env-file-if-exists=../../.env scripts/prisma.mjs migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
+  }
+}

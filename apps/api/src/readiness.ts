@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type CheckResult, type ReadyResponse } from '@swellwright/contracts';
 import { Redis } from 'iovalkey';
-import pg from 'pg';
 
 export const READINESS_CHECKS = Symbol('READINESS_CHECKS');
 const CHECK_TIMEOUT_MS = 2000;
@@ -77,26 +76,19 @@ export class ReadinessService {
   }
 }
 
-export class PostgresCheck implements ReadinessCheck {
-  readonly name = 'postgres';
-  private readonly pool: pg.Pool;
+/** What the check needs from the database: the shared connection pool is owned and closed elsewhere. */
+export interface SchemaProbe {
+  assertReady(): Promise<void>;
+}
 
-  constructor(connectionString: string) {
-    this.pool = new pg.Pool({
-      connectionString,
-      max: 1,
-      connectionTimeoutMillis: CHECK_TIMEOUT_MS,
-    });
-    // An idle client can fail between probes; the next probe reports it.
-    this.pool.on('error', () => undefined);
-  }
+/** The server answers and the schema matches the migrations shipped with this build. */
+export class DatabaseCheck implements ReadinessCheck {
+  readonly name = 'postgres';
+
+  constructor(private readonly database: SchemaProbe) {}
 
   async run(): Promise<void> {
-    await this.pool.query('SELECT 1');
-  }
-
-  async close(): Promise<void> {
-    await this.pool.end();
+    await this.database.assertReady();
   }
 }
 

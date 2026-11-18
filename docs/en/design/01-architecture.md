@@ -6,7 +6,7 @@
 | Layer | Choice | Notes |
 |---|---|---|
 | Backend | NestJS 12 (the panel uses 11), TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (route registry, ADR 0012), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | same as the panel |
-| Database | PostgreSQL + Prisma (major chosen with the first model, ADR 0012) (+ Kysely for heavy queries, as in the panel) | Prisma migrations, time-series partitioning |
+| Database | PostgreSQL + Prisma 7 (ADR 0013) (+ Kysely for heavy queries, as in the panel) | Prisma migrations, time-series partitioning |
 | Queues and locks | BullMQ + a Redis-compatible store (Valkey), Redlock and Postgres advisory locks | separate queues per task type |
 | SSH | `ssh2` (the panel already has it) | pool, host key pinning, detached processes on the node, PTY, SFTP |
 | Panel API | `@remnawave/backend-contract` (version matched to the panel version) | typed requests and responses instead of home-grown OpenAPI validation |
@@ -39,6 +39,7 @@ apps/web          React: UI
 apps/cli          sw
 apps/probe-agent  probe agent (TCP, TLS/SNI, and REALITY via xray tests, 16-20 KB freeze test)
 packages/contracts       Zod schemas and types (shared by api, web, cli, SDK)
+packages/db              Prisma schema, migrations and the database client (shared by api and worker)
 packages/engine          engine: workflow DSL, journal, rollback, strategies, policies
 packages/steps           step library (ssh, node, panel, dns, certsync, provider, http, probe, notify, approval)
 packages/remnawave       wrapper over backend-contract: client, version adapters, impact calculator

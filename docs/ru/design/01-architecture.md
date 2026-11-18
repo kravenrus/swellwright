@@ -4,7 +4,7 @@
 | Слой | Выбор | Примечание |
 |---|---|---|
 | Бэкенд | NestJS 12 (в панели 11), TypeScript 6.0 (в панели 5.9, см. ADR 0009), Zod 4 (реестр маршрутов, ADR 0012), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | как у панели |
-| БД | PostgreSQL + Prisma (мажорная версия выбирается с первой моделью, ADR 0012) (+ Kysely для тяжёлых запросов, как у панели) | миграции Prisma, партиционирование временных рядов |
+| БД | PostgreSQL + Prisma 7 (ADR 0013) (+ Kysely для тяжёлых запросов, как у панели) | миграции Prisma, партиционирование временных рядов |
 | Очереди и блокировки | BullMQ + Redis-совместимое хранилище (Valkey), блокировки Redlock и advisory locks Postgres | отдельные очереди по типам задач |
 | SSH | `ssh2` (в панели уже есть) | пул, закрепление ключей хоста, отдельные процессы на ноде, PTY, SFTP |
 | API панели | `@remnawave/backend-contract` (версия под версию панели) | типизированные запросы и ответы вместо самодельной проверки OpenAPI |
@@ -37,6 +37,7 @@ apps/web          React: интерфейс
 apps/cli          sw
 apps/probe-agent  агент-зонд (тесты TCP, TLS/SNI, REALITY через xray, заморозка 16-20 КБ)
 packages/contracts       Zod-схемы и типы (общие для api, web, cli, SDK)
+packages/db              схема Prisma, миграции и клиент базы данных (общий для api и worker)
 packages/engine          движок: DSL сценариев, журнал, откат, стратегии, политики
 packages/steps           библиотека шагов (ssh, node, panel, dns, certsync, provider, http, probe, notify, approval)
 packages/remnawave       обёртка над backend-contract: клиент, адаптеры версий, калькулятор влияния

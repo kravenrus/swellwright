@@ -15,7 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", "node_modules", "dist", "build", ".turbo", ".pnpm-store", "coverage"}
+# "generated" is the Prisma client written by `prisma generate` (gitignored build output with sample e-mail addresses in comments).
+SKIP_DIRS = {".git", "node_modules", "dist", "build", "generated", ".turbo", ".pnpm-store", "coverage"}
 SKIP_FILES = {"LICENSE", "DCO"}
 FORBIDDEN_NAMES = re.compile(r"(^\.env($|\.)|\.pem$|\.key$|\.p12$|\.pfx$|(^|/)id_(rsa|ed25519|ecdsa)|\.sqlite3?$|\.dump$)")
 ALLOWED_NAMES = {".env.example"}
