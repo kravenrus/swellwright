@@ -2,4 +2,4 @@
 
 React web UI built on Mantine, styled after the Remnawave panel (phase 1).
 
-Status: first slice. The application shell in the panel's visual language and an overview page that reads the API status. Run it with `pnpm --filter @swellwright/web dev`; design in `docs/en/design/wireframes/`.
+Status: the application shell in the panel's visual language, an overview page that reads the API status, and the screens before it: first-run setup, sign-in, the authenticator (QR code and recovery codes) and sign-out ([ADR 0014](../../docs/adr/0014-sign-in-with-password-and-authenticator.md)). Run it with `pnpm --filter @swellwright/web dev`; design in `docs/en/design/wireframes/`.

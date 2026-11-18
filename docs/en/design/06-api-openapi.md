@@ -24,7 +24,8 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 ## 3. Resource groups and endpoints (main)
 | Group | Endpoints (in brief) |
 |---|---|
-| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
+| setup | `GET /setup/status`, `POST /setup/owner` (first run only, needs the setup token) |
+| auth | `POST /auth/login`, `/auth/logout`, `/auth/totp`, `/auth/totp/enrollment`, `/auth/totp/confirm`, `/auth/passkeys/*`, `POST /auth/step-up`, `GET /auth/me` |
 | users, roles | CRUD for Swellwright users and roles, `GET /roles/permissions` |
 | tokens | `POST/GET/DELETE /tokens` (Swellwright tokens), `GET /tokens/scopes` |
 | vault | `GET /vault/status`, `POST /vault/unseal`, `/vault/seal`, `/vault/rotate-kek`; `POST/GET/DELETE /secrets` (values are write-only), `POST /secrets/{id}/reveal` (step-up), `GET /secrets/{id}/usage` |

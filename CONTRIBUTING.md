@@ -40,7 +40,9 @@ pnpm --filter @swellwright/api dev        # http://127.0.0.1:3000/api/v1/ready
 pnpm --filter @swellwright/web dev        # http://127.0.0.1:5173, proxies /api to the API
 ```
 
-The integration tests need the same database. Point `SW_TEST_DATABASE_URL` (and `SW_TEST_VALKEY_URL`) at the compose services after `db:migrate:deploy`; without them those tests are skipped, and CI always runs them.
+On a new database the API prints a one-time **setup token** to its log. Open the console, enter the token, create the owner and add the authenticator ([ADR 0014](docs/adr/0014-sign-in-with-password-and-authenticator.md)). Set `SW_AUTH_KEY` in `.env` (the comment in `.env.example` shows how to make one) so the authenticator keeps working after a restart.
+
+The integration tests need the same database. Point `SW_TEST_DATABASE_URL` (and `SW_TEST_VALKEY_URL`) at the compose services after `db:migrate:deploy`; without them those tests are skipped, and CI always runs them. The sign-in tests make a schema of their own, so the database needs permission to create schemas. `SW_TEST_DATABASE_POOL=1` makes the tests use one connection each, for a server that cannot run transactions of several connections side by side.
 
 ### Changing the database schema
 

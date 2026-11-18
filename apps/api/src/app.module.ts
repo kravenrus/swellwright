@@ -1,8 +1,17 @@
 import { type DynamicModule, Module, type OnApplicationShutdown, Inject } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Database } from '@swellwright/db';
 
+import { AuthController } from './auth/auth.controller.js';
+import { AuthService } from './auth/auth.service.js';
+import { AuthGuard, OriginGuard } from './auth/guards.js';
+import { DEFAULT_PASSWORD_PARAMS, PasswordHasher, type PasswordParams } from './auth/password.js';
+import { SecretBox } from './auth/secret-box.js';
+import { SessionService } from './auth/session.service.js';
+import { SetupController } from './auth/setup.controller.js';
+import { SetupService } from './auth/setup.service.js';
 import { type AppConfig } from './config.js';
-import { CONFIG, DATABASE } from './tokens.js';
+import { CONFIG, DATABASE, PASSWORD_HASHER, SECRET_BOX } from './tokens.js';
 import {
   DatabaseCheck,
   READINESS_CHECKS,
@@ -15,6 +24,10 @@ import { SystemController } from './system.controller.js';
 export interface AppOptions {
   /** Replaces the checks built from the configuration (tests). */
   readonly readinessChecks?: readonly ReadinessCheck[];
+  /** Cheaper Argon2id parameters for tests; production always uses the defaults. */
+  readonly passwordParams?: PasswordParams;
+  /** A database to use instead of the one built from the configuration (tests with a schema of their own). */
+  readonly database?: Database;
 }
 
 function checksFrom(config: AppConfig, database: Database | undefined): ReadinessCheck[] {
@@ -37,10 +50,12 @@ export class AppModule implements OnApplicationShutdown {
 
   static register(config: AppConfig, options: AppOptions = {}): DynamicModule {
     // The pool is created lazily by the client, so building it here does not connect.
-    const database = config.databaseUrl ? new Database({ url: config.databaseUrl }) : undefined;
+    const database =
+      options.database ??
+      (config.databaseUrl ? new Database({ url: config.databaseUrl }) : undefined);
     return {
       module: AppModule,
-      controllers: [SystemController],
+      controllers: [SystemController, SetupController, AuthController],
       providers: [
         { provide: CONFIG, useValue: config },
         { provide: DATABASE, useValue: database },
@@ -49,6 +64,17 @@ export class AppModule implements OnApplicationShutdown {
           useValue: options.readinessChecks ?? checksFrom(config, database),
         },
         ReadinessService,
+        {
+          provide: PASSWORD_HASHER,
+          useValue: new PasswordHasher(options.passwordParams ?? DEFAULT_PASSWORD_PARAMS),
+        },
+        { provide: SECRET_BOX, useValue: new SecretBox(config.authKey) },
+        SessionService,
+        AuthService,
+        SetupService,
+        // Guards run in this order: the origin check first, then the session.
+        { provide: APP_GUARD, useClass: OriginGuard },
+        { provide: APP_GUARD, useClass: AuthGuard },
       ],
     };
   }

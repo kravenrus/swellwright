@@ -10,6 +10,8 @@ export interface DatabaseOptions {
   readonly poolSize?: number;
   /** How long to wait for a connection before giving up, in milliseconds. */
   readonly connectTimeoutMs?: number;
+  /** A PostgreSQL schema other than `public`. Used by tests that need a database of their own. */
+  readonly schema?: string;
 }
 
 /**
@@ -20,11 +22,14 @@ export class Database {
   readonly client: PrismaClient;
 
   constructor(options: DatabaseOptions) {
-    const adapter = new PrismaPg({
-      connectionString: options.url,
-      max: options.poolSize ?? 10,
-      connectionTimeoutMillis: options.connectTimeoutMs ?? 2000,
-    });
+    const adapter = new PrismaPg(
+      {
+        connectionString: options.url,
+        max: options.poolSize ?? 10,
+        connectionTimeoutMillis: options.connectTimeoutMs ?? 2000,
+      },
+      options.schema ? { schema: options.schema } : undefined,
+    );
     this.client = new PrismaClient({ adapter });
   }
 
