@@ -12,6 +12,12 @@ ARG NODE_IMAGE=node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb
 
 # The Prisma schema engine is a native program that needs OpenSSL.
 FROM ${NODE_IMAGE} AS base
+# Where the Prisma schema engine is downloaded from (also during `pnpm run build`, which generates the client).
+# The default is Prisma's own host; behind a network that cannot reach it, pass another one with
+# `--build-arg PRISMA_ENGINES_MIRROR=<url>`. Whatever the source, the engine is checked against the checksum
+# pinned in packages/db/engine-checksums.json, so a mirror cannot swap the binary.
+ARG PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
+ENV PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl \
  && rm -rf /var/lib/apt/lists/*
