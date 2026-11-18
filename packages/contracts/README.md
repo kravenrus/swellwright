@@ -2,4 +2,4 @@
 
 Zod schemas shared by API, UI, CLI and SDK; the source of the OpenAPI document.
 
-Status: planned, no code yet. See `docs/en/` for the design.
+Status: first slice. Error envelope, system schemas, the route registry and the OpenAPI 3.1 generator ([ADR 0012](../../docs/adr/0012-contract-first-api-with-a-route-registry.md)). `pnpm run openapi` rewrites `docs/api/openapi.json`.

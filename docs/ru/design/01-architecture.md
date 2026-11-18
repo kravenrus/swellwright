@@ -3,13 +3,13 @@
 ## 1. Стек (согласован со стеком Remnawave; версии сверены с Remnawave 3.4.x)
 | Слой | Выбор | Примечание |
 |---|---|---|
-| Бэкенд | NestJS 11, TypeScript 6.0 (в панели 5.9, см. ADR 0009), Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | как у панели |
-| БД | PostgreSQL + Prisma 6 (+ Kysely для тяжёлых запросов, как у панели) | миграции Prisma, партиционирование временных рядов |
+| Бэкенд | NestJS 12 (в панели 11), TypeScript 6.0 (в панели 5.9, см. ADR 0009), Zod 4 (реестр маршрутов, ADR 0012), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | как у панели |
+| БД | PostgreSQL + Prisma (мажорная версия выбирается с первой моделью, ADR 0012) (+ Kysely для тяжёлых запросов, как у панели) | миграции Prisma, партиционирование временных рядов |
 | Очереди и блокировки | BullMQ + Redis-совместимое хранилище (Valkey), блокировки Redlock и advisory locks Postgres | отдельные очереди по типам задач |
 | SSH | `ssh2` (в панели уже есть) | пул, закрепление ключей хоста, отдельные процессы на ноде, PTY, SFTP |
 | API панели | `@remnawave/backend-contract` (версия под версию панели) | типизированные запросы и ответы вместо самодельной проверки OpenAPI |
 | Фронтенд | React 19, Vite, Mantine 9 (core, notifications, modals, spotlight, code-highlight, dropzone, form, dates, charts), TanStack Query 5, Zustand 5, React Router 7, Zod 4, i18next (ru, en), Tabler icons, Monaco, `@xterm/xterm` | как у панели |
-| OpenAPI | `@nestjs/swagger` + `nestjs-zod`, Scalar UI | как у панели (`@scalar/nestjs-api-reference`) |
+| OpenAPI | генерируется из реестра маршрутов (ADR 0012), Scalar UI | как у панели (`@scalar/nestjs-api-reference`) |
 | Монорепо | pnpm workspaces, Turborepo, строгие ESLint и TS | `--frozen-lockfile --ignore-scripts` |
 | Контейнеры | Docker, multi-stage, non-root | как у панели |
 

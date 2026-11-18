@@ -5,13 +5,13 @@
 ## 1. Stack (aligned with the Remnawave stack; versions checked against Remnawave 3.4.x)
 | Layer | Choice | Notes |
 |---|---|---|
-| Backend | NestJS 11, TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | same as the panel |
-| Database | PostgreSQL + Prisma 6 (+ Kysely for heavy queries, as in the panel) | Prisma migrations, time-series partitioning |
+| Backend | NestJS 12 (the panel uses 11), TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (route registry, ADR 0012), CQRS, `@nestjs/schedule`, `@nestjs/terminus`, `@willsoto/nestjs-prometheus` | same as the panel |
+| Database | PostgreSQL + Prisma (major chosen with the first model, ADR 0012) (+ Kysely for heavy queries, as in the panel) | Prisma migrations, time-series partitioning |
 | Queues and locks | BullMQ + a Redis-compatible store (Valkey), Redlock and Postgres advisory locks | separate queues per task type |
 | SSH | `ssh2` (the panel already has it) | pool, host key pinning, detached processes on the node, PTY, SFTP |
 | Panel API | `@remnawave/backend-contract` (version matched to the panel version) | typed requests and responses instead of home-grown OpenAPI validation |
 | Frontend | React 19, Vite, Mantine 9 (core, notifications, modals, spotlight, code-highlight, dropzone, form, dates, charts), TanStack Query 5, Zustand 5, React Router 7, Zod 4, i18next (ru, en), Tabler icons, Monaco, `@xterm/xterm` | same as the panel |
-| OpenAPI | `@nestjs/swagger` + `nestjs-zod`, Scalar UI | same as the panel (`@scalar/nestjs-api-reference`) |
+| OpenAPI | generated from the route registry (ADR 0012), Scalar UI | same as the panel (`@scalar/nestjs-api-reference`) |
 | Monorepo | pnpm workspaces, Turborepo, strict ESLint and TS | `--frozen-lockfile --ignore-scripts` |
 | Containers | Docker, multi-stage, non-root | same as the panel |
 

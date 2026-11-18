@@ -4,13 +4,13 @@
 
 | Layer | Choice |
 |---|---|
-| Backend | NestJS 11, TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (`nestjs-zod`), CQRS, `@nestjs/schedule`, Terminus, Prometheus |
-| Database | PostgreSQL with Prisma 6 (and Kysely for heavy queries) |
+| Backend | NestJS 12 (the panel uses 11), TypeScript 6.0 (the panel uses 5.9, see ADR 0009), Zod 4 (route registry, ADR 0012), CQRS, `@nestjs/schedule`, Terminus, Prometheus |
+| Database | PostgreSQL with Prisma (major chosen with the first model, ADR 0012) and Kysely for heavy queries |
 | Queues and locks | BullMQ on a Redis-compatible store (Valkey); Redlock and PostgreSQL advisory locks |
 | SSH | `ssh2`: pooling, detached steps, sudo, PTY terminal, SFTP, certificates |
 | Panel client | `@remnawave/backend-contract` pinned per panel version |
 | Frontend | React 19, Vite, Mantine 9, TanStack Query 5, Zustand 5, React Router 7, Zod 4, i18next, Tabler icons, Monaco, xterm.js |
-| API docs | `@nestjs/swagger` + `nestjs-zod`, Scalar UI |
+| API docs | OpenAPI 3.1 generated from the route registry (ADR 0012), Scalar UI |
 | Monorepo | pnpm workspaces, Turborepo, strict TypeScript and ESLint, `--frozen-lockfile --ignore-scripts` |
 
 ## Components

@@ -1,0 +1,163 @@
+/*
+ * Component styles of the Remnawave panel theme (frontend 3.4.11, src/shared/constants/theme/overrides and
+ * src/app/layouts/dashboard/main-layout), expressed against Mantine's static class names.
+ * Import after "@mantine/core/styles.css".
+ */
+
+html,
+body {
+  min-height: 100vh;
+}
+
+/* Cards: translucent white over the page, thin translucent border. */
+.mantine-Card-root {
+  background: rgba(255, 255, 255, 0.02);
+  animation: sw-fade-in 200ms linear both;
+}
+
+.mantine-Card-root[data-with-border='true'] {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@keyframes sw-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Tabs: pills with a tinted active state. */
+.mantine-Tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mantine-Tabs-tab {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: var(--mantine-radius-md);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.mantine-Tabs-tab:hover {
+  color: var(--mantine-color-text);
+  background-color: var(--mantine-color-default-hover);
+  border-color: var(--mantine-color-default-border);
+}
+
+.mantine-Tabs-tab[data-active],
+.mantine-Tabs-tab[data-active]:hover {
+  color: var(--mantine-primary-color-4);
+  background: color-mix(in srgb, var(--mantine-primary-color-6) 12%, transparent);
+  border-color: color-mix(in srgb, var(--mantine-primary-color-6) 30%, transparent);
+}
+
+.mantine-Tabs-tabLabel {
+  font-weight: 500;
+}
+
+/* Drawer and modal: translucent header, thin border. */
+.mantine-Drawer-header,
+.mantine-Modal-header {
+  background: rgba(22, 27, 35, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-lg);
+}
+
+.mantine-Modal-content {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Compact layout: a 64 px brand row and a 52 px navigation row. */
+.sw-header {
+  background-color: var(--mantine-color-dark-7);
+  border-bottom: 1px solid var(--mantine-color-dark-4);
+}
+
+.sw-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  height: 64px;
+  padding-inline: var(--mantine-spacing-lg);
+}
+
+.sw-nav-row {
+  display: flex;
+  align-items: stretch;
+  height: 52px;
+  padding-inline: var(--mantine-spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sw-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 100%;
+}
+
+.sw-nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding-inline: 12px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--mantine-color-dark-1);
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.sw-nav-item:hover,
+.sw-nav-item:focus-visible,
+.sw-nav-item[data-expanded] {
+  color: var(--mantine-color-white);
+  background-color: rgb(255 255 255 / 0.03);
+}
+
+.sw-nav-item[data-active],
+.sw-nav-item[data-active]:hover {
+  color: var(--mantine-color-cyan-4);
+  text-shadow:
+    0.25px 0 currentColor,
+    -0.25px 0 currentColor;
+}
+
+.sw-nav-item[data-active]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--mantine-color-cyan-4);
+}
+
+.sw-nav-item[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sw-caret {
+  opacity: 0.45;
+}
+
+.sw-page {
+  padding: 32px;
+}

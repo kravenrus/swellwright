@@ -2,4 +2,4 @@
 
 Shared UI components and theme tokens.
 
-Status: planned, no code yet. See `docs/en/` for the design.
+Status: first slice. The Remnawave panel theme tokens, `theme`, `styles.css`, the compact `AppHeader`, `PageHeader` and status components; see `docs/en/design/wireframes/README.md` for the token table.

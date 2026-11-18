@@ -17,11 +17,16 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "hygiene": "python scripts/check-hygiene.py",
-    "check": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm run build"
+    "check": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
+    "test": "turbo run test",
+    "openapi": "turbo run build --filter=@swellwright/contracts && node scripts/openapi.mjs",
+    "openapi:check": "turbo run build --filter=@swellwright/contracts && node scripts/openapi.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
     "eslint": "10.15.0",
+    "eslint-plugin-react-hooks": "7.1.1",
     "prettier": "3.10.1",
     "turbo": "2.11.11",
     "typescript": "6.0.3",
