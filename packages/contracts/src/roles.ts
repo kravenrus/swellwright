@@ -25,6 +25,12 @@ export const PERMISSION_INFO = {
   'roles:read': 'See the roles and the permission catalogue.',
   'audit:read': 'Read the audit log.',
   'audit:verify': 'Verify the integrity of the audit chain.',
+  'audit:export': 'Export the audit log and make checkpoints of it.',
+  'sessions:read': 'See the signed-in sessions of every user.',
+  'sessions:revoke': 'End the sessions of other users.',
+  'tokens:create': 'Create API tokens in your own name.',
+  'tokens:read': 'See the API tokens of every user, never their values.',
+  'tokens:revoke': 'Revoke the API tokens of other users.',
 } as const satisfies Record<string, string>;
 
 export type Permission = keyof typeof PERMISSION_INFO;
@@ -42,6 +48,9 @@ export const IMPLIED_PERMISSIONS: Readonly<Partial<Record<Permission, Permission
   'vault:reveal': 'vault:read',
   'users:write': 'users:read',
   'audit:verify': 'audit:read',
+  'audit:export': 'audit:read',
+  'sessions:revoke': 'sessions:read',
+  'tokens:revoke': 'tokens:read',
 };
 
 /**
@@ -53,6 +62,10 @@ export const STEP_UP_PERMISSIONS: readonly Permission[] = [
   'vault:manage',
   'vault:reveal',
   'terminal:use',
+  'audit:export',
+  'sessions:revoke',
+  'tokens:create',
+  'tokens:revoke',
 ];
 
 const READ_ONLY_OPERATIONS: readonly Permission[] = [
@@ -80,6 +93,7 @@ export const ROLE_INFO: Readonly<
       'runs:read',
       'runs:execute',
       'vault:read',
+      'tokens:create',
     ],
   },
   observer: {
@@ -99,6 +113,9 @@ export const ROLE_INFO: Readonly<
       'roles:read',
       'audit:read',
       'audit:verify',
+      'audit:export',
+      'sessions:read',
+      'tokens:read',
     ],
   },
 };

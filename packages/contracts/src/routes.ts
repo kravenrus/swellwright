@@ -16,6 +16,12 @@ import {
 } from './auth.js';
 import { ApiErrorSchema } from './errors.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
+import {
+  SessionIdParamsSchema,
+  SessionListQuerySchema,
+  SessionListSchema,
+  SessionsRevokedSchema,
+} from './sessions.js';
 import { HealthResponseSchema, ReadyResponseSchema, VersionResponseSchema } from './system.js';
 import {
   CreateUserRequestSchema,
@@ -509,8 +515,93 @@ export const verifyAuditChainRoute = defineRoute({
   responses: { 200: { description: 'The result.', schema: ChainVerificationSchema } },
 });
 
+export const listMySessionsRoute = defineRoute({
+  operationId: 'listMySessions',
+  method: 'get',
+  path: '/auth/sessions',
+  tags: ['sessions'],
+  summary: 'The signed-in sessions of your account',
+  description: 'Every active session of the caller, the current one marked.',
+  auth: 'session',
+  responses: { 200: { description: 'Your sessions.', schema: SessionListSchema } },
+});
+
+export const revokeMySessionRoute = defineRoute({
+  operationId: 'revokeMySession',
+  method: 'delete',
+  path: '/auth/sessions/{id}',
+  tags: ['sessions'],
+  summary: 'End one of your sessions',
+  description:
+    'Ends another session of your own account at once. The session you are using cannot be ended here (409): sign out instead. A session that is not yours is reported as not found.',
+  auth: 'session',
+  request: { params: SessionIdParamsSchema },
+  responses: { 204: { description: 'The session is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const revokeOtherSessionsRoute = defineRoute({
+  operationId: 'revokeOtherSessions',
+  method: 'post',
+  path: '/auth/sessions/revoke-others',
+  tags: ['sessions'],
+  summary: 'End all your other sessions',
+  description: 'Keeps the session you are using and ends every other session of your account.',
+  auth: 'session',
+  responses: { 200: { description: 'How many were ended.', schema: SessionsRevokedSchema } },
+});
+
+export const listSessionsRoute = defineRoute({
+  operationId: 'listSessions',
+  method: 'get',
+  path: '/sessions',
+  tags: ['sessions'],
+  summary: 'The signed-in sessions of every user',
+  description: 'Active sessions, most recently used first. Filter by user with `userId`.',
+  auth: 'session',
+  permission: 'sessions:read',
+  request: { query: SessionListQuerySchema },
+  responses: { 200: { description: 'The sessions.', schema: SessionListSchema } },
+});
+
+export const revokeSessionRoute = defineRoute({
+  operationId: 'revokeSession',
+  method: 'delete',
+  path: '/sessions/{id}',
+  tags: ['sessions'],
+  summary: 'End a session of any user',
+  description:
+    'Ends the session at once and records it. The session you are using cannot be ended here (409).',
+  auth: 'session',
+  permission: 'sessions:revoke',
+  stepUp: true,
+  request: { params: SessionIdParamsSchema },
+  responses: { 204: { description: 'The session is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const revokeUserSessionsRoute = defineRoute({
+  operationId: 'revokeUserSessions',
+  method: 'post',
+  path: '/users/{id}/sessions/revoke',
+  tags: ['sessions'],
+  summary: 'End every session of a user',
+  description:
+    'Ends all sessions of the user at once, for example after a suspected theft of a cookie. Refused with 409 for your own account (use "end all other sessions").',
+  auth: 'session',
+  permission: 'sessions:revoke',
+  stepUp: true,
+  request: { params: UserIdParamsSchema },
+  responses: { 200: { description: 'How many were ended.', schema: SessionsRevokedSchema } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
-export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = ['getMe', 'changePassword', 'stepUp'];
+export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
+  'getMe',
+  'changePassword',
+  'stepUp',
+  'listMySessions',
+  'revokeMySession',
+  'revokeOtherSessions',
+];
 
 /** Every route of the public API. The server binds its handlers to these definitions. */
 export const routes = [
@@ -545,6 +636,12 @@ export const routes = [
   rolesRoute,
   listAuditRoute,
   verifyAuditChainRoute,
+  listMySessionsRoute,
+  revokeMySessionRoute,
+  revokeOtherSessionsRoute,
+  listSessionsRoute,
+  revokeSessionRoute,
+  revokeUserSessionsRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */
