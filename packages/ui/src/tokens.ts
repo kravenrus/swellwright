@@ -33,7 +33,7 @@ export const SHADED_GRAY = [
 export const FONT_FAMILY =
   "Montserrat, Vazirmatn, 'Apple Color Emoji', 'Noto Sans SC', 'Twemoji Country Flags', sans-serif";
 /** The font of the brand title (the panel uses it for the title and nothing else). */
-export const FONT_FAMILY_BRAND = "Unbounded, sans-serif";
+export const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
 
 /** The panel moves every breakpoint: `lg` (64em, 1024 px) is where its mobile layout ends. */
 export const BREAKPOINTS = {
