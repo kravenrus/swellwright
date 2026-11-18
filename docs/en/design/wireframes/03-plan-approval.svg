@@ -1,175 +1,147 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">Plan and approval wireframe</title><desc id="d">The plan drawer for editing a shared config profile: impact, diff, rollback, policy checks and approval.</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="0" y="0" width="220" height="800" fill="#0a101c"/>
-<line x1="220" y1="0" x2="220" y2="800" stroke="#27385a"/>
-<polygon points="34,17 45.3,23.5 45.3,36.5 34,43 22.7,36.5 22.7,23.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M25 27 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M25 33.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="58" y="35" font-size="16" fill="#e6edf7" font-weight="700">Swellwright</text>
-<circle cx="30" cy="73" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="77" font-size="13.5" fill="#9fb0c8">Overview</text>
-<circle cx="30" cy="105" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="109" font-size="13.5" fill="#9fb0c8">Servers</text>
-<circle cx="30" cy="137" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="141" font-size="13.5" fill="#9fb0c8">Nodes</text>
-<circle cx="30" cy="169" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="173" font-size="13.5" fill="#9fb0c8">Runs</text>
-<circle cx="30" cy="201" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="205" font-size="13.5" fill="#9fb0c8">Scenarios</text>
-<rect x="10" y="218" width="200" height="30" rx="7" fill="#16223a"/>
-<rect x="10" y="218" width="3" height="30" rx="1.5" fill="#22d3ee"/>
-<circle cx="30" cy="233" r="4" fill="none" stroke="#22d3ee" stroke-width="1.4"/>
-<text x="46" y="237" font-size="13.5" fill="#e6edf7" font-weight="600">Panel</text>
-<circle cx="30" cy="265" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="269" font-size="13.5" fill="#9fb0c8">Chains</text>
-<circle cx="30" cy="297" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="301" font-size="13.5" fill="#9fb0c8">DNS</text>
-<circle cx="30" cy="329" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="333" font-size="13.5" fill="#9fb0c8">Certificates</text>
-<circle cx="30" cy="361" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="365" font-size="13.5" fill="#9fb0c8">Probes</text>
-<circle cx="30" cy="393" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="397" font-size="13.5" fill="#9fb0c8">Alerts</text>
-<circle cx="30" cy="425" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="429" font-size="13.5" fill="#9fb0c8">Schedules</text>
-<circle cx="30" cy="457" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="461" font-size="13.5" fill="#9fb0c8">Reports</text>
-<circle cx="30" cy="489" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="493" font-size="13.5" fill="#9fb0c8">Security</text>
-<circle cx="30" cy="521" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="525" font-size="13.5" fill="#9fb0c8">API console</text>
-<circle cx="30" cy="553" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="557" font-size="13.5" fill="#9fb0c8">Settings</text>
-<circle cx="30" cy="585" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="589" font-size="13.5" fill="#9fb0c8">Documentation</text>
-<line x1="0" y1="752" x2="220" y2="752" stroke="#27385a"/>
-<circle cx="22" cy="772" r="5" fill="#34d399"/>
-<path d="M19.9 772 L21.4 773.7 L24.4 770.1" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="36" y="776" font-size="12" fill="#9fb0c8">Vault unsealed</text>
-<text x="204" y="776" font-size="11.5" fill="#6b7d99" text-anchor="end">v0.1</text>
-<rect x="221" y="0" width="1059" height="56" fill="#0a101c"/>
-<line x1="221" y1="56" x2="1280" y2="56" stroke="#27385a"/>
-<text x="244" y="34" font-size="13.5" fill="#9fb0c8">Panel  /  Profiles  /  Foreign</text>
-<rect x="560" y="12" width="280" height="32" rx="8" fill="#0b1424" stroke="#27385a"/>
-<text x="576" y="33" font-size="12.5" fill="#6b7d99">Search  (Ctrl+K)</text>
-<rect x="858" y="16" width="178.4" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="868" y="32.2" font-size="12" fill="#9fb0c8">Panel: panel.example.com</text>
-<rect x="1088" y="14" width="92" height="28" rx="14" fill="#16223a" stroke="#60a5fa"/>
-<circle cx="1104" cy="28" r="6" fill="#60a5fa"/>
-<path d="M1102.5 25.4 L1106.7 28 L1102.5 30.6 Z" fill="#0b1220"/>
-<text x="1116" y="32" font-size="11.5" fill="#e6edf7" font-weight="600">2 running</text>
-<circle cx="1204" cy="28" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<path d="M1198 33 h12 M1200 33 v-5 a4 4 0 0 1 8 0 v5" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="1213" cy="19" r="8" fill="#f87171"/>
-<text x="1213" y="22.6" font-size="10" fill="#1b0707" font-weight="800" text-anchor="middle">3</text>
-<circle cx="1250" cy="28" r="14" fill="#16223a" stroke="#27385a"/>
-<text x="1250" y="32" font-size="11" fill="#e6edf7" font-weight="700" text-anchor="middle">OW</text>
-<text x="244" y="104" font-size="22" fill="#e6edf7" font-weight="700">Profile: Foreign</text>
-<rect x="244" y="140" width="240" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="140" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="180" width="300" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="180" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="220" width="360" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="220" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="260" width="240" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="260" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="300" width="300" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="300" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="340" width="360" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="340" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="244" y="380" width="240" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="560" y="380" width="180" height="12" rx="4" fill="#27385a" opacity="0.35"/>
-<rect x="0" y="0" width="1280" height="800" fill="#000000" opacity="0.58"/>
-<rect x="500" y="0" width="780" height="800" fill="#111b2e" stroke="#27385a"/>
-<text x="528" y="44" font-size="19" fill="#e6edf7" font-weight="700">Plan: edit config profile “Foreign”</text>
-<text x="528" y="66" font-size="12" fill="#9fb0c8">Run #482  ·  scenario P05  ·  dry run finished 14:02:11, nothing has been changed yet</text>
-<path d="M1246 30 l14 14 M1260 30 l-14 14" fill="none" stroke="#9fb0c8" stroke-width="1.8"/>
-<rect x="528" y="84" width="230" height="84" rx="9" fill="#16223a" stroke="#27385a"/>
-<text x="542" y="106" font-size="11.5" fill="#6b7d99" font-weight="700">Risk</text>
-<circle cx="550" cy="128" r="7" fill="#fbbf24"/>
-<path d="M550 124.8 L550 128.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="550" cy="131" r="1" fill="#0b1220"/>
-<text x="564" y="133" font-size="14" fill="#e6edf7" font-weight="700">High</text>
-<text x="542" y="154" font-size="11.5" fill="#9fb0c8">Shared profile, all nodes</text>
-<rect x="770" y="84" width="230" height="84" rx="9" fill="#16223a" stroke="#27385a"/>
-<text x="784" y="106" font-size="11.5" fill="#6b7d99" font-weight="700">Impact</text>
-<circle cx="792" cy="128" r="7" fill="#fbbf24"/>
-<path d="M792 124.8 L792 128.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="792" cy="131" r="1" fill="#0b1220"/>
-<text x="806" y="133" font-size="14" fill="#e6edf7" font-weight="700">12 nodes restart Xray</text>
-<text x="784" y="154" font-size="11.5" fill="#9fb0c8">about 12 to 40 s per node</text>
-<rect x="1012" y="84" width="230" height="84" rx="9" fill="#16223a" stroke="#27385a"/>
-<text x="1026" y="106" font-size="11.5" fill="#6b7d99" font-weight="700">Rollback</text>
-<circle cx="1034" cy="128" r="7" fill="#a78bfa"/>
-<path d="M1036.8 129.4 A3.4 3.4 0 1 1 1036.4 125.8" fill="none" stroke="#0b1220" stroke-width="1.6"/>
-<path d="M1037.6 124.4 L1036.4 125.8 L1038 126.6" fill="none" stroke="#0b1220" stroke-width="1.4"/>
-<text x="1048" y="133" font-size="14" fill="#e6edf7" font-weight="700">Full</text>
-<text x="1026" y="154" font-size="11.5" fill="#9fb0c8">profile snapshot is restored</text>
-<circle cx="528" cy="84" r="11" fill="#fbbf24"/>
-<text x="528" y="88.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
-<rect x="528" y="184" width="724" height="162" rx="9" fill="#070d18" stroke="#27385a"/>
-<text x="544" y="206" font-size="11.5" fill="#6b7d99" font-weight="700">Diff  ·  profile JSON  ·  inbound “vless-main”</text>
-<text x="544" y="232" class="mo" font-size="12" fill="#9fb0c8" font-weight="700"> </text>
-<text x="562" y="232" class="mo" font-size="12" fill="#9fb0c8">&quot;sniffing&quot;: {</text>
-<text x="544" y="247" class="mo" font-size="12" fill="#9fb0c8" font-weight="700"> </text>
-<text x="562" y="247" class="mo" font-size="12" fill="#9fb0c8">  &quot;enabled&quot;: true,</text>
-<rect x="536" y="251" width="708" height="15" rx="2" fill="#f87171" opacity="0.12"/>
-<text x="544" y="262" class="mo" font-size="12" fill="#f87171" font-weight="700">-</text>
-<text x="562" y="262" class="mo" font-size="12" fill="#e6edf7">  &quot;destOverride&quot;: [&quot;http&quot;, &quot;tls&quot;, &quot;fakedns&quot;],</text>
-<rect x="536" y="266" width="708" height="15" rx="2" fill="#34d399" opacity="0.12"/>
-<text x="544" y="277" class="mo" font-size="12" fill="#34d399" font-weight="700">+</text>
-<text x="562" y="277" class="mo" font-size="12" fill="#e6edf7">  &quot;destOverride&quot;: [&quot;http&quot;, &quot;tls&quot;],</text>
-<rect x="536" y="281" width="708" height="15" rx="2" fill="#f87171" opacity="0.12"/>
-<text x="544" y="292" class="mo" font-size="12" fill="#f87171" font-weight="700">-</text>
-<text x="562" y="292" class="mo" font-size="12" fill="#e6edf7">  &quot;routeOnly&quot;: false</text>
-<rect x="536" y="296" width="708" height="15" rx="2" fill="#34d399" opacity="0.12"/>
-<text x="544" y="307" class="mo" font-size="12" fill="#34d399" font-weight="700">+</text>
-<text x="562" y="307" class="mo" font-size="12" fill="#e6edf7">  &quot;routeOnly&quot;: true</text>
-<text x="544" y="322" class="mo" font-size="12" fill="#9fb0c8" font-weight="700"> </text>
-<text x="562" y="322" class="mo" font-size="12" fill="#9fb0c8">}</text>
-<text x="544" y="340" font-size="11" fill="#6b7d99">+1 line  /  −1 line shown as unified diff (side by side is one click away)</text>
-<circle cx="528" cy="184" r="11" fill="#fbbf24"/>
-<text x="528" y="188.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
-<rect x="528" y="362" width="370" height="176" rx="9" fill="#16223a" stroke="#27385a"/>
-<text x="544" y="386" font-size="12.5" fill="#e6edf7" font-weight="700">Strategy and locks</text>
-<text x="544" y="410" font-size="12" fill="#9fb0c8">Canary: PL-01 first, then waves of 3</text>
-<text x="544" y="432" font-size="12" fill="#9fb0c8">Gates: node online, Xray uptime,</text>
-<text x="544" y="454" font-size="12" fill="#9fb0c8">users online at least 90%</text>
-<text x="544" y="476" font-size="12" fill="#9fb0c8">On gate failure: stop and roll back</text>
-<text x="544" y="498" font-size="12" fill="#9fb0c8">Locks: profile Foreign, 12 nodes</text>
-<rect x="910" y="362" width="342" height="176" rx="9" fill="#16223a" stroke="#27385a"/>
-<text x="926" y="386" font-size="12.5" fill="#e6edf7" font-weight="700">Policy checks</text>
-<circle cx="936" cy="408" r="7" fill="#34d399"/>
-<path d="M933 408 L935.2 410.4 L939.4 405.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="952" y="412" font-size="12" fill="#e6edf7">P-001  Plan reviewed before applying</text>
-<circle cx="936" cy="436" r="7" fill="#fbbf24"/>
-<path d="M936 432.8 L936 436.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="936" cy="439" r="1" fill="#0b1220"/>
-<text x="952" y="440" font-size="12" fill="#e6edf7">P-003  Shared profile: acknowledged</text>
-<circle cx="936" cy="464" r="7" fill="#34d399"/>
-<path d="M933 464 L935.2 466.4 L939.4 461.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="952" y="468" font-size="12" fill="#e6edf7">P-004  Canary first, small groups</text>
-<circle cx="936" cy="492" r="7" fill="#34d399"/>
-<path d="M933 492 L935.2 494.4 L939.4 489.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="952" y="496" font-size="12" fill="#e6edf7">P-009  Fallback access preserved</text>
-<circle cx="910" cy="362" r="11" fill="#fbbf24"/>
-<text x="910" y="366.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text>
-<rect x="528" y="556" width="724" height="220" rx="9" fill="#16223a" stroke="#fbbf24"/>
-<text x="544" y="580" font-size="13.5" fill="#e6edf7" font-weight="700">Approval</text>
-<text x="544" y="602" font-size="12" fill="#9fb0c8">Bound to this exact plan:</text>
-<text x="700" y="602" class="mo" font-size="12" fill="#e6edf7">sha256:7f3a9c…c91e</text>
-<text x="544" y="622" font-size="12" fill="#9fb0c8">Approver: owner (you).  Second approver: not required by policy.</text>
-<circle cx="1236" cy="576" r="11" fill="#fbbf24"/>
-<text x="1236" y="580.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">4</text>
-<text x="544" y="646" font-size="12" fill="#9fb0c8" font-weight="600">Type RESTART 12 NODES to confirm</text>
-<rect x="544" y="654" width="420" height="34" rx="7" fill="#0b1424" stroke="#27385a"/>
-<text x="556" y="675.5" font-size="13" fill="#6b7d99">RESTART 12 NODES</text>
-<circle cx="1000" cy="690" r="7" fill="#22d3ee"/>
-<circle cx="1000" cy="687" r="1" fill="#0b1220"/>
-<path d="M1000 689.4 L1000 693.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1014" y="694" font-size="12" fill="#9fb0c8">Step-up: TOTP code required</text>
-<rect x="544" y="728" width="120" height="34" rx="7" fill="none" stroke="#f87171" stroke-width="1.4"/>
-<text x="604" y="749.5" font-size="13" fill="#f87171" font-weight="600" text-anchor="middle">Reject</text>
-<rect x="674" y="728" width="150" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="749" y="749.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Request changes</text>
-<rect x="1040" y="728" width="196" height="34" rx="7" fill="#16223a" stroke="#27385a" opacity="0.8"/>
-<text x="1138" y="749.5" font-size="13" fill="#6b7d99" font-weight="600" text-anchor="middle">Approve and run</text>
-<text x="840" y="750" font-size="11" fill="#6b7d99">Enabled after confirmation</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="t d"><title id="t">Plan and approval wireframe</title><desc id="d">The plan drawer for editing a shared config profile: impact, diff, rollback, policy checks and approval.</desc><style>text{font-family:Montserrat,Vazirmatn,'Noto Sans SC',sans-serif}.mo{font-family:'Fira Mono',monospace}use{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}path{stroke-linecap:round;stroke-linejoin:round}</style><defs><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></symbol><symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></symbol><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></symbol><symbol id="i-server" viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-2" /> <path d="M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -2" /> <path d="M7 8l0 .01" /> <path d="M7 16l0 .01" /></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /> <path d="M11 6l9 0" /> <path d="M11 12l9 0" /> <path d="M11 18l9 0" /></symbol><symbol id="i-radar-2" viewBox="0 0 24 24"><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M15.51 15.56a5 5 0 1 0 -3.51 1.44" /> <path d="M18.832 17.86a9 9 0 1 0 -6.832 3.14" /> <path d="M12 12v9" /></symbol><symbol id="i-hexagon" viewBox="0 0 24 24"><path d="M19.875 6.27a2.225 2.225 0 0 1 1.125 1.948v7.284c0 .809 -.443 1.555 -1.158 1.948l-6.75 4.27a2.269 2.269 0 0 1 -2.184 0l-6.75 -4.27a2.225 2.225 0 0 1 -1.158 -1.948v-7.285c0 -.809 .443 -1.554 1.158 -1.947l6.75 -3.98a2.33 2.33 0 0 1 2.25 0l6.75 3.98h-.033" /></symbol><symbol id="i-shield-lock" viewBox="0 0 24 24"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" /> <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12l0 2.5" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6l-12 12" /> <path d="M6 6l12 12" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3.06 13a9 9 0 1 0 .49 -4.087" /> <path d="M3 4.001v5h5" /> <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M9 12l2 2l4 -4" /></symbol><symbol id="i-info-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M12 9h.01" /> <path d="M11 12h1v4h1" /></symbol></defs><rect width="1280" height="900" fill="#161b22"/><line x1="0" y1="115.5" x2="1280" y2="115.5" stroke="#484f58"/>
+<polygon points="52,18 64.1,25 64.1,39 52,46 39.9,39 39.9,25" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M43 29 q4.5 -4 9 0 t9 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M43 35.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="78" y="38" font-size="18" fill="#ffffff" font-weight="700">Swellwright</text>
+<rect x="1212.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-user" x="1221" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="1168.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="1177" y="23" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="1199" cy="19" r="4.5" fill="#ff8787"/>
+<rect x="1124.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-search" x="1133" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="996.7" y="20.5" width="115.8" height="22" rx="8" fill="none" stroke="#3bc9db"/>
+<use href="#i-player-play" x="1004.2" y="25.5" width="12" height="12" stroke="#3bc9db"/>
+<text x="1024.2" y="35.5" font-size="11" fill="#3bc9db" font-weight="700" letter-spacing="0.3">2 RUNNING</text>
+<rect x="722.7" y="14.5" width="261" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="736.2" y="37" font-size="13" fill="#b1bac4" font-weight="500">Panel: panel.example.com</text>
+<use href="#i-chevron-down" x="959.2" y="25" width="14" height="14" stroke="#8b949e"/>
+<line x1="0" y1="64.5" x2="1280" y2="64.5" stroke="#24292f"/>
+<use href="#i-layout-dashboard" x="44" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="70" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Overview</text>
+<use href="#i-server" x="169.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="195.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Fleet</text>
+<use href="#i-chevron-down" x="241.8" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-list-check" x="281.8" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="307.8" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Operations</text>
+<use href="#i-chevron-down" x="400.6" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-radar-2" x="440.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="466.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Monitoring</text>
+<use href="#i-chevron-down" x="559.5" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-hexagon" x="599.5" y="81" width="18" height="18" stroke="#3bc9db"/>
+<text x="625.5" y="95.5" font-size="15" fill="#3bc9db" font-weight="600">Panel</text>
+<use href="#i-chevron-down" x="676.9" y="84" width="12" height="12" stroke="#3bc9db" opacity="0.45"/>
+<rect x="595.5" y="113.5" width="97.4" height="2" rx="1" fill="#3bc9db"/>
+<use href="#i-shield-lock" x="716.9" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="742.9" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Security</text>
+<use href="#i-chevron-down" x="813" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-settings" x="853" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="879" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Settings</text>
+<use href="#i-chevron-down" x="950.2" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<rect x="32.5" y="132.5" width="1215" height="75" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="148.5" width="43" height="43" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-hexagon" x="59" y="159" width="22" height="22" stroke="#3bc9db"/>
+<text x="108" y="168" font-size="18" fill="#ffffff" font-weight="600">Profile: Foreign</text>
+<text x="108" y="188" font-size="14" fill="#8b949e">Config profile, 12 nodes</text>
+<rect x="48" y="244" width="280" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="244" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="288" width="350" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="288" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="332" width="420" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="332" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="376" width="280" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="376" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="420" width="350" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="420" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="464" width="420" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="464" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="508" width="280" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="508" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="48" y="552" width="350" height="12" rx="4" fill="#2a3038"/>
+<rect x="520" y="552" width="180" height="12" rx="4" fill="#2a3038"/>
+<rect x="0" y="0" width="1280" height="900" fill="#000000" opacity="0.6"/>
+<rect x="500" y="0" width="780" height="900" fill="#161b22" stroke="#484f58"/>
+<rect x="501" y="0" width="779" height="60" fill="#161b22"/>
+<line x1="500" y1="60.5" x2="1280" y2="60.5" stroke="#272c33"/>
+<text x="524" y="36" font-size="16" fill="#ffffff" font-weight="600">Plan: edit config profile “Foreign”</text>
+<rect x="1228.5" y="12.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-x" x="1237" y="21" width="18" height="18" stroke="#b1bac4"/>
+<text x="524" y="90" font-size="13" fill="#8b949e">Run #482  ·  scenario P05  ·  dry run finished 14:02:11, nothing has been changed yet</text>
+<rect x="524.5" y="108.5" width="231" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="540" y="130" font-size="12" fill="#8b949e" font-weight="600">Risk</text>
+<use href="#i-alert-triangle" x="540" y="144" width="16" height="16" stroke="#ffd43b"/>
+<text x="566" y="157" font-size="14" fill="#ffffff" font-weight="600">High</text>
+<text x="540" y="184" font-size="12" fill="#8b949e">Shared profile, all nodes</text>
+<rect x="768.5" y="108.5" width="231" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="784" y="130" font-size="12" fill="#8b949e" font-weight="600">Impact</text>
+<use href="#i-alert-triangle" x="784" y="144" width="16" height="16" stroke="#ffd43b"/>
+<text x="810" y="157" font-size="14" fill="#ffffff" font-weight="600">12 nodes restart Xray</text>
+<text x="784" y="184" font-size="12" fill="#8b949e">about 12 to 40 s per node</text>
+<rect x="1012.5" y="108.5" width="231" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="1028" y="130" font-size="12" fill="#8b949e" font-weight="600">Rollback</text>
+<use href="#i-restore" x="1028" y="144" width="16" height="16" stroke="#9775fa"/>
+<text x="1054" y="157" font-size="14" fill="#ffffff" font-weight="600">Full</text>
+<text x="1028" y="184" font-size="12" fill="#8b949e">profile snapshot is restored</text>
+<circle cx="524" cy="108" r="11" fill="#ffa94d"/>
+<text x="524" y="112.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">1</text>
+<rect x="524.5" y="216.5" width="731" height="176" rx="8" fill="#0d1117" stroke="#272c33"/>
+<text x="540" y="240" font-size="12" fill="#8b949e" font-weight="600">Diff  ·  profile JSON  ·  inbound “vless-main”</text>
+<text x="538" y="266" class="mo" font-size="13" fill="#8b949e" font-weight="700"> </text>
+<text x="558" y="266" class="mo" font-size="13" fill="#8b949e">&quot;sniffing&quot;: {</text>
+<text x="538" y="283" class="mo" font-size="13" fill="#8b949e" font-weight="700"> </text>
+<text x="558" y="283" class="mo" font-size="13" fill="#8b949e">  &quot;enabled&quot;: true,</text>
+<rect x="525" y="288" width="730" height="17" rx="2" fill="#ff8787" opacity="0.12"/>
+<text x="538" y="300" class="mo" font-size="13" fill="#ff8787" font-weight="700">-</text>
+<text x="558" y="300" class="mo" font-size="13" fill="#c9d1d9">  &quot;destOverride&quot;: [&quot;http&quot;, &quot;tls&quot;, &quot;fakedns&quot;],</text>
+<rect x="525" y="305" width="730" height="17" rx="2" fill="#38d9a9" opacity="0.12"/>
+<text x="538" y="317" class="mo" font-size="13" fill="#38d9a9" font-weight="700">+</text>
+<text x="558" y="317" class="mo" font-size="13" fill="#c9d1d9">  &quot;destOverride&quot;: [&quot;http&quot;, &quot;tls&quot;],</text>
+<rect x="525" y="322" width="730" height="17" rx="2" fill="#ff8787" opacity="0.12"/>
+<text x="538" y="334" class="mo" font-size="13" fill="#ff8787" font-weight="700">-</text>
+<text x="558" y="334" class="mo" font-size="13" fill="#c9d1d9">  &quot;routeOnly&quot;: false</text>
+<rect x="525" y="339" width="730" height="17" rx="2" fill="#38d9a9" opacity="0.12"/>
+<text x="538" y="351" class="mo" font-size="13" fill="#38d9a9" font-weight="700">+</text>
+<text x="558" y="351" class="mo" font-size="13" fill="#c9d1d9">  &quot;routeOnly&quot;: true</text>
+<text x="538" y="368" class="mo" font-size="13" fill="#8b949e" font-weight="700"> </text>
+<text x="558" y="368" class="mo" font-size="13" fill="#8b949e">}</text>
+<text x="540" y="384" font-size="12" fill="#6e7681">+1 line, -1 line, shown unified (side by side is one click away)</text>
+<circle cx="524" cy="216" r="11" fill="#ffa94d"/>
+<text x="524" y="220.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">2</text>
+<rect x="524.5" y="408.5" width="371" height="187" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="540" y="438" font-size="15" fill="#ffffff" font-weight="600">Strategy and locks</text>
+<text x="540" y="470" font-size="13" fill="#b1bac4">Canary: PL-01 first, then waves of 3</text>
+<text x="540" y="494" font-size="13" fill="#b1bac4">Gates: node online, Xray uptime,</text>
+<text x="540" y="518" font-size="13" fill="#b1bac4">users online at least 90%</text>
+<text x="540" y="542" font-size="13" fill="#b1bac4">On gate failure: stop and roll back</text>
+<text x="540" y="566" font-size="13" fill="#b1bac4">Locks: profile Foreign, 12 nodes</text>
+<rect x="912.5" y="408.5" width="343" height="187" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="928" y="438" font-size="15" fill="#ffffff" font-weight="600">Policy checks</text>
+<use href="#i-circle-check" x="928" y="458" width="16" height="16" stroke="#38d9a9"/>
+<text x="956" y="471" font-size="13" fill="#c9d1d9">P-001  Plan reviewed before applying</text>
+<use href="#i-alert-triangle" x="928" y="490" width="16" height="16" stroke="#ffd43b"/>
+<text x="956" y="503" font-size="13" fill="#c9d1d9">P-003  Shared profile: acknowledged</text>
+<use href="#i-circle-check" x="928" y="522" width="16" height="16" stroke="#38d9a9"/>
+<text x="956" y="535" font-size="13" fill="#c9d1d9">P-004  Canary first, small groups</text>
+<use href="#i-circle-check" x="928" y="554" width="16" height="16" stroke="#38d9a9"/>
+<text x="956" y="567" font-size="13" fill="#c9d1d9">P-009  Fallback access preserved</text>
+<circle cx="912" cy="408" r="11" fill="#ffa94d"/>
+<text x="912" y="412.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">3</text>
+<rect x="524.5" y="612.5" width="731" height="262" rx="8" fill="#1c1810" stroke="#6b5a14"/>
+<text x="544" y="642" font-size="15" fill="#ffffff" font-weight="600">Approval</text>
+<text x="544" y="668" font-size="13" fill="#b1bac4">Bound to this exact plan:</text>
+<text x="730" y="668" class="mo" font-size="13" fill="#ffffff">sha256:7f3a9c…c91e</text>
+<text x="544" y="692" font-size="13" fill="#b1bac4">Approver: owner (you). A second approver is not required by policy.</text>
+<circle cx="1236" cy="636" r="11" fill="#ffa94d"/>
+<text x="1236" y="640.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">4</text>
+<text x="544" y="724" font-size="14" fill="#c9d1d9" font-weight="500">Type RESTART 12 NODES to confirm</text>
+<rect x="544.5" y="732.5" width="419" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="558" y="755" font-size="14" fill="#6e7681">RESTART 12 NODES</text>
+<use href="#i-info-circle" x="992" y="752" width="16" height="16" stroke="#4dabf7"/>
+<text x="1020" y="765" font-size="13" fill="#b1bac4">Step-up: TOTP code required</text>
+<rect x="544" y="818" width="112" height="38" rx="8" fill="#641515"/>
+<text x="577.1" y="842" font-size="14" fill="#fff5f5" font-weight="600">Reject</text>
+<rect x="666.5" y="818.5" width="159" height="37" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="683.4" y="842" font-size="14" fill="#ffffff" font-weight="600">Request changes</text>
+<text x="846" y="842" font-size="12" fill="#6e7681">Enabled after confirmation</text>
+<rect x="1040" y="818" width="196" height="38" rx="8" fill="#21262d"/>
+<text x="1077.1" y="842" font-size="14" fill="#6e7681" font-weight="600">Approve and run</text></svg>

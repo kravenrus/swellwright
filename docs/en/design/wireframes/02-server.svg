@@ -1,242 +1,206 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">Server card wireframe</title><desc id="d">A server: facts, baseline and drift, access, linked panel node and recent runs.</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="0" y="0" width="220" height="800" fill="#0a101c"/>
-<line x1="220" y1="0" x2="220" y2="800" stroke="#27385a"/>
-<polygon points="34,17 45.3,23.5 45.3,36.5 34,43 22.7,36.5 22.7,23.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M25 27 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M25 33.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="58" y="35" font-size="16" fill="#e6edf7" font-weight="700">Swellwright</text>
-<circle cx="30" cy="73" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="77" font-size="13.5" fill="#9fb0c8">Overview</text>
-<rect x="10" y="90" width="200" height="30" rx="7" fill="#16223a"/>
-<rect x="10" y="90" width="3" height="30" rx="1.5" fill="#22d3ee"/>
-<circle cx="30" cy="105" r="4" fill="none" stroke="#22d3ee" stroke-width="1.4"/>
-<text x="46" y="109" font-size="13.5" fill="#e6edf7" font-weight="600">Servers</text>
-<circle cx="30" cy="137" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="141" font-size="13.5" fill="#9fb0c8">Nodes</text>
-<circle cx="30" cy="169" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="173" font-size="13.5" fill="#9fb0c8">Runs</text>
-<circle cx="30" cy="201" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="205" font-size="13.5" fill="#9fb0c8">Scenarios</text>
-<circle cx="30" cy="233" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="237" font-size="13.5" fill="#9fb0c8">Panel</text>
-<circle cx="30" cy="265" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="269" font-size="13.5" fill="#9fb0c8">Chains</text>
-<circle cx="30" cy="297" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="301" font-size="13.5" fill="#9fb0c8">DNS</text>
-<circle cx="30" cy="329" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="333" font-size="13.5" fill="#9fb0c8">Certificates</text>
-<circle cx="30" cy="361" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="365" font-size="13.5" fill="#9fb0c8">Probes</text>
-<circle cx="30" cy="393" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="397" font-size="13.5" fill="#9fb0c8">Alerts</text>
-<circle cx="30" cy="425" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="429" font-size="13.5" fill="#9fb0c8">Schedules</text>
-<circle cx="30" cy="457" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="461" font-size="13.5" fill="#9fb0c8">Reports</text>
-<circle cx="30" cy="489" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="493" font-size="13.5" fill="#9fb0c8">Security</text>
-<circle cx="30" cy="521" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="525" font-size="13.5" fill="#9fb0c8">API console</text>
-<circle cx="30" cy="553" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="557" font-size="13.5" fill="#9fb0c8">Settings</text>
-<circle cx="30" cy="585" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="589" font-size="13.5" fill="#9fb0c8">Documentation</text>
-<line x1="0" y1="752" x2="220" y2="752" stroke="#27385a"/>
-<circle cx="22" cy="772" r="5" fill="#34d399"/>
-<path d="M19.9 772 L21.4 773.7 L24.4 770.1" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="36" y="776" font-size="12" fill="#9fb0c8">Vault unsealed</text>
-<text x="204" y="776" font-size="11.5" fill="#6b7d99" text-anchor="end">v0.1</text>
-<rect x="221" y="0" width="1059" height="56" fill="#0a101c"/>
-<line x1="221" y1="56" x2="1280" y2="56" stroke="#27385a"/>
-<text x="244" y="34" font-size="13.5" fill="#9fb0c8">Servers  /  PL-01</text>
-<rect x="560" y="12" width="280" height="32" rx="8" fill="#0b1424" stroke="#27385a"/>
-<text x="576" y="33" font-size="12.5" fill="#6b7d99">Search  (Ctrl+K)</text>
-<rect x="858" y="16" width="178.4" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="868" y="32.2" font-size="12" fill="#9fb0c8">Panel: panel.example.com</text>
-<rect x="1088" y="14" width="92" height="28" rx="14" fill="#16223a" stroke="#60a5fa"/>
-<circle cx="1104" cy="28" r="6" fill="#60a5fa"/>
-<path d="M1102.5 25.4 L1106.7 28 L1102.5 30.6 Z" fill="#0b1220"/>
-<text x="1116" y="32" font-size="11.5" fill="#e6edf7" font-weight="600">2 running</text>
-<circle cx="1204" cy="28" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<path d="M1198 33 h12 M1200 33 v-5 a4 4 0 0 1 8 0 v5" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="1213" cy="19" r="8" fill="#f87171"/>
-<text x="1213" y="22.6" font-size="10" fill="#1b0707" font-weight="800" text-anchor="middle">3</text>
-<circle cx="1250" cy="28" r="14" fill="#16223a" stroke="#27385a"/>
-<text x="1250" y="32" font-size="11" fill="#e6edf7" font-weight="700" text-anchor="middle">OW</text>
-<text x="244" y="108" font-size="24" fill="#e6edf7" font-weight="700">PL-01</text>
-<rect x="320" y="90" width="77.8" height="24" rx="12" fill="#16223a" stroke="#34d399"/>
-<circle cx="335" cy="102" r="6" fill="#34d399"/>
-<path d="M332.4 102 L334.3 104.1 L337.9 99.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="347" y="106.2" font-size="12" fill="#e6edf7" font-weight="600">Active</text>
-<rect x="405.8" y="90" width="84.7" height="24" rx="12" fill="#16223a" stroke="#fbbf24"/>
-<circle cx="420.8" cy="102" r="6" fill="#fbbf24"/>
-<path d="M420.8 99.3 L420.8 102.5" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="420.8" cy="104.6" r="0.9" fill="#0b1220"/>
-<text x="432.8" y="106.2" font-size="12" fill="#e6edf7" font-weight="600">1 drift</text>
-<rect x="498.5" y="90" width="154.3" height="24" rx="12" fill="#16223a" stroke="#34d399"/>
-<circle cx="513.5" cy="102" r="6" fill="#34d399"/>
-<path d="M510.9 102 L512.8 104.1 L516.4 99.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="525.5" y="106.2" font-size="12" fill="#e6edf7" font-weight="600">Panel node online</text>
-<text x="244" y="134" font-size="12.5" fill="#9fb0c8">pl1.example.com   ·   192.0.2.14   ·   Provider A   ·   Poland   ·   tags: foreign, wave-1</text>
-<rect x="880" y="88" width="100" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="930" y="109.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Run check</text>
-<rect x="990" y="88" width="130" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="1055" y="109.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Open terminal</text>
-<rect x="1130" y="88" width="126" height="34" rx="7" fill="#22d3ee"/>
-<text x="1193" y="109.5" font-size="13" fill="#06202a" font-weight="600" text-anchor="middle">Scenarios</text>
-<circle cx="1256" cy="84" r="11" fill="#fbbf24"/>
-<text x="1256" y="88.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
-<line x1="244" y1="172" x2="1256" y2="172" stroke="#27385a"/>
-<rect x="244" y="170" width="80" height="3" rx="1.5" fill="#22d3ee"/>
-<text x="258" y="164" font-size="13" fill="#e6edf7" font-weight="600">Overview</text>
-<text x="338" y="164" font-size="13" fill="#9fb0c8">Facts</text>
-<text x="398.5" y="164" font-size="13" fill="#9fb0c8">Baseline and drift</text>
-<text x="543.5" y="164" font-size="13" fill="#9fb0c8">Runs</text>
-<text x="597.5" y="164" font-size="13" fill="#9fb0c8">Terminal</text>
-<text x="677.5" y="164" font-size="13" fill="#9fb0c8">Files</text>
-<text x="738" y="164" font-size="13" fill="#9fb0c8">DNS</text>
-<text x="785.5" y="164" font-size="13" fill="#9fb0c8">Certificate</text>
-<text x="885" y="164" font-size="13" fill="#9fb0c8">Panel</text>
-<text x="945.5" y="164" font-size="13" fill="#9fb0c8">Secrets</text>
-<text x="1019" y="164" font-size="13" fill="#9fb0c8">Log</text>
-<rect x="244" y="192" width="322" height="396" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="220" font-size="13.5" fill="#e6edf7" font-weight="700">Facts</text>
-<line x1="244" y1="234" x2="566" y2="234" stroke="#27385a"/>
-<text x="262" y="260" font-size="12" fill="#6b7d99">Provider</text>
-<text x="548" y="260" font-size="12.5" fill="#e6edf7" text-anchor="end">Provider A</text>
-<text x="262" y="289" font-size="12" fill="#6b7d99">IPv4</text>
-<text x="548" y="289" font-size="12.5" fill="#e6edf7" text-anchor="end">192.0.2.14</text>
-<text x="262" y="318" font-size="12" fill="#6b7d99">OS</text>
-<text x="548" y="318" font-size="12.5" fill="#e6edf7" text-anchor="end">Ubuntu 24.04 LTS</text>
-<text x="262" y="347" font-size="12" fill="#6b7d99">Kernel</text>
-<text x="548" y="347" font-size="12.5" fill="#e6edf7" text-anchor="end">6.8.0-100-generic</text>
-<text x="262" y="376" font-size="12" fill="#6b7d99">Docker</text>
-<text x="548" y="376" font-size="12.5" fill="#e6edf7" text-anchor="end">27.5</text>
-<text x="262" y="405" font-size="12" fill="#6b7d99">Node image</text>
-<text x="548" y="405" font-size="12.5" fill="#e6edf7" text-anchor="end">remnawave/node:3.4.6</text>
-<text x="262" y="434" font-size="12" fill="#6b7d99">Xray</text>
-<text x="548" y="434" font-size="12.5" fill="#e6edf7" text-anchor="end">26.11.9</text>
-<text x="262" y="463" font-size="12" fill="#6b7d99">Uptime</text>
-<text x="548" y="463" font-size="12.5" fill="#e6edf7" text-anchor="end">41 days</text>
-<text x="262" y="492" font-size="12" fill="#6b7d99">Time sync</text>
-<text x="548" y="492" font-size="12.5" fill="#e6edf7" text-anchor="end">NTP, offset 1.8 s</text>
-<text x="262" y="521" font-size="12" fill="#6b7d99">Memory</text>
-<text x="548" y="521" font-size="12.5" fill="#e6edf7" text-anchor="end">1.9 of 3.8 GB</text>
-<text x="262" y="550" font-size="12" fill="#6b7d99">Disk</text>
-<text x="548" y="550" font-size="12.5" fill="#e6edf7" text-anchor="end">9.4 of 40 GB</text>
-<circle cx="244" cy="192" r="11" fill="#fbbf24"/>
-<text x="244" y="196.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
-<rect x="244" y="604" width="322" height="172" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="632" font-size="13.5" fill="#e6edf7" font-weight="700">Access</text>
-<line x1="244" y1="646" x2="566" y2="646" stroke="#27385a"/>
-<text x="262" y="672" font-size="12" fill="#6b7d99">Method</text>
-<text x="548" y="672" font-size="12.5" fill="#e6edf7" text-anchor="end">SSH key from the vault</text>
-<text x="262" y="698" font-size="12" fill="#6b7d99">Host key</text>
-<text x="548" y="698" class="mo" font-size="12.5" fill="#e6edf7" text-anchor="end">SHA256:ab12…f9 (pinned)</text>
-<text x="262" y="724" font-size="12" fill="#6b7d99">Node API port</text>
-<text x="548" y="724" font-size="12.5" fill="#e6edf7" text-anchor="end">open to the panel only</text>
-<rect x="262" y="738" width="130" height="28" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="327" y="756.5" font-size="12" fill="#e6edf7" font-weight="600" text-anchor="middle">Rotate access</text>
-<circle cx="244" cy="604" r="11" fill="#fbbf24"/>
-<text x="244" y="608.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text>
-<rect x="582" y="192" width="400" height="584" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="600" y="220" font-size="13.5" fill="#e6edf7" font-weight="700">Baseline and drift</text>
-<line x1="582" y1="234" x2="982" y2="234" stroke="#27385a"/>
-<text x="964" y="220" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">Open details</text>
-<rect x="600" y="252" width="364" height="14" rx="7" fill="#16223a"/>
-<rect x="600" y="252" width="346" height="14" rx="7" fill="#34d399"/>
-<rect x="946" y="252" width="18" height="14" rx="7" fill="#fbbf24"/>
-<text x="600" y="290" font-size="12.5" fill="#9fb0c8" font-weight="600">33 checks:  32 pass,  1 drift</text>
-<circle cx="614" cy="316" r="7" fill="#34d399"/>
-<path d="M611 316 L613.2 318.4 L617.4 313.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="320" font-size="12.5" fill="#e6edf7">SSH: password login disabled</text>
-<line x1="600" y1="334" x2="964" y2="334" stroke="#27385a"/>
-<circle cx="614" cy="354" r="7" fill="#34d399"/>
-<path d="M611 354 L613.2 356.4 L617.4 351.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="358" font-size="12.5" fill="#e6edf7">Firewall: node API port limited to the panel</text>
-<line x1="600" y1="372" x2="964" y2="372" stroke="#27385a"/>
-<circle cx="614" cy="392" r="7" fill="#34d399"/>
-<path d="M611 392 L613.2 394.4 L617.4 389.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="396" font-size="12.5" fill="#e6edf7">Kernel: BBR and fq enabled</text>
-<line x1="600" y1="410" x2="964" y2="410" stroke="#27385a"/>
-<circle cx="614" cy="430" r="7" fill="#fbbf24"/>
-<path d="M614 426.8 L614 430.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="614" cy="433" r="1" fill="#0b1220"/>
-<text x="632" y="434" font-size="12.5" fill="#e6edf7">Time sync: offset 1.8 s (limit 1 s)</text>
-<line x1="600" y1="448" x2="964" y2="448" stroke="#27385a"/>
-<circle cx="614" cy="468" r="7" fill="#34d399"/>
-<path d="M611 468 L613.2 470.4 L617.4 465.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="472" font-size="12.5" fill="#e6edf7">Image tag pinned to 3.4.6</text>
-<line x1="600" y1="486" x2="964" y2="486" stroke="#27385a"/>
-<circle cx="614" cy="506" r="7" fill="#34d399"/>
-<path d="M611 506 L613.2 508.4 L617.4 503.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="510" font-size="12.5" fill="#e6edf7">Decoy site answers on port 443</text>
-<line x1="600" y1="524" x2="964" y2="524" stroke="#27385a"/>
-<circle cx="614" cy="544" r="7" fill="#34d399"/>
-<path d="M611 544 L613.2 546.4 L617.4 541.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="548" font-size="12.5" fill="#e6edf7">Certificate chain valid, 61 days left</text>
-<line x1="600" y1="562" x2="964" y2="562" stroke="#27385a"/>
-<circle cx="614" cy="582" r="7" fill="#34d399"/>
-<path d="M611 582 L613.2 584.4 L617.4 579.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="632" y="586" font-size="12.5" fill="#e6edf7">HAProxy default backend is the decoy</text>
-<line x1="600" y1="600" x2="964" y2="600" stroke="#27385a"/>
-<rect x="600" y="614" width="364" height="130" rx="8" fill="#16223a" stroke="#fbbf24"/>
-<circle cx="620" cy="638" r="7" fill="#fbbf24"/>
-<path d="M620 634.8 L620 638.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="620" cy="641" r="1" fill="#0b1220"/>
-<text x="636" y="642" font-size="12.5" fill="#e6edf7" font-weight="700">Drift: time sync</text>
-<text x="620" y="666" font-size="12" fill="#9fb0c8">Plan a repair to see the exact change first.</text>
-<text x="620" y="686" font-size="12" fill="#9fb0c8">Nothing is changed by looking.</text>
-<rect x="620" y="700" width="150" height="30" rx="7" fill="#22d3ee"/>
-<text x="695" y="719.5" font-size="12.5" fill="#06202a" font-weight="600" text-anchor="middle">Plan repair</text>
-<rect x="780" y="700" width="150" height="30" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="855" y="719.5" font-size="12.5" fill="#e6edf7" font-weight="600" text-anchor="middle">Re-run baseline</text>
-<circle cx="582" cy="192" r="11" fill="#fbbf24"/>
-<text x="582" y="196.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">4</text>
-<rect x="998" y="192" width="258" height="232" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="1016" y="220" font-size="13.5" fill="#e6edf7" font-weight="700">Linked panel node</text>
-<line x1="998" y1="234" x2="1256" y2="234" stroke="#27385a"/>
-<text x="1016" y="270" font-size="12" fill="#6b7d99">State</text>
-<rect x="1148" y="254" width="76" height="22" rx="11" fill="#16223a" stroke="#34d399"/>
-<circle cx="1163" cy="265" r="6" fill="#34d399"/>
-<path d="M1160.4 265 L1162.3 267.1 L1165.9 262.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1175" y="269.2" font-size="11.5" fill="#e6edf7" font-weight="600">Online</text>
-<text x="1016" y="300" font-size="12" fill="#6b7d99">Users online</text>
-<text x="1238" y="300" font-size="12.5" fill="#e6edf7" text-anchor="end">214</text>
-<text x="1016" y="328" font-size="12" fill="#6b7d99">Profile</text>
-<text x="1238" y="328" font-size="12.5" fill="#e6edf7" text-anchor="end">Foreign</text>
-<text x="1016" y="356" font-size="12" fill="#6b7d99">Traffic, 24 h</text>
-<text x="1238" y="356" font-size="12.5" fill="#e6edf7" text-anchor="end">182 GB</text>
-<text x="1016" y="384" font-size="12" fill="#6b7d99">Xray uptime</text>
-<text x="1238" y="384" font-size="12.5" fill="#e6edf7" text-anchor="end">41 days</text>
-<rect x="998" y="440" width="258" height="336" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="1016" y="468" font-size="13.5" fill="#e6edf7" font-weight="700">Recent runs</text>
-<line x1="998" y1="482" x2="1256" y2="482" stroke="#27385a"/>
-<text x="1238" y="468" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">All runs</text>
-<circle cx="1018" cy="496" r="7" fill="#34d399"/>
-<path d="M1015 496 L1017.2 498.4 L1021.4 493.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1034" y="500" font-size="12.5" fill="#e6edf7" font-weight="600">#481 Baseline check</text>
-<text x="1034" y="520" font-size="11.5" fill="#6b7d99">2 h ago</text>
-<line x1="1014" y1="532" x2="1240" y2="532" stroke="#27385a"/>
-<circle cx="1018" cy="552" r="7" fill="#34d399"/>
-<path d="M1015 552 L1017.2 554.4 L1021.4 549.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1034" y="556" font-size="12.5" fill="#e6edf7" font-weight="600">#470 Reboot cycle</text>
-<text x="1034" y="576" font-size="11.5" fill="#6b7d99">6 days ago</text>
-<line x1="1014" y1="588" x2="1240" y2="588" stroke="#27385a"/>
-<circle cx="1018" cy="608" r="7" fill="#a78bfa"/>
-<path d="M1020.8 609.4 A3.4 3.4 0 1 1 1020.4 605.8" fill="none" stroke="#0b1220" stroke-width="1.6"/>
-<path d="M1021.6 604.4 L1020.4 605.8 L1022 606.6" fill="none" stroke="#0b1220" stroke-width="1.4"/>
-<text x="1034" y="612" font-size="12.5" fill="#e6edf7" font-weight="600">#455 Rename, rolled back</text>
-<text x="1034" y="632" font-size="11.5" fill="#6b7d99">19 days ago</text>
-<line x1="1014" y1="644" x2="1240" y2="644" stroke="#27385a"/>
-<circle cx="1018" cy="664" r="7" fill="#34d399"/>
-<path d="M1015 664 L1017.2 666.4 L1021.4 661.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1034" y="668" font-size="12.5" fill="#e6edf7" font-weight="600">#431 Image update 3.4.6</text>
-<text x="1034" y="688" font-size="11.5" fill="#6b7d99">29 days ago</text>
-<line x1="1014" y1="700" x2="1240" y2="700" stroke="#27385a"/>
-<circle cx="1018" cy="720" r="7" fill="#34d399"/>
-<path d="M1015 720 L1017.2 722.4 L1021.4 717.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="1034" y="724" font-size="12.5" fill="#e6edf7" font-weight="600">#402 Adopt node</text>
-<text x="1034" y="744" font-size="11.5" fill="#6b7d99">61 days ago</text>
-<line x1="1014" y1="756" x2="1240" y2="756" stroke="#27385a"/>
-<circle cx="998" cy="440" r="11" fill="#fbbf24"/>
-<text x="998" y="444.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">5</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="t d"><title id="t">Server card wireframe</title><desc id="d">A server: facts, baseline and drift, access, linked panel node and recent runs.</desc><style>text{font-family:Montserrat,Vazirmatn,'Noto Sans SC',sans-serif}.mo{font-family:'Fira Mono',monospace}use{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}path{stroke-linecap:round;stroke-linejoin:round}</style><defs><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></symbol><symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></symbol><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></symbol><symbol id="i-server" viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-2" /> <path d="M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -2" /> <path d="M7 8l0 .01" /> <path d="M7 16l0 .01" /></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /> <path d="M11 6l9 0" /> <path d="M11 12l9 0" /> <path d="M11 18l9 0" /></symbol><symbol id="i-radar-2" viewBox="0 0 24 24"><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M15.51 15.56a5 5 0 1 0 -3.51 1.44" /> <path d="M18.832 17.86a9 9 0 1 0 -6.832 3.14" /> <path d="M12 12v9" /></symbol><symbol id="i-hexagon" viewBox="0 0 24 24"><path d="M19.875 6.27a2.225 2.225 0 0 1 1.125 1.948v7.284c0 .809 -.443 1.555 -1.158 1.948l-6.75 4.27a2.269 2.269 0 0 1 -2.184 0l-6.75 -4.27a2.225 2.225 0 0 1 -1.158 -1.948v-7.285c0 -.809 .443 -1.554 1.158 -1.947l6.75 -3.98a2.33 2.33 0 0 1 2.25 0l6.75 3.98h-.033" /></symbol><symbol id="i-shield-lock" viewBox="0 0 24 24"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" /> <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12l0 2.5" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M9 12l2 2l4 -4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></symbol><symbol id="i-terminal-2" viewBox="0 0 24 24"><path d="M8 9l3 3l-3 3" /> <path d="M13 15l3 0" /> <path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /> <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3.06 13a9 9 0 1 0 .49 -4.087" /> <path d="M3 4.001v5h5" /> <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol></defs><rect width="1280" height="900" fill="#161b22"/><line x1="0" y1="115.5" x2="1280" y2="115.5" stroke="#484f58"/>
+<polygon points="52,18 64.1,25 64.1,39 52,46 39.9,39 39.9,25" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M43 29 q4.5 -4 9 0 t9 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M43 35.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="78" y="38" font-size="18" fill="#ffffff" font-weight="700">Swellwright</text>
+<rect x="1212.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-user" x="1221" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="1168.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="1177" y="23" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="1199" cy="19" r="4.5" fill="#ff8787"/>
+<rect x="1124.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-search" x="1133" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="996.7" y="20.5" width="115.8" height="22" rx="8" fill="none" stroke="#3bc9db"/>
+<use href="#i-player-play" x="1004.2" y="25.5" width="12" height="12" stroke="#3bc9db"/>
+<text x="1024.2" y="35.5" font-size="11" fill="#3bc9db" font-weight="700" letter-spacing="0.3">2 RUNNING</text>
+<rect x="722.7" y="14.5" width="261" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="736.2" y="37" font-size="13" fill="#b1bac4" font-weight="500">Panel: panel.example.com</text>
+<use href="#i-chevron-down" x="959.2" y="25" width="14" height="14" stroke="#8b949e"/>
+<line x1="0" y1="64.5" x2="1280" y2="64.5" stroke="#24292f"/>
+<use href="#i-layout-dashboard" x="44" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="70" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Overview</text>
+<use href="#i-server" x="169.6" y="81" width="18" height="18" stroke="#3bc9db"/>
+<text x="195.6" y="95.5" font-size="15" fill="#3bc9db" font-weight="600">Fleet</text>
+<use href="#i-chevron-down" x="241.8" y="84" width="12" height="12" stroke="#3bc9db" opacity="0.45"/>
+<rect x="165.6" y="113.5" width="92.3" height="2" rx="1" fill="#3bc9db"/>
+<use href="#i-list-check" x="281.8" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="307.8" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Operations</text>
+<use href="#i-chevron-down" x="400.6" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-radar-2" x="440.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="466.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Monitoring</text>
+<use href="#i-chevron-down" x="559.5" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-hexagon" x="599.5" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="625.5" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Panel</text>
+<use href="#i-chevron-down" x="676.9" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-shield-lock" x="716.9" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="742.9" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Security</text>
+<use href="#i-chevron-down" x="813" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-settings" x="853" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="879" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Settings</text>
+<use href="#i-chevron-down" x="950.2" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<rect x="32.5" y="132.5" width="1215" height="95" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="158.5" width="43" height="43" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-server" x="59" y="169" width="22" height="22" stroke="#3bc9db"/>
+<text x="108" y="178" font-size="18" fill="#ffffff" font-weight="600">PL-01</text>
+<rect x="172.3" y="162.5" width="84.2" height="22" rx="8" fill="none" stroke="#38d9a9"/>
+<use href="#i-circle-check" x="182.3" y="167" width="13" height="13" stroke="#38d9a9"/>
+<text x="201.8" y="177.5" font-size="11" fill="#38d9a9" font-weight="700" letter-spacing="0.3">ACTIVE</text>
+<rect x="265.4" y="162.5" width="84.1" height="22" rx="8" fill="none" stroke="#ffd43b"/>
+<use href="#i-alert-triangle" x="275.4" y="167" width="13" height="13" stroke="#ffd43b"/>
+<text x="294.9" y="177.5" font-size="11" fill="#ffd43b" font-weight="700" letter-spacing="0.3">1 DRIFT</text>
+<rect x="358.6" y="162.5" width="170" height="22" rx="8" fill="none" stroke="#38d9a9"/>
+<use href="#i-circle-check" x="368.6" y="167" width="13" height="13" stroke="#38d9a9"/>
+<text x="388.1" y="177.5" font-size="11" fill="#38d9a9" font-weight="700" letter-spacing="0.3">PANEL NODE ONLINE</text>
+<text x="108" y="198" font-size="14" fill="#8b949e">pl1.example.com  ·  192.0.2.14  ·  Provider A  ·  Poland  ·  tags: foreign, wave-1</text>
+<rect x="846.5" y="158.5" width="111" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-player-play" x="851.7" y="168" width="16" height="16" stroke="#ffffff"/>
+<text x="875.7" y="181" font-size="14" fill="#ffffff" font-weight="600">Run check</text>
+<rect x="966.5" y="158.5" width="147" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-terminal-2" x="975.5" y="168" width="16" height="16" stroke="#ffffff"/>
+<text x="999.5" y="181" font-size="14" fill="#ffffff" font-weight="600">Open terminal</text>
+<rect x="1122" y="158" width="110" height="36" rx="8" fill="#0c8599"/>
+<text x="1131" y="181" font-size="14" fill="#ffffff" font-weight="600">Scenarios</text>
+<use href="#i-chevron-down" x="1208" y="169" width="14" height="14" stroke="#ffffff"/>
+<circle cx="1248" cy="132" r="11" fill="#ffa94d"/>
+<text x="1248" y="136.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">1</text>
+<rect x="32.5" y="244.5" width="97.8" height="35" rx="8" fill="#0e2e36" stroke="#164f5a"/>
+<text x="48" y="267" font-size="14" fill="#3bc9db" font-weight="500">Overview</text>
+<rect x="139.3" y="244.5" width="69.1" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="154.8" y="267" font-size="14" fill="#b1bac4" font-weight="500">Facts</text>
+<rect x="217.3" y="244.5" width="156.4" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="232.8" y="267" font-size="14" fill="#b1bac4" font-weight="500">Baseline and drift</text>
+<rect x="382.7" y="244.5" width="67.2" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="398.2" y="267" font-size="14" fill="#b1bac4" font-weight="500">Runs</text>
+<rect x="458.9" y="244.5" width="94" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="474.4" y="267" font-size="14" fill="#b1bac4" font-weight="500">Terminal</text>
+<rect x="562" y="244.5" width="63.3" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="577.5" y="267" font-size="14" fill="#b1bac4" font-weight="500">Files</text>
+<rect x="634.3" y="244.5" width="62.6" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="649.8" y="267" font-size="14" fill="#b1bac4" font-weight="500">DNS</text>
+<rect x="705.9" y="244.5" width="104.6" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="721.4" y="267" font-size="14" fill="#b1bac4" font-weight="500">Certificate</text>
+<rect x="819.5" y="244.5" width="71.5" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="835" y="267" font-size="14" fill="#b1bac4" font-weight="500">Panel</text>
+<rect x="899.9" y="244.5" width="83.4" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="915.4" y="267" font-size="14" fill="#b1bac4" font-weight="500">Secrets</text>
+<rect x="992.3" y="244.5" width="57.9" height="35" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="1007.8" y="267" font-size="14" fill="#b1bac4" font-weight="500">Log</text>
+<rect x="32.5" y="296.5" width="359" height="375" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="48" y="326" font-size="15" fill="#ffffff" font-weight="600">Facts</text>
+<text x="48" y="354" font-size="13" fill="#8b949e">Provider</text>
+<text x="376" y="354" font-size="13" fill="#c9d1d9" text-anchor="end">Provider A</text>
+<text x="48" y="383" font-size="13" fill="#8b949e">IPv4</text>
+<text x="376" y="383" font-size="13" fill="#c9d1d9" text-anchor="end">192.0.2.14</text>
+<text x="48" y="412" font-size="13" fill="#8b949e">OS</text>
+<text x="376" y="412" font-size="13" fill="#c9d1d9" text-anchor="end">Ubuntu 24.04 LTS</text>
+<text x="48" y="441" font-size="13" fill="#8b949e">Kernel</text>
+<text x="376" y="441" font-size="13" fill="#c9d1d9" text-anchor="end">6.8.0-100-generic</text>
+<text x="48" y="470" font-size="13" fill="#8b949e">Docker</text>
+<text x="376" y="470" font-size="13" fill="#c9d1d9" text-anchor="end">27.5</text>
+<text x="48" y="499" font-size="13" fill="#8b949e">Node image</text>
+<text x="376" y="499" font-size="13" fill="#c9d1d9" text-anchor="end">remnawave/node:3.4.6</text>
+<text x="48" y="528" font-size="13" fill="#8b949e">Xray</text>
+<text x="376" y="528" font-size="13" fill="#c9d1d9" text-anchor="end">26.11.9</text>
+<text x="48" y="557" font-size="13" fill="#8b949e">Uptime</text>
+<text x="376" y="557" font-size="13" fill="#c9d1d9" text-anchor="end">41 days</text>
+<text x="48" y="586" font-size="13" fill="#8b949e">Time sync</text>
+<text x="376" y="586" font-size="13" fill="#c9d1d9" text-anchor="end">NTP, offset 1.8 s</text>
+<text x="48" y="615" font-size="13" fill="#8b949e">Memory</text>
+<text x="376" y="615" font-size="13" fill="#c9d1d9" text-anchor="end">1.9 of 3.8 GB</text>
+<text x="48" y="644" font-size="13" fill="#8b949e">Disk</text>
+<text x="376" y="644" font-size="13" fill="#c9d1d9" text-anchor="end">9.4 of 40 GB</text>
+<circle cx="32" cy="296" r="11" fill="#ffa94d"/>
+<text x="32" y="300.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">2</text>
+<rect x="32.5" y="688.5" width="359" height="187" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="48" y="718" font-size="15" fill="#ffffff" font-weight="600">Access</text>
+<text x="48" y="750" font-size="13" fill="#8b949e">Method</text>
+<text x="376" y="750" font-size="13" fill="#c9d1d9" text-anchor="end">SSH key from the vault</text>
+<text x="48" y="778" font-size="13" fill="#8b949e">Host key</text>
+<text x="376" y="778" class="mo" font-size="12" fill="#c9d1d9" text-anchor="end">SHA256:ab12…f9 (pinned)</text>
+<text x="48" y="806" font-size="13" fill="#8b949e">Node API port</text>
+<text x="376" y="806" font-size="13" fill="#c9d1d9" text-anchor="end">open to the panel only</text>
+<rect x="48.5" y="830.5" width="149" height="33" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="76.5" y="851.7" font-size="13" fill="#ffffff" font-weight="600">Rotate access</text>
+<circle cx="32" cy="688" r="11" fill="#ffa94d"/>
+<text x="32" y="692.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">3</text>
+<rect x="408.5" y="296.5" width="463" height="579" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="424" y="326" font-size="15" fill="#ffffff" font-weight="600">Baseline and drift</text>
+<text x="856" y="326" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Open details</text>
+<rect x="424" y="340" width="432" height="10" rx="5" fill="#484f58"/>
+<rect x="424" y="340" width="419" height="10" rx="5" fill="#38d9a9"/>
+<rect x="841" y="340" width="14" height="10" rx="5" fill="#ffd43b"/>
+<text x="424" y="378" font-size="13" fill="#b1bac4" font-weight="600">33 checks: 32 pass, 1 drift</text>
+<use href="#i-circle-check" x="432" y="400" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="413" font-size="14" fill="#c9d1d9">SSH: password login disabled</text>
+<line x1="424" y1="427.5" x2="856" y2="427.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="438" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="451" font-size="14" fill="#c9d1d9">Firewall: node API port limited to the panel</text>
+<line x1="424" y1="465.5" x2="856" y2="465.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="476" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="489" font-size="14" fill="#c9d1d9">Kernel: BBR and fq enabled</text>
+<line x1="424" y1="503.5" x2="856" y2="503.5" stroke="#24292f"/>
+<use href="#i-alert-triangle" x="432" y="514" width="16" height="16" stroke="#ffd43b"/>
+<text x="462" y="527" font-size="14" fill="#c9d1d9">Time sync: offset 1.8 s (limit 1 s)</text>
+<line x1="424" y1="541.5" x2="856" y2="541.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="552" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="565" font-size="14" fill="#c9d1d9">Image tag pinned to 3.4.6</text>
+<line x1="424" y1="579.5" x2="856" y2="579.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="590" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="603" font-size="14" fill="#c9d1d9">Decoy site answers on port 443</text>
+<line x1="424" y1="617.5" x2="856" y2="617.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="628" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="641" font-size="14" fill="#c9d1d9">Certificate chain valid, 61 days left</text>
+<line x1="424" y1="655.5" x2="856" y2="655.5" stroke="#24292f"/>
+<use href="#i-circle-check" x="432" y="666" width="16" height="16" stroke="#38d9a9"/>
+<text x="462" y="679" font-size="14" fill="#c9d1d9">HAProxy default backend is the decoy</text>
+<line x1="424" y1="693.5" x2="856" y2="693.5" stroke="#24292f"/>
+<rect x="424.5" y="710.5" width="431" height="146" rx="8" fill="#201c10" stroke="#6b5a14"/>
+<use href="#i-alert-triangle" x="438" y="726" width="16" height="16" stroke="#ffd43b"/>
+<text x="466" y="739" font-size="14" fill="#ffffff" font-weight="600">Drift: time sync</text>
+<text x="444" y="764" font-size="13" fill="#b1bac4">Plan a repair to see the exact change first.</text>
+<text x="444" y="784" font-size="13" fill="#b1bac4">Looking at drift never changes anything.</text>
+<rect x="444" y="806" width="130" height="36" rx="8" fill="#0c8599"/>
+<text x="472.4" y="828.7" font-size="13" fill="#ffffff" font-weight="600">Plan repair</text>
+<rect x="584.5" y="806.5" width="159" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-refresh" x="599.3" y="816" width="16" height="16" stroke="#ffffff"/>
+<text x="623.3" y="828.7" font-size="13" fill="#ffffff" font-weight="600">Re-run baseline</text>
+<circle cx="408" cy="296" r="11" fill="#ffa94d"/>
+<text x="408" y="300.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">4</text>
+<rect x="888.5" y="296.5" width="359" height="231" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="904" y="326" font-size="15" fill="#ffffff" font-weight="600">Linked panel node</text>
+<text x="904" y="372" font-size="13" fill="#8b949e">State</text>
+<rect x="1122.5" y="358.5" width="86.5" height="22" rx="8" fill="none" stroke="#38d9a9"/>
+<use href="#i-circle-check" x="1132.5" y="363" width="13" height="13" stroke="#38d9a9"/>
+<text x="1152" y="373.5" font-size="11" fill="#38d9a9" font-weight="700" letter-spacing="0.3">ONLINE</text>
+<text x="904" y="406" font-size="13" fill="#8b949e">Users online</text>
+<text x="1232" y="406" font-size="13" fill="#c9d1d9" text-anchor="end">214</text>
+<text x="904" y="435" font-size="13" fill="#8b949e">Profile</text>
+<text x="1232" y="435" font-size="13" fill="#c9d1d9" text-anchor="end">Foreign</text>
+<text x="904" y="464" font-size="13" fill="#8b949e">Traffic, 24 h</text>
+<text x="1232" y="464" font-size="13" fill="#c9d1d9" text-anchor="end">182 GB</text>
+<text x="904" y="493" font-size="13" fill="#8b949e">Xray uptime</text>
+<text x="1232" y="493" font-size="13" fill="#c9d1d9" text-anchor="end">41 days</text>
+<rect x="888.5" y="544.5" width="359" height="331" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="904" y="574" font-size="15" fill="#ffffff" font-weight="600">Recent runs</text>
+<text x="1232" y="574" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">All runs</text>
+<use href="#i-circle-check" x="900" y="587" width="16" height="16" stroke="#38d9a9"/>
+<text x="928" y="600" font-size="14" fill="#ffffff" font-weight="500">#481 Baseline check</text>
+<text x="928" y="620" font-size="12" fill="#8b949e">2 h ago</text>
+<line x1="904" y1="632" x2="1232" y2="632" stroke="#24292f"/>
+<use href="#i-circle-check" x="900" y="643" width="16" height="16" stroke="#38d9a9"/>
+<text x="928" y="656" font-size="14" fill="#ffffff" font-weight="500">#470 Reboot cycle</text>
+<text x="928" y="676" font-size="12" fill="#8b949e">6 days ago</text>
+<line x1="904" y1="688" x2="1232" y2="688" stroke="#24292f"/>
+<use href="#i-restore" x="900" y="699" width="16" height="16" stroke="#9775fa"/>
+<text x="928" y="712" font-size="14" fill="#ffffff" font-weight="500">#455 Rename, rolled back</text>
+<text x="928" y="732" font-size="12" fill="#8b949e">19 days ago</text>
+<line x1="904" y1="744" x2="1232" y2="744" stroke="#24292f"/>
+<use href="#i-circle-check" x="900" y="755" width="16" height="16" stroke="#38d9a9"/>
+<text x="928" y="768" font-size="14" fill="#ffffff" font-weight="500">#431 Image update 3.4.6</text>
+<text x="928" y="788" font-size="12" fill="#8b949e">29 days ago</text>
+<line x1="904" y1="800" x2="1232" y2="800" stroke="#24292f"/>
+<use href="#i-circle-check" x="900" y="811" width="16" height="16" stroke="#38d9a9"/>
+<text x="928" y="824" font-size="14" fill="#ffffff" font-weight="500">#402 Adopt node</text>
+<text x="928" y="844" font-size="12" fill="#8b949e">61 days ago</text>
+<circle cx="888" cy="544" r="11" fill="#ffa94d"/>
+<text x="888" y="548.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">5</text></svg>

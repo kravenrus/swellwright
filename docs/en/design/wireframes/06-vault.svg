@@ -1,194 +1,175 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">Vault page wireframe</title><desc id="d">Security, vault: status, key rotation, recovery kit and the list of secrets (write-only values).</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="0" y="0" width="220" height="800" fill="#0a101c"/>
-<line x1="220" y1="0" x2="220" y2="800" stroke="#27385a"/>
-<polygon points="34,17 45.3,23.5 45.3,36.5 34,43 22.7,36.5 22.7,23.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M25 27 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M25 33.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="58" y="35" font-size="16" fill="#e6edf7" font-weight="700">Swellwright</text>
-<circle cx="30" cy="73" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="77" font-size="13.5" fill="#9fb0c8">Overview</text>
-<circle cx="30" cy="105" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="109" font-size="13.5" fill="#9fb0c8">Servers</text>
-<circle cx="30" cy="137" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="141" font-size="13.5" fill="#9fb0c8">Nodes</text>
-<circle cx="30" cy="169" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="173" font-size="13.5" fill="#9fb0c8">Runs</text>
-<circle cx="30" cy="201" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="205" font-size="13.5" fill="#9fb0c8">Scenarios</text>
-<circle cx="30" cy="233" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="237" font-size="13.5" fill="#9fb0c8">Panel</text>
-<circle cx="30" cy="265" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="269" font-size="13.5" fill="#9fb0c8">Chains</text>
-<circle cx="30" cy="297" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="301" font-size="13.5" fill="#9fb0c8">DNS</text>
-<circle cx="30" cy="329" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="333" font-size="13.5" fill="#9fb0c8">Certificates</text>
-<circle cx="30" cy="361" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="365" font-size="13.5" fill="#9fb0c8">Probes</text>
-<circle cx="30" cy="393" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="397" font-size="13.5" fill="#9fb0c8">Alerts</text>
-<circle cx="30" cy="425" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="429" font-size="13.5" fill="#9fb0c8">Schedules</text>
-<circle cx="30" cy="457" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="461" font-size="13.5" fill="#9fb0c8">Reports</text>
-<rect x="10" y="474" width="200" height="30" rx="7" fill="#16223a"/>
-<rect x="10" y="474" width="3" height="30" rx="1.5" fill="#22d3ee"/>
-<circle cx="30" cy="489" r="4" fill="none" stroke="#22d3ee" stroke-width="1.4"/>
-<text x="46" y="493" font-size="13.5" fill="#e6edf7" font-weight="600">Security</text>
-<circle cx="30" cy="521" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="525" font-size="13.5" fill="#9fb0c8">API console</text>
-<circle cx="30" cy="553" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="557" font-size="13.5" fill="#9fb0c8">Settings</text>
-<circle cx="30" cy="585" r="4" fill="none" stroke="#6b7d99" stroke-width="1.4"/>
-<text x="46" y="589" font-size="13.5" fill="#9fb0c8">Documentation</text>
-<line x1="0" y1="752" x2="220" y2="752" stroke="#27385a"/>
-<circle cx="22" cy="772" r="5" fill="#34d399"/>
-<path d="M19.9 772 L21.4 773.7 L24.4 770.1" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="36" y="776" font-size="12" fill="#9fb0c8">Vault unsealed</text>
-<text x="204" y="776" font-size="11.5" fill="#6b7d99" text-anchor="end">v0.1</text>
-<rect x="221" y="0" width="1059" height="56" fill="#0a101c"/>
-<line x1="221" y1="56" x2="1280" y2="56" stroke="#27385a"/>
-<text x="244" y="34" font-size="13.5" fill="#9fb0c8">Security  /  Vault</text>
-<rect x="560" y="12" width="280" height="32" rx="8" fill="#0b1424" stroke="#27385a"/>
-<text x="576" y="33" font-size="12.5" fill="#6b7d99">Search  (Ctrl+K)</text>
-<rect x="858" y="16" width="178.4" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="868" y="32.2" font-size="12" fill="#9fb0c8">Panel: panel.example.com</text>
-<rect x="1088" y="14" width="92" height="28" rx="14" fill="#16223a" stroke="#60a5fa"/>
-<circle cx="1104" cy="28" r="6" fill="#60a5fa"/>
-<path d="M1102.5 25.4 L1106.7 28 L1102.5 30.6 Z" fill="#0b1220"/>
-<text x="1116" y="32" font-size="11.5" fill="#e6edf7" font-weight="600">2 running</text>
-<circle cx="1204" cy="28" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<path d="M1198 33 h12 M1200 33 v-5 a4 4 0 0 1 8 0 v5" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="1213" cy="19" r="8" fill="#f87171"/>
-<text x="1213" y="22.6" font-size="10" fill="#1b0707" font-weight="800" text-anchor="middle">3</text>
-<circle cx="1250" cy="28" r="14" fill="#16223a" stroke="#27385a"/>
-<text x="1250" y="32" font-size="11" fill="#e6edf7" font-weight="700" text-anchor="middle">OW</text>
-<text x="244" y="104" font-size="22" fill="#e6edf7" font-weight="700">Vault</text>
-<rect x="330" y="87" width="91.7" height="24" rx="12" fill="#16223a" stroke="#34d399"/>
-<circle cx="345" cy="99" r="6" fill="#34d399"/>
-<path d="M342.4 99 L344.3 101.1 L347.9 96.8" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="357" y="103.2" font-size="12" fill="#e6edf7" font-weight="600">Unsealed</text>
-<rect x="429.7" y="87" width="59.6" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="439.7" y="103.2" font-size="12" fill="#9fb0c8">KEK v3</text>
-<rect x="497.3" y="87" width="125.6" height="24" rx="12" fill="#16223a" stroke="#27385a"/>
-<text x="507.3" y="103.2" font-size="12" fill="#9fb0c8">Auto-unseal: off</text>
-<rect x="960" y="86" width="84" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="1002" y="107.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Seal now</text>
-<rect x="1054" y="86" width="112" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="1110" y="107.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Rotate KEK</text>
-<rect x="1176" y="86" width="80" height="34" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="1216" y="107.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Export</text>
-<circle cx="1256" cy="82" r="11" fill="#fbbf24"/>
-<text x="1256" y="86.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
-<rect x="244" y="134" width="241" height="84" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="160" font-size="12" fill="#6b7d99" font-weight="700">Secrets</text>
-<text x="262" y="188" font-size="19" fill="#e6edf7" font-weight="700">24</text>
-<text x="262" y="207" font-size="11.5" fill="#9fb0c8">7 kinds</text>
-<rect x="501" y="134" width="241" height="84" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="519" y="160" font-size="12" fill="#6b7d99" font-weight="700">Last KEK rotation</text>
-<text x="519" y="188" font-size="19" fill="#e6edf7" font-weight="700">2026-09-30</text>
-<text x="519" y="207" font-size="11.5" fill="#9fb0c8">next planned 2027-03-30</text>
-<rect x="758" y="134" width="241" height="84" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="776" y="160" font-size="12" fill="#6b7d99" font-weight="700">Recovery kit</text>
-<text x="776" y="188" font-size="19" fill="#e6edf7" font-weight="700">Verified</text>
-<text x="776" y="207" font-size="11.5" fill="#9fb0c8">printed key, 2026-10-02</text>
-<rect x="1015" y="134" width="241" height="84" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="1033" y="160" font-size="12" fill="#6b7d99" font-weight="700">Backup</text>
-<text x="1033" y="188" font-size="19" fill="#e6edf7" font-weight="700">Encrypted</text>
-<text x="1033" y="207" font-size="11.5" fill="#9fb0c8">daily, last 02:10</text>
-<circle cx="244" cy="134" r="11" fill="#fbbf24"/>
-<text x="244" y="138.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
-<rect x="244" y="234" width="1012" height="542" rx="10" fill="#111b2e" stroke="#27385a"/>
-<text x="262" y="262" font-size="13.5" fill="#e6edf7" font-weight="700">Secrets</text>
-<line x1="244" y1="276" x2="1256" y2="276" stroke="#27385a"/>
-<text x="1238" y="262" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="end">Add secret</text>
-<text x="256" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Name</text>
-<text x="446" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Kind</text>
-<text x="616" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Value</text>
-<text x="776" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Used by (30 d)</text>
-<text x="946" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Last used</text>
-<text x="1056" y="297" font-size="11.5" fill="#6b7d99" font-weight="700">Rotated</text>
-<text x="1244" y="297" font-size="11.5" fill="#6b7d99" font-weight="700" text-anchor="end"></text>
-<line x1="244" y1="308" x2="1256" y2="308" stroke="#27385a"/>
-<text x="256" y="332.3" font-size="12.5" fill="#e6edf7">panel-token</text>
-<text x="446" y="332.3" font-size="12.5" fill="#e6edf7">Panel API token</text>
-<path d="M618 327 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 327 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="332.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="332.3" font-size="12.5" fill="#e6edf7">62 runs</text>
-<text x="946" y="332.3" font-size="12.5" fill="#e6edf7">2 min ago</text>
-<text x="1056" y="332.3" font-size="12.5" fill="#e6edf7">2026-09-30</text>
-<text x="1244" y="332.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="348" x2="1256" y2="348" stroke="#27385a"/>
-<text x="256" y="372.3" font-size="12.5" fill="#e6edf7">dns-primary</text>
-<text x="446" y="372.3" font-size="12.5" fill="#e6edf7">DNS credentials</text>
-<path d="M618 367 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 367 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="372.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="372.3" font-size="12.5" fill="#e6edf7">9 runs</text>
-<text x="946" y="372.3" font-size="12.5" fill="#e6edf7">3 days ago</text>
-<text x="1056" y="372.3" font-size="12.5" fill="#e6edf7">2026-08-14</text>
-<text x="1244" y="372.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="388" x2="1256" y2="388" stroke="#27385a"/>
-<text x="256" y="412.3" font-size="12.5" fill="#e6edf7">pl-01-key</text>
-<text x="446" y="412.3" font-size="12.5" fill="#e6edf7">SSH key</text>
-<path d="M618 407 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 407 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="412.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="412.3" font-size="12.5" fill="#e6edf7">14 runs</text>
-<text x="946" y="412.3" font-size="12.5" fill="#e6edf7">2 h ago</text>
-<text x="1056" y="412.3" font-size="12.5" fill="#e6edf7">2026-10-02</text>
-<text x="1244" y="412.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="428" x2="1256" y2="428" stroke="#27385a"/>
-<text x="256" y="452.3" font-size="12.5" fill="#e6edf7">se-01-key</text>
-<text x="446" y="452.3" font-size="12.5" fill="#e6edf7">SSH key</text>
-<path d="M618 447 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 447 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="452.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="452.3" font-size="12.5" fill="#e6edf7">11 runs</text>
-<text x="946" y="452.3" font-size="12.5" fill="#e6edf7">2 h ago</text>
-<text x="1056" y="452.3" font-size="12.5" fill="#e6edf7">2026-10-02</text>
-<text x="1244" y="452.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="468" x2="1256" y2="468" stroke="#27385a"/>
-<text x="256" y="492.3" font-size="12.5" fill="#e6edf7">notify-bot</text>
-<text x="446" y="492.3" font-size="12.5" fill="#e6edf7">Notification token</text>
-<path d="M618 487 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 487 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="492.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="492.3" font-size="12.5" fill="#e6edf7">120 sends</text>
-<text x="946" y="492.3" font-size="12.5" fill="#e6edf7">5 min ago</text>
-<text x="1056" y="492.3" font-size="12.5" fill="#e6edf7">2026-07-21</text>
-<text x="1244" y="492.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="508" x2="1256" y2="508" stroke="#27385a"/>
-<text x="256" y="532.3" font-size="12.5" fill="#e6edf7">provider-api</text>
-<text x="446" y="532.3" font-size="12.5" fill="#e6edf7">Hosting API token</text>
-<path d="M618 527 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 527 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="532.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="532.3" font-size="12.5" fill="#e6edf7">0 runs</text>
-<text x="946" y="532.3" font-size="12.5" fill="#e6edf7">never</text>
-<text x="1056" y="532.3" font-size="12.5" fill="#e6edf7">2026-06-02</text>
-<text x="1244" y="532.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="548" x2="1256" y2="548" stroke="#27385a"/>
-<text x="256" y="572.3" font-size="12.5" fill="#e6edf7">ssh-ca</text>
-<text x="446" y="572.3" font-size="12.5" fill="#e6edf7">SSH CA key</text>
-<path d="M618 567 h12 v8 h-12 Z" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<path d="M621 567 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#9fb0c8" stroke-width="1.3"/>
-<text x="638" y="572.3" font-size="13" fill="#9fb0c8">••••••••</text>
-<text x="776" y="572.3" font-size="12.5" fill="#e6edf7">40 certs</text>
-<text x="946" y="572.3" font-size="12.5" fill="#e6edf7">1 h ago</text>
-<text x="1056" y="572.3" font-size="12.5" fill="#e6edf7">2026-09-30</text>
-<text x="1244" y="572.3" font-size="12.5" fill="#22d3ee" font-weight="600" text-anchor="end">Rotate</text>
-<line x1="244" y1="588" x2="1256" y2="588" stroke="#27385a"/>
-<circle cx="244" cy="234" r="11" fill="#fbbf24"/>
-<text x="244" y="238.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text>
-<rect x="262" y="622" width="976" height="132" rx="9" fill="#16223a" stroke="#27385a"/>
-<circle cx="284" cy="650" r="7" fill="#22d3ee"/>
-<circle cx="284" cy="647" r="1" fill="#0b1220"/>
-<path d="M284 649.4 L284 653.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="302" y="654" font-size="13" fill="#e6edf7" font-weight="700">Values are write-only in this console.</text>
-<text x="284" y="678" font-size="12" fill="#9fb0c8">Revealing a value needs the reveal permission (vault:reveal) and step-up authentication; every reveal is audited.</text>
-<text x="284" y="698" font-size="12" fill="#9fb0c8">Rotation re-wraps data keys under a new KEK without re-encrypting the data.</text>
-<rect x="284" y="712" width="170" height="28" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="369" y="730.5" font-size="12" fill="#e6edf7" font-weight="600" text-anchor="middle">Reveal a value…</text>
-<circle cx="262" cy="622" r="11" fill="#fbbf24"/>
-<text x="262" y="626.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">4</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="t d"><title id="t">Vault page wireframe</title><desc id="d">Security, vault: status, key rotation, recovery kit and the list of secrets (write-only values).</desc><style>text{font-family:Montserrat,Vazirmatn,'Noto Sans SC',sans-serif}.mo{font-family:'Fira Mono',monospace}use{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}path{stroke-linecap:round;stroke-linejoin:round}</style><defs><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></symbol><symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></symbol><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></symbol><symbol id="i-server" viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-2" /> <path d="M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -2" /> <path d="M7 8l0 .01" /> <path d="M7 16l0 .01" /></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 11.5l1.5 1.5l2.5 -2.5" /> <path d="M3.5 17.5l1.5 1.5l2.5 -2.5" /> <path d="M11 6l9 0" /> <path d="M11 12l9 0" /> <path d="M11 18l9 0" /></symbol><symbol id="i-radar-2" viewBox="0 0 24 24"><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M15.51 15.56a5 5 0 1 0 -3.51 1.44" /> <path d="M18.832 17.86a9 9 0 1 0 -6.832 3.14" /> <path d="M12 12v9" /></symbol><symbol id="i-hexagon" viewBox="0 0 24 24"><path d="M19.875 6.27a2.225 2.225 0 0 1 1.125 1.948v7.284c0 .809 -.443 1.555 -1.158 1.948l-6.75 4.27a2.269 2.269 0 0 1 -2.184 0l-6.75 -4.27a2.225 2.225 0 0 1 -1.158 -1.948v-7.285c0 -.809 .443 -1.554 1.158 -1.947l6.75 -3.98a2.33 2.33 0 0 1 2.25 0l6.75 3.98h-.033" /></symbol><symbol id="i-shield-lock" viewBox="0 0 24 24"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" /> <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12l0 2.5" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6" /> <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /> <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M9 12l2 2l4 -4" /></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /> <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /> <path d="M7 11l5 5l5 -5" /> <path d="M12 4l0 12" /></symbol><symbol id="i-key" viewBox="0 0 24 24"><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0" /> <path d="M15 9h.01" /></symbol><symbol id="i-calendar-time" viewBox="0 0 24 24"><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" /> <path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M15 3v4" /> <path d="M7 3v4" /> <path d="M3 11h16" /> <path d="M18 16.496v1.504l1 1" /></symbol><symbol id="i-info-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M12 9h.01" /> <path d="M11 12h1v4h1" /></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /> <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></symbol></defs><rect width="1280" height="900" fill="#161b22"/><line x1="0" y1="115.5" x2="1280" y2="115.5" stroke="#484f58"/>
+<polygon points="52,18 64.1,25 64.1,39 52,46 39.9,39 39.9,25" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M43 29 q4.5 -4 9 0 t9 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M43 35.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="78" y="38" font-size="18" fill="#ffffff" font-weight="700">Swellwright</text>
+<rect x="1212.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-user" x="1221" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="1168.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="1177" y="23" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="1199" cy="19" r="4.5" fill="#ff8787"/>
+<rect x="1124.5" y="14.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-search" x="1133" y="23" width="18" height="18" stroke="#b1bac4"/>
+<rect x="996.7" y="20.5" width="115.8" height="22" rx="8" fill="none" stroke="#3bc9db"/>
+<use href="#i-player-play" x="1004.2" y="25.5" width="12" height="12" stroke="#3bc9db"/>
+<text x="1024.2" y="35.5" font-size="11" fill="#3bc9db" font-weight="700" letter-spacing="0.3">2 RUNNING</text>
+<rect x="722.7" y="14.5" width="261" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="736.2" y="37" font-size="13" fill="#b1bac4" font-weight="500">Panel: panel.example.com</text>
+<use href="#i-chevron-down" x="959.2" y="25" width="14" height="14" stroke="#8b949e"/>
+<line x1="0" y1="64.5" x2="1280" y2="64.5" stroke="#24292f"/>
+<use href="#i-layout-dashboard" x="44" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="70" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Overview</text>
+<use href="#i-server" x="169.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="195.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Fleet</text>
+<use href="#i-chevron-down" x="241.8" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-list-check" x="281.8" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="307.8" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Operations</text>
+<use href="#i-chevron-down" x="400.6" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-radar-2" x="440.6" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="466.6" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Monitoring</text>
+<use href="#i-chevron-down" x="559.5" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-hexagon" x="599.5" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="625.5" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Panel</text>
+<use href="#i-chevron-down" x="676.9" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<use href="#i-shield-lock" x="716.9" y="81" width="18" height="18" stroke="#3bc9db"/>
+<text x="742.9" y="95.5" font-size="15" fill="#3bc9db" font-weight="600">Security</text>
+<use href="#i-chevron-down" x="813" y="84" width="12" height="12" stroke="#3bc9db" opacity="0.45"/>
+<rect x="712.9" y="113.5" width="116.1" height="2" rx="1" fill="#3bc9db"/>
+<use href="#i-settings" x="853" y="81" width="18" height="18" stroke="#b1bac4"/>
+<text x="879" y="95.5" font-size="15" fill="#b1bac4" font-weight="500">Settings</text>
+<use href="#i-chevron-down" x="950.2" y="84" width="12" height="12" stroke="#b1bac4" opacity="0.45"/>
+<rect x="32.5" y="132.5" width="1215" height="75" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="148.5" width="43" height="43" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-lock" x="59" y="159" width="22" height="22" stroke="#3bc9db"/>
+<text x="108" y="168" font-size="18" fill="#ffffff" font-weight="600">Vault</text>
+<rect x="171.6" y="152.5" width="105.9" height="22" rx="8" fill="none" stroke="#38d9a9"/>
+<use href="#i-circle-check" x="181.6" y="157" width="13" height="13" stroke="#38d9a9"/>
+<text x="201.1" y="167.5" font-size="11" fill="#38d9a9" font-weight="700" letter-spacing="0.3">UNSEALED</text>
+<rect x="286.5" y="152.5" width="63.3" height="22" rx="8" fill="none" stroke="#8b949e"/>
+<text x="296.5" y="167.5" font-size="11" fill="#8b949e" font-weight="700" letter-spacing="0.3">KEK V3</text>
+<rect x="358.8" y="152.5" width="138.6" height="22" rx="8" fill="none" stroke="#8b949e"/>
+<text x="368.8" y="167.5" font-size="11" fill="#8b949e" font-weight="700" letter-spacing="0.3">AUTO-UNSEAL: OFF</text>
+<text x="108" y="188" font-size="14" fill="#8b949e">Encrypted storage for every secret Swellwright keeps</text>
+<rect x="868.5" y="152.5" width="111" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-lock" x="879.3" y="162" width="16" height="16" stroke="#ffffff"/>
+<text x="903.3" y="175" font-size="14" fill="#ffffff" font-weight="600">Seal now</text>
+<rect x="988.5" y="152.5" width="129" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-refresh" x="1000" y="162" width="16" height="16" stroke="#ffffff"/>
+<text x="1024" y="175" font-size="14" fill="#ffffff" font-weight="600">Rotate KEK</text>
+<rect x="1126.5" y="152.5" width="105" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-download" x="1143.1" y="162" width="16" height="16" stroke="#ffffff"/>
+<text x="1167.1" y="175" font-size="14" fill="#ffffff" font-weight="600">Export</text>
+<circle cx="1248" cy="132" r="11" fill="#ffa94d"/>
+<text x="1248" y="136.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">1</text>
+<rect x="32.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="48.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-key" x="58" y="246" width="20" height="20" stroke="#38d9a9"/>
+<text x="100" y="250" font-size="13" fill="#8b949e" font-weight="500">Secrets</text>
+<text x="100" y="286" font-size="24" fill="#ffffff" font-weight="600">24</text>
+<text x="140.3" y="286" font-size="12" fill="#8b949e">7 kinds</text>
+<rect x="340.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="356.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-calendar-time" x="366" y="246" width="20" height="20" stroke="#38d9a9"/>
+<text x="408" y="250" font-size="13" fill="#8b949e" font-weight="500">Last KEK rotation</text>
+<text x="408" y="282" font-size="24" fill="#ffffff" font-weight="600">2026-09-30</text>
+<text x="408" y="302" font-size="12" fill="#8b949e">next 2027-03-30</text>
+<rect x="648.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="664.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-shield-lock" x="674" y="246" width="20" height="20" stroke="#38d9a9"/>
+<text x="716" y="250" font-size="13" fill="#8b949e" font-weight="500">Recovery kit</text>
+<text x="716" y="286" font-size="24" fill="#ffffff" font-weight="600">Verified</text>
+<text x="822.6" y="286" font-size="12" fill="#8b949e">printed key</text>
+<rect x="956.5" y="220.5" width="291" height="91" rx="8" fill="#1b2026" stroke="#292d34"/>
+<rect x="972.5" y="236.5" width="39" height="39" rx="8" fill="#063943" stroke="#0f5f6c"/>
+<use href="#i-download" x="982" y="246" width="20" height="20" stroke="#38d9a9"/>
+<text x="1024" y="250" font-size="13" fill="#8b949e" font-weight="500">Backup</text>
+<text x="1024" y="286" font-size="24" fill="#ffffff" font-weight="600">Encrypted</text>
+<text x="1162.5" y="286" font-size="12" fill="#8b949e">daily, 02:10</text>
+<circle cx="32" cy="220" r="11" fill="#ffa94d"/>
+<text x="32" y="224.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">2</text>
+<rect x="32.5" y="328.5" width="1215" height="379" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="48" y="358" font-size="15" fill="#ffffff" font-weight="600">Secrets</text>
+<text x="1232" y="358" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Add secret</text>
+<text x="48" y="387" font-size="12" fill="#8b949e" font-weight="600">Name</text>
+<text x="268" y="387" font-size="12" fill="#8b949e" font-weight="600">Kind</text>
+<text x="468" y="387" font-size="12" fill="#8b949e" font-weight="600">Value</text>
+<text x="638" y="387" font-size="12" fill="#8b949e" font-weight="600">Used by (30 d)</text>
+<text x="808" y="387" font-size="12" fill="#8b949e" font-weight="600">Last used</text>
+<text x="958" y="387" font-size="12" fill="#8b949e" font-weight="600">Rotated</text>
+<text x="1232" y="387" font-size="12" fill="#8b949e" font-weight="600" text-anchor="end"></text>
+<line x1="32" y1="397.5" x2="1248" y2="397.5" stroke="#24292f"/>
+<text x="48" y="423" font-size="14" fill="#ffffff" font-weight="500">panel-token</text>
+<text x="268" y="423" font-size="14" fill="#c9d1d9">Panel API token</text>
+<use href="#i-lock" x="468.5" y="410.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="423" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="423" font-size="14" fill="#c9d1d9">62 runs</text>
+<text x="808" y="423" font-size="14" fill="#c9d1d9">2 min ago</text>
+<text x="958" y="423" font-size="14" fill="#c9d1d9">2026-09-30</text>
+<text x="1232" y="423" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="437.5" x2="1248" y2="437.5" stroke="#24292f"/>
+<text x="48" y="463" font-size="14" fill="#ffffff" font-weight="500">dns-primary</text>
+<text x="268" y="463" font-size="14" fill="#c9d1d9">DNS credentials</text>
+<use href="#i-lock" x="468.5" y="450.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="463" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="463" font-size="14" fill="#c9d1d9">9 runs</text>
+<text x="808" y="463" font-size="14" fill="#c9d1d9">3 days ago</text>
+<text x="958" y="463" font-size="14" fill="#c9d1d9">2026-08-14</text>
+<text x="1232" y="463" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="477.5" x2="1248" y2="477.5" stroke="#24292f"/>
+<text x="48" y="503" font-size="14" fill="#ffffff" font-weight="500">pl-01-key</text>
+<text x="268" y="503" font-size="14" fill="#c9d1d9">SSH key</text>
+<use href="#i-lock" x="468.5" y="490.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="503" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="503" font-size="14" fill="#c9d1d9">14 runs</text>
+<text x="808" y="503" font-size="14" fill="#c9d1d9">2 h ago</text>
+<text x="958" y="503" font-size="14" fill="#c9d1d9">2026-10-02</text>
+<text x="1232" y="503" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="517.5" x2="1248" y2="517.5" stroke="#24292f"/>
+<text x="48" y="543" font-size="14" fill="#ffffff" font-weight="500">se-01-key</text>
+<text x="268" y="543" font-size="14" fill="#c9d1d9">SSH key</text>
+<use href="#i-lock" x="468.5" y="530.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="543" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="543" font-size="14" fill="#c9d1d9">11 runs</text>
+<text x="808" y="543" font-size="14" fill="#c9d1d9">2 h ago</text>
+<text x="958" y="543" font-size="14" fill="#c9d1d9">2026-10-02</text>
+<text x="1232" y="543" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="557.5" x2="1248" y2="557.5" stroke="#24292f"/>
+<text x="48" y="583" font-size="14" fill="#ffffff" font-weight="500">notify-bot</text>
+<text x="268" y="583" font-size="14" fill="#c9d1d9">Notification token</text>
+<use href="#i-lock" x="468.5" y="570.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="583" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="583" font-size="14" fill="#c9d1d9">120 sends</text>
+<text x="808" y="583" font-size="14" fill="#c9d1d9">5 min ago</text>
+<text x="958" y="583" font-size="14" fill="#c9d1d9">2026-07-21</text>
+<text x="1232" y="583" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="597.5" x2="1248" y2="597.5" stroke="#24292f"/>
+<text x="48" y="623" font-size="14" fill="#ffffff" font-weight="500">provider-api</text>
+<text x="268" y="623" font-size="14" fill="#c9d1d9">Hosting API token</text>
+<use href="#i-lock" x="468.5" y="610.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="623" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="623" font-size="14" fill="#c9d1d9">0 runs</text>
+<text x="808" y="623" font-size="14" fill="#c9d1d9">never</text>
+<text x="958" y="623" font-size="14" fill="#c9d1d9">2026-06-02</text>
+<text x="1232" y="623" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="637.5" x2="1248" y2="637.5" stroke="#24292f"/>
+<text x="48" y="663" font-size="14" fill="#ffffff" font-weight="500">ssh-ca</text>
+<text x="268" y="663" font-size="14" fill="#c9d1d9">SSH CA key</text>
+<use href="#i-lock" x="468.5" y="650.5" width="15" height="15" stroke="#8b949e"/>
+<text x="492" y="663" font-size="14" fill="#8b949e">••••••••</text>
+<text x="638" y="663" font-size="14" fill="#c9d1d9">40 certs</text>
+<text x="808" y="663" font-size="14" fill="#c9d1d9">1 h ago</text>
+<text x="958" y="663" font-size="14" fill="#c9d1d9">2026-09-30</text>
+<text x="1232" y="663" font-size="13" fill="#3bc9db" font-weight="500" text-anchor="end">Rotate</text>
+<line x1="32" y1="677.5" x2="1248" y2="677.5" stroke="#24292f"/>
+<circle cx="32" cy="328" r="11" fill="#ffa94d"/>
+<text x="32" y="332.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">3</text>
+<rect x="32.5" y="724.5" width="1215" height="152" rx="8" fill="#0f2233" stroke="#1d4a73"/>
+<use href="#i-info-circle" x="51" y="747" width="18" height="18" stroke="#4dabf7"/>
+<text x="84" y="761" font-size="15" fill="#ffffff" font-weight="600">Values are write-only in this console.</text>
+<text x="60" y="790" font-size="13" fill="#b1bac4">Revealing a value needs the reveal permission (vault:reveal) and step-up authentication; every reveal is audited.</text>
+<text x="60" y="812" font-size="13" fill="#b1bac4">Rotation re-wraps data keys under a new KEK without re-encrypting the data.</text>
+<rect x="60.5" y="828.5" width="189" height="33" rx="8" fill="#21262d" stroke="#484f58"/>
+<use href="#i-eye" x="90.2" y="837" width="16" height="16" stroke="#ffffff"/>
+<text x="114.2" y="849.7" font-size="13" fill="#ffffff" font-weight="600">Reveal a value…</text>
+<circle cx="32" cy="724" r="11" fill="#ffa94d"/>
+<text x="32" y="728.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">4</text></svg>

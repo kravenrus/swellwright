@@ -4,11 +4,36 @@ Annotated wireframes for the screens that carry the most design risk. They compl
 
 ## How to read them
 
-- They are layout and behavior sketches, not pixel specifications. The real UI is built from Mantine components and the panel theme (see [ADR 0011](../../../adr/0011-ui-built-on-the-panel-code-and-theme.md)), dark by default.
+- They are layout and behavior sketches, not pixel specifications. Colors, fonts, icons, radii and component variants are taken from the Remnawave panel frontend 3.4.11 (see [Visual language](#visual-language) and [ADR 0011](../../../adr/0011-ui-built-on-the-panel-code-and-theme.md)); the real UI is built from the same Mantine components. Text is set in Montserrat and Fira Mono, so a viewer without these fonts sees a system font and slightly different widths.
 - All data is fictional: `example.com`, documentation IP ranges, invented node names and run numbers.
 - Status is never conveyed by color alone: every status has an icon and a word. Icons: check = done or healthy, cross = error or blocked, exclamation = warning or drift, play = running, ring = waiting, curved arrow = rollback, "i" = information. No emoji are used in the UI.
 - Yellow numbered markers match the notes under each screen.
 - Every change in the wireframes starts with a plan (dry run) and ends with a verification, as the engine requires ([08](../08-engine.md)).
+
+## Visual language
+
+Swellwright must look like the panel it manages, so every visual decision below is read from the panel frontend (version 3.4.11, `src/shared/constants/theme` and `src/app/layouts`), not invented.
+
+| Aspect | Value in the panel | Where it is defined |
+|---|---|---|
+| Library | Mantine 9.5, React 19 | `package.json` |
+| Color scheme | dark; body `#161b22`, text `#c9d1d9`, dimmed text `#8b949e`, input and default button `#21262d`, default border `#484f58`; the palette is GitHub-like (`dark` 0 to 9: `#c9d1d9` to `#010409`) | `theme.ts` |
+| Primary color | cyan, shade 8 (`#0c8599`) for filled buttons; `#3bc9db` (cyan 4) for active text and links; tinted fills from cyan 6 | `theme.ts`, `colors-resolver.tsx` |
+| Status colors | teal = success or online, red = error or offline, yellow or orange = warning, violet = rollback, blue = information, gray = neutral | usage across the panel |
+| Fonts | Montserrat for text (weights 400 to 600), Fira Mono for code and terminals; Vazirmatn and Noto Sans SC as fallbacks | `theme.ts`, `index.html` |
+| Radius | `md` (8 px) on buttons, inputs, cards, badges, tabs; `lg` (16 px) on the optional sidebar | `theme.ts`, `overrides` |
+| Cards | translucent white: 2% fill and 8% border over the body | `overrides/card` |
+| Buttons | the default variant is "light" (tinted cyan); the main action is "filled"; danger is a tinted red | `overrides/buttons.tsx` |
+| Badges | outline variant, uppercase, `md` radius | `overrides/badge.ts` |
+| Tabs | pill tabs with a thin border; the active tab is tinted cyan | `overrides/tabs` |
+| Theme icon | the custom "soft" variant: tinted gradient with a thin tinted border | `colors-resolver.tsx` |
+| Drawer and modal | translucent header, overlay 60% black | `overrides/drawer`, `overrides/modal` |
+| Layout | compact by default: header of 116 px (64 px brand row, 52 px navigation row), 32 px page padding, a header card at the top of every page; the floating 300 px sidebar is the "legacy" option | `layout-variants` |
+| Icons | Tabler Icons, outline | dependencies |
+
+Things to do in `packages/ui` before building screens: mirror these values as tokens, self-host the two fonts instead of loading them from a CDN (no visitor address leaks, works offline), and re-check the table on every supported panel minor version.
+
+The panel 3.4.11 also ships a browser SSH terminal with its own client-side vault (saved connections, snippets, host-key confirmation). Its screens are a ready reference for the Swellwright terminal and vault patterns ([risks](../12-risks-open.md)).
 
 ## 1. Overview
 
@@ -19,7 +44,7 @@ Annotated wireframes for the screens that carry the most design risk. They compl
 3. **Needs your attention:** pending approvals first, then active runs and notices (new releases, vulnerabilities). Approvals are never hidden behind a menu.
 4. **Availability matrix:** node by carrier by time slot, filled by probe agents. A cell shows an icon, not only a color.
 
-The top bar holds search and commands (Ctrl+K), the panel switcher, the tray of active runs and the alerts. The left menu follows the sections listed in [07](../07-ui-ux.md#2-shell).
+The header follows the panel's compact layout: a brand row with the panel switcher, the tray of active runs, search and commands (Ctrl+K) and the alerts, and a navigation row with grouped sections ([07](../07-ui-ux.md#2-shell)).
 
 ## 2. Server card
 

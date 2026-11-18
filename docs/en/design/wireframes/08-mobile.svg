@@ -1,140 +1,118 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" role="img" aria-labelledby="t d"><title id="t">Mobile wireframes</title><desc id="d">The emergency use case on a phone: look at the fleet, approve a plan, stop and roll back a run.</desc><style>text{font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}.mo{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}path{stroke-linecap:round;stroke-linejoin:round}</style><rect width="1280" height="800" fill="#0b1220"/><rect x="40" y="30" width="340" height="740" rx="28" fill="#0a101c" stroke="#27385a" stroke-width="2"/>
-<text x="68" y="64" font-size="12" fill="#9fb0c8" font-weight="600">9:41</text>
-<rect x="54" y="82" width="312" height="44" fill="none"/>
-<text x="64" y="110" font-size="24" fill="#e6edf7">≡</text>
-<polygon points="112,91 123.3,97.5 123.3,110.5 112,117 100.7,110.5 100.7,97.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M103 101 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M103 107.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="134" y="109" font-size="15" fill="#e6edf7" font-weight="700">Overview</text>
-<circle cx="340" cy="104" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="350" cy="94" r="7" fill="#f87171"/>
-<line x1="40" y1="130" x2="380" y2="130" stroke="#27385a"/>
-<rect x="58" y="146" width="148" height="76" rx="9" fill="#111b2e" stroke="#27385a"/>
-<circle cx="76" cy="166" r="7" fill="#f87171"/>
-<path d="M73.4 163.4 L78.6 168.6 M78.6 163.4 L73.4 168.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="90" y="170" font-size="11.5" fill="#9fb0c8" font-weight="600">Nodes online</text>
-<text x="72" y="204" font-size="20" fill="#e6edf7" font-weight="700">11 / 12</text>
-<rect x="214" y="146" width="148" height="76" rx="9" fill="#111b2e" stroke="#27385a"/>
-<circle cx="232" cy="166" r="7" fill="#fbbf24"/>
-<path d="M232 162.8 L232 166.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="232" cy="169" r="1" fill="#0b1220"/>
-<text x="246" y="170" font-size="11.5" fill="#9fb0c8" font-weight="600">Drift</text>
-<text x="228" y="204" font-size="20" fill="#e6edf7" font-weight="700">2 nodes</text>
-<rect x="58" y="234" width="304" height="96" rx="9" fill="#111b2e" stroke="#fbbf24"/>
-<circle cx="78" cy="258" r="7" fill="#fbbf24"/>
-<path d="M78 254.8 L78 258.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="78" cy="261" r="1" fill="#0b1220"/>
-<text x="94" y="262" font-size="13" fill="#e6edf7" font-weight="700">Approval pending</text>
-<text x="74" y="284" font-size="12" fill="#9fb0c8">Edit profile “Foreign”</text>
-<text x="74" y="302" font-size="12" fill="#9fb0c8">Restarts 12 nodes</text>
-<rect x="266" y="294" width="80" height="28" rx="7" fill="#22d3ee"/>
-<text x="306" y="312.5" font-size="12" fill="#06202a" font-weight="600" text-anchor="middle">Review</text>
-<rect x="58" y="342" width="304" height="70" rx="9" fill="#111b2e" stroke="#27385a"/>
-<circle cx="78" cy="366" r="7" fill="#60a5fa"/>
-<path d="M76.2 363 L81.2 366 L76.2 369 Z" fill="#0b1220"/>
-<text x="94" y="370" font-size="13" fill="#e6edf7" font-weight="700">Running: rename PL-01</text>
-<text x="74" y="394" font-size="12" fill="#9fb0c8">Stage 3 of 7, about 2 min left</text>
-<rect x="58" y="424" width="304" height="130" rx="9" fill="#111b2e" stroke="#27385a"/>
-<text x="74" y="448" font-size="13" fill="#e6edf7" font-weight="700">Alerts</text>
-<circle cx="80" cy="474" r="7" fill="#f87171"/>
-<path d="M77.4 471.4 L82.6 476.6 M82.6 471.4 L77.4 476.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="96" y="479" font-size="12.5" fill="#e6edf7">AT-01 unreachable</text>
-<circle cx="80" cy="508" r="7" fill="#fbbf24"/>
-<path d="M80 504.8 L80 508.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="80" cy="511" r="1" fill="#0b1220"/>
-<text x="96" y="513" font-size="12.5" fill="#e6edf7">CH-01 Xray uptime reset</text>
-<circle cx="40" cy="30" r="11" fill="#fbbf24"/>
-<text x="40" y="34.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">1</text>
-<rect x="470" y="30" width="340" height="740" rx="28" fill="#0a101c" stroke="#27385a" stroke-width="2"/>
-<text x="498" y="64" font-size="12" fill="#9fb0c8" font-weight="600">9:41</text>
-<rect x="484" y="82" width="312" height="44" fill="none"/>
-<text x="494" y="110" font-size="24" fill="#e6edf7">≡</text>
-<polygon points="542,91 553.3,97.5 553.3,110.5 542,117 530.7,110.5 530.7,97.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M533 101 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M533 107.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="564" y="109" font-size="15" fill="#e6edf7" font-weight="700">Plan #482</text>
-<circle cx="770" cy="104" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="780" cy="94" r="7" fill="#f87171"/>
-<line x1="470" y1="130" x2="810" y2="130" stroke="#27385a"/>
-<text x="488" y="166" font-size="15" fill="#e6edf7" font-weight="700">Edit profile “Foreign”</text>
-<circle cx="496" cy="198" r="7" fill="#fbbf24"/>
-<path d="M496 194.8 L496 198.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="496" cy="201" r="1" fill="#0b1220"/>
-<text x="514" y="203" font-size="12.5" fill="#e6edf7">Risk: high</text>
-<circle cx="496" cy="226" r="7" fill="#fbbf24"/>
-<path d="M496 222.8 L496 226.6" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<circle cx="496" cy="229" r="1" fill="#0b1220"/>
-<text x="514" y="231" font-size="12.5" fill="#e6edf7">12 nodes restart Xray</text>
-<circle cx="496" cy="254" r="7" fill="#a78bfa"/>
-<path d="M498.8 255.4 A3.4 3.4 0 1 1 498.4 251.8" fill="none" stroke="#0b1220" stroke-width="1.6"/>
-<path d="M499.6 250.4 L498.4 251.8 L500 252.6" fill="none" stroke="#0b1220" stroke-width="1.4"/>
-<text x="514" y="259" font-size="12.5" fill="#e6edf7">Rollback: full</text>
-<rect x="488" y="280" width="304" height="96" rx="8" fill="#070d18" stroke="#27385a"/>
-<text x="500" y="308" class="mo" font-size="12" fill="#f87171" font-weight="700">-</text>
-<text x="518" y="308" class="mo" font-size="12" fill="#e6edf7">&quot;fakedns&quot; removed</text>
-<text x="500" y="332" class="mo" font-size="12" fill="#34d399" font-weight="700">+</text>
-<text x="518" y="332" class="mo" font-size="12" fill="#e6edf7">&quot;routeOnly&quot;: true</text>
-<text x="500" y="364" font-size="12" fill="#22d3ee" font-weight="600">Open the full diff</text>
-<text x="488" y="398" font-size="12" fill="#9fb0c8" font-weight="600">Type RESTART 12 NODES</text>
-<rect x="488" y="406" width="304" height="36" rx="7" fill="#0b1424" stroke="#27385a"/>
-<text x="500" y="428.5" font-size="13" fill="#6b7d99">RESTART 12 NODES</text>
-<circle cx="496" cy="482" r="6" fill="#22d3ee"/>
-<circle cx="496" cy="479.4" r="0.9" fill="#0b1220"/>
-<path d="M496 481.5 L496 484.9" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="510" y="486" font-size="12" fill="#9fb0c8">TOTP code is requested next</text>
-<rect x="488" y="512" width="304" height="40" rx="7" fill="#16223a" stroke="#27385a" opacity="0.8"/>
-<text x="640" y="536.5" font-size="14" fill="#6b7d99" font-weight="600" text-anchor="middle">Approve and run</text>
-<rect x="488" y="562" width="148" height="36" rx="7" fill="none" stroke="#f87171" stroke-width="1.4"/>
-<text x="562" y="584.5" font-size="13" fill="#f87171" font-weight="600" text-anchor="middle">Reject</text>
-<rect x="644" y="562" width="148" height="36" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="718" y="584.5" font-size="13" fill="#e6edf7" font-weight="600" text-anchor="middle">Changes</text>
-<circle cx="470" cy="30" r="11" fill="#fbbf24"/>
-<text x="470" y="34.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">2</text>
-<rect x="900" y="30" width="340" height="740" rx="28" fill="#0a101c" stroke="#27385a" stroke-width="2"/>
-<text x="928" y="64" font-size="12" fill="#9fb0c8" font-weight="600">9:41</text>
-<rect x="914" y="82" width="312" height="44" fill="none"/>
-<text x="924" y="110" font-size="24" fill="#e6edf7">≡</text>
-<polygon points="972,91 983.3,97.5 983.3,110.5 972,117 960.7,110.5 960.7,97.5" fill="none" stroke="#22d3ee" stroke-width="2"/>
-<path d="M963 101 q4.5 -4 9 0 t9 0" fill="none" stroke="#22d3ee" stroke-width="1.6"/>
-<path d="M963 107.5 q4.5 -4 9 0 t9 0" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
-<text x="994" y="109" font-size="15" fill="#e6edf7" font-weight="700">Run #479</text>
-<circle cx="1200" cy="104" r="12" fill="none" stroke="#9fb0c8" stroke-width="1.4"/>
-<circle cx="1210" cy="94" r="7" fill="#f87171"/>
-<line x1="900" y1="130" x2="1240" y2="130" stroke="#27385a"/>
-<text x="918" y="166" font-size="15" fill="#e6edf7" font-weight="700">Deploy node SE-01</text>
-<rect x="918" y="178" width="84.7" height="24" rx="12" fill="#16223a" stroke="#60a5fa"/>
-<circle cx="933" cy="190" r="6" fill="#60a5fa"/>
-<path d="M931.5 187.4 L935.7 190 L931.5 192.6 Z" fill="#0b1220"/>
-<text x="945" y="194.2" font-size="12" fill="#e6edf7" font-weight="600">Running</text>
-<rect x="918" y="220" width="304" height="10" rx="5" fill="#16223a"/>
-<rect x="918" y="220" width="188.5" height="10" rx="5" fill="#22d3ee"/>
-<text x="918" y="250" font-size="12" fill="#9fb0c8">Stage 5 of 8  ·  about 03:50 left</text>
-<circle cx="928" cy="284" r="7" fill="#34d399"/>
-<path d="M925 284 L927.2 286.4 L931.4 281.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="946" y="289" font-size="13" fill="#9fb0c8">connect</text>
-<circle cx="928" cy="314" r="7" fill="#34d399"/>
-<path d="M925 314 L927.2 316.4 L931.4 311.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="946" y="319" font-size="13" fill="#9fb0c8">dns</text>
-<circle cx="928" cy="344" r="7" fill="#34d399"/>
-<path d="M925 344 L927.2 346.4 L931.4 341.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="946" y="349" font-size="13" fill="#9fb0c8">snapshot</text>
-<circle cx="928" cy="374" r="7" fill="#34d399"/>
-<path d="M925 374 L927.2 376.4 L931.4 371.4" fill="none" stroke="#0b1220" stroke-width="1.8"/>
-<text x="946" y="379" font-size="13" fill="#9fb0c8">preflight</text>
-<circle cx="928" cy="404" r="7" fill="#60a5fa"/>
-<path d="M926.2 401 L931.2 404 L926.2 407 Z" fill="#0b1220"/>
-<text x="946" y="409" font-size="13" fill="#e6edf7" font-weight="700">install  62%</text>
-<circle cx="928" cy="434" r="6" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
-<text x="946" y="439" font-size="13" fill="#9fb0c8">panel</text>
-<circle cx="928" cy="464" r="6" fill="none" stroke="#6b7d99" stroke-width="1.6"/>
-<text x="946" y="469" font-size="13" fill="#9fb0c8">verify</text>
-<rect x="918" y="498" width="304" height="62" rx="8" fill="#070d18" stroke="#27385a"/>
-<text x="930" y="522" class="mo" font-size="11.5" fill="#e6edf7">14:14:02  layer 4 of 5: 62%</text>
-<text x="930" y="542" class="mo" font-size="11.5" fill="#9fb0c8">14:14:20  layer 5 of 5: queued</text>
-<rect x="918" y="578" width="148" height="40" rx="7" fill="#16223a" stroke="#27385a"/>
-<text x="992" y="602.5" font-size="14" fill="#e6edf7" font-weight="600" text-anchor="middle">Stop</text>
-<rect x="1074" y="578" width="148" height="40" rx="7" fill="none" stroke="#f87171" stroke-width="1.4"/>
-<text x="1148" y="602.5" font-size="14" fill="#f87171" font-weight="600" text-anchor="middle">Roll back</text>
-<text x="1070" y="640" font-size="11" fill="#6b7d99" text-anchor="middle">Rollback asks for confirmation first</text>
-<circle cx="900" cy="30" r="11" fill="#fbbf24"/>
-<text x="900" y="34.4" font-size="12" fill="#1b1300" font-weight="800" text-anchor="middle">3</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="t d"><title id="t">Phone wireframes</title><desc id="d">The emergency use case on a phone: look at the fleet, approve a plan, stop and roll back a run.</desc><style>text{font-family:Montserrat,Vazirmatn,'Noto Sans SC',sans-serif}.mo{font-family:'Fira Mono',monospace}use{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}path{stroke-linecap:round;stroke-linejoin:round}</style><defs><symbol id="i-menu-2" viewBox="0 0 24 24"><path d="M4 6l16 0" /> <path d="M4 12l16 0" /> <path d="M4 18l16 0" /></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M10 10l4 4m0 -4l-4 4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></symbol><symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8" /></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3.06 13a9 9 0 1 0 .49 -4.087" /> <path d="M3 4.001v5h5" /> <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="i-info-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M12 9h.01" /> <path d="M11 12h1v4h1" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M9 12l2 2l4 -4" /></symbol><symbol id="i-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></symbol></defs><rect width="1280" height="900" fill="#161b22"/><rect x="37" y="41" width="342" height="818" rx="30" fill="#161b22" stroke="#484f58" stroke-width="2"/>
+<text x="68" y="76" font-size="13" fill="#b1bac4" font-weight="500">9:41</text>
+<line x1="37" y1="152.5" x2="379" y2="152.5" stroke="#484f58"/>
+<use href="#i-menu-2" x="61" y="105" width="22" height="22" stroke="#b1bac4"/>
+<polygon points="116,104 126.4,110 126.4,122 116,128 105.6,122 105.6,110" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M108.3 113.4 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M108.3 119 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="140" y="122" font-size="15" fill="#ffffff" font-weight="600">Overview</text>
+<rect x="316.5" y="98.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="325" y="107" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="347" cy="103" r="4.5" fill="#ff8787"/>
+<rect x="54.5" y="172.5" width="149" height="83" rx="8" fill="#1b2026" stroke="#292d34"/>
+<use href="#i-circle-x" x="70" y="188" width="16" height="16" stroke="#ff8787"/>
+<text x="96" y="201" font-size="12" fill="#8b949e" font-weight="500">Nodes online</text>
+<text x="70" y="238" font-size="20" fill="#ffffff" font-weight="600">11 / 12</text>
+<rect x="212.5" y="172.5" width="149" height="83" rx="8" fill="#1b2026" stroke="#292d34"/>
+<use href="#i-alert-triangle" x="228" y="188" width="16" height="16" stroke="#ffd43b"/>
+<text x="254" y="201" font-size="12" fill="#8b949e" font-weight="500">Drift</text>
+<text x="228" y="238" font-size="20" fill="#ffffff" font-weight="600">2 nodes</text>
+<rect x="54.5" y="272.5" width="307" height="112" rx="8" fill="#201c10" stroke="#6b5a14"/>
+<use href="#i-alert-triangle" x="70" y="290" width="16" height="16" stroke="#ffd43b"/>
+<text x="98" y="303" font-size="14" fill="#ffffff" font-weight="600">Approval pending</text>
+<text x="70" y="328" font-size="13" fill="#b1bac4">Edit profile “Foreign”</text>
+<text x="70" y="348" font-size="13" fill="#b1bac4">Restarts 12 nodes</text>
+<rect x="262" y="336" width="84" height="30" rx="8" fill="#063943"/>
+<text x="279.6" y="355.7" font-size="13" fill="#e3fafc" font-weight="600">Review</text>
+<rect x="54.5" y="400.5" width="307" height="75" rx="8" fill="#1b2026" stroke="#292d34"/>
+<use href="#i-player-play" x="70" y="418" width="16" height="16" stroke="#3bc9db"/>
+<text x="98" y="431" font-size="14" fill="#ffffff" font-weight="600">Running: rename PL-01</text>
+<text x="70" y="456" font-size="13" fill="#8b949e">Stage 3 of 7, about 2 min left</text>
+<rect x="54.5" y="492.5" width="307" height="139" rx="8" fill="#1b2026" stroke="#292d34"/>
+<text x="70" y="522" font-size="15" fill="#ffffff" font-weight="600">Alerts</text>
+<use href="#i-circle-x" x="72" y="536" width="16" height="16" stroke="#ff8787"/>
+<text x="100" y="549" font-size="13" fill="#c9d1d9">AT-01 unreachable</text>
+<use href="#i-alert-triangle" x="72" y="572" width="16" height="16" stroke="#ffd43b"/>
+<text x="100" y="585" font-size="13" fill="#c9d1d9">CH-01 Xray uptime reset</text>
+<circle cx="36" cy="40" r="11" fill="#ffa94d"/>
+<text x="36" y="44.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">1</text>
+<rect x="469" y="41" width="342" height="818" rx="30" fill="#161b22" stroke="#484f58" stroke-width="2"/>
+<text x="500" y="76" font-size="13" fill="#b1bac4" font-weight="500">9:41</text>
+<line x1="469" y1="152.5" x2="811" y2="152.5" stroke="#484f58"/>
+<use href="#i-menu-2" x="493" y="105" width="22" height="22" stroke="#b1bac4"/>
+<polygon points="548,104 558.4,110 558.4,122 548,128 537.6,122 537.6,110" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M540.3 113.4 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M540.3 119 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="572" y="122" font-size="15" fill="#ffffff" font-weight="600">Plan #482</text>
+<rect x="748.5" y="98.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="757" y="107" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="779" cy="103" r="4.5" fill="#ff8787"/>
+<text x="486" y="194" font-size="16" fill="#ffffff" font-weight="600">Edit profile “Foreign”</text>
+<use href="#i-alert-triangle" x="488" y="222" width="16" height="16" stroke="#ffd43b"/>
+<text x="518" y="235" font-size="14" fill="#c9d1d9">Risk: high</text>
+<use href="#i-alert-triangle" x="488" y="252" width="16" height="16" stroke="#ffd43b"/>
+<text x="518" y="265" font-size="14" fill="#c9d1d9">12 nodes restart Xray</text>
+<use href="#i-restore" x="488" y="282" width="16" height="16" stroke="#9775fa"/>
+<text x="518" y="295" font-size="14" fill="#c9d1d9">Rollback: full</text>
+<rect x="486.5" y="324.5" width="307" height="100" rx="8" fill="#0d1117" stroke="#272c33"/>
+<text x="500" y="356" class="mo" font-size="13" fill="#ff8787" font-weight="700">-</text>
+<text x="520" y="356" class="mo" font-size="13" fill="#c9d1d9">&quot;fakedns&quot; removed</text>
+<text x="500" y="382" class="mo" font-size="13" fill="#38d9a9" font-weight="700">+</text>
+<text x="520" y="382" class="mo" font-size="13" fill="#c9d1d9">&quot;routeOnly&quot;: true</text>
+<text x="500" y="412" font-size="13" fill="#3bc9db" font-weight="500">Open the full diff</text>
+<text x="486" y="454" font-size="14" fill="#c9d1d9" font-weight="500">Type RESTART 12 NODES</text>
+<rect x="486.5" y="462.5" width="307" height="35" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="500" y="485" font-size="14" fill="#6e7681">RESTART 12 NODES</text>
+<use href="#i-info-circle" x="489" y="527" width="14" height="14" stroke="#4dabf7"/>
+<text x="516" y="539" font-size="13" fill="#b1bac4">TOTP code is requested next</text>
+<rect x="486" y="564" width="308" height="42" rx="8" fill="#21262d"/>
+<text x="579.1" y="590" font-size="14" fill="#6e7681" font-weight="600">Approve and run</text>
+<rect x="486" y="616" width="150" height="38" rx="8" fill="#641515"/>
+<text x="539.7" y="639.7" font-size="13" fill="#fff5f5" font-weight="600">Reject</text>
+<rect x="644.5" y="616.5" width="149" height="37" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="689.6" y="639.7" font-size="13" fill="#ffffff" font-weight="600">Changes</text>
+<circle cx="468" cy="40" r="11" fill="#ffa94d"/>
+<text x="468" y="44.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">2</text>
+<rect x="901" y="41" width="342" height="818" rx="30" fill="#161b22" stroke="#484f58" stroke-width="2"/>
+<text x="932" y="76" font-size="13" fill="#b1bac4" font-weight="500">9:41</text>
+<line x1="901" y1="152.5" x2="1243" y2="152.5" stroke="#484f58"/>
+<use href="#i-menu-2" x="925" y="105" width="22" height="22" stroke="#b1bac4"/>
+<polygon points="980,104 990.4,110 990.4,122 980,128 969.6,122 969.6,110" fill="none" stroke="#3bc9db" stroke-width="2"/>
+<path d="M972.3 113.4 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#3bc9db" stroke-width="1.6"/>
+<path d="M972.3 119 q3.9 -3.4 7.7 0 t7.7 0" fill="none" stroke="#4dabf7" stroke-width="1.6"/>
+<text x="1004" y="122" font-size="15" fill="#ffffff" font-weight="600">Run #479</text>
+<rect x="1180.5" y="98.5" width="35" height="35" rx="8" fill="none" stroke="#484f58"/>
+<use href="#i-bell" x="1189" y="107" width="18" height="18" stroke="#b1bac4"/>
+<circle cx="1211" cy="103" r="4.5" fill="#ff8787"/>
+<text x="918" y="194" font-size="16" fill="#ffffff" font-weight="600">Deploy node SE-01</text>
+<rect x="918.5" y="210.5" width="97.6" height="22" rx="8" fill="none" stroke="#3bc9db"/>
+<use href="#i-player-play" x="928.5" y="215" width="13" height="13" stroke="#3bc9db"/>
+<text x="948" y="225.5" font-size="11" fill="#3bc9db" font-weight="700" letter-spacing="0.3">RUNNING</text>
+<rect x="918" y="258" width="308" height="10" rx="5" fill="#484f58"/>
+<rect x="918" y="258" width="191" height="10" rx="5" fill="#0c8599"/>
+<text x="918" y="290" font-size="13" fill="#b1bac4">Stage 5 of 8  ·  about 03:50 left</text>
+<use href="#i-circle-check" x="920" y="316" width="16" height="16" stroke="#38d9a9"/>
+<text x="950" y="329" font-size="14" fill="#b1bac4">connect</text>
+<use href="#i-circle-check" x="920" y="348" width="16" height="16" stroke="#38d9a9"/>
+<text x="950" y="361" font-size="14" fill="#b1bac4">dns</text>
+<use href="#i-circle-check" x="920" y="380" width="16" height="16" stroke="#38d9a9"/>
+<text x="950" y="393" font-size="14" fill="#b1bac4">snapshot</text>
+<use href="#i-circle-check" x="920" y="412" width="16" height="16" stroke="#38d9a9"/>
+<text x="950" y="425" font-size="14" fill="#b1bac4">preflight</text>
+<use href="#i-player-play" x="920" y="444" width="16" height="16" stroke="#3bc9db"/>
+<text x="950" y="457" font-size="14" fill="#ffffff" font-weight="600">install  62%</text>
+<use href="#i-circle" x="920" y="476" width="16" height="16" stroke="#6e7681"/>
+<text x="950" y="489" font-size="14" fill="#b1bac4">panel</text>
+<use href="#i-circle" x="920" y="508" width="16" height="16" stroke="#6e7681"/>
+<text x="950" y="521" font-size="14" fill="#b1bac4">verify</text>
+<rect x="918.5" y="560.5" width="307" height="70" rx="8" fill="#0d1117" stroke="#272c33"/>
+<text x="932" y="588" class="mo" font-size="12" fill="#c9d1d9">14:14:02  layer 4 of 5: 62%</text>
+<text x="932" y="610" class="mo" font-size="12" fill="#8b949e">14:14:20  layer 5 of 5: queued</text>
+<rect x="918.5" y="654.5" width="149" height="41" rx="8" fill="#21262d" stroke="#484f58"/>
+<text x="976.3" y="680" font-size="14" fill="#ffffff" font-weight="600">Stop</text>
+<rect x="1076" y="654" width="150" height="42" rx="8" fill="#641515"/>
+<use href="#i-restore" x="1105.8" y="667" width="16" height="16" stroke="#fff5f5"/>
+<text x="1129.8" y="680" font-size="14" fill="#fff5f5" font-weight="600">Roll back</text>
+<text x="1072" y="720" font-size="12" fill="#6e7681" text-anchor="middle">Rollback asks for confirmation first</text>
+<circle cx="900" cy="40" r="11" fill="#ffa94d"/>
+<text x="900" y="44.4" font-size="12" fill="#1a1100" font-weight="700" text-anchor="middle">3</text></svg>
