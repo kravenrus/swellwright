@@ -9,6 +9,8 @@ import {
 } from '@swellwright/plugin-api';
 import semver from 'semver';
 
+import { digestPlugin } from './digest.js';
+
 /** Where a plugin directory comes from, which decides how far it is trusted (ADR 0008). */
 export type TrustLevel = 'official' | 'local';
 
@@ -31,6 +33,8 @@ export interface DiscoveredPlugin {
   readonly trust: TrustLevel;
   readonly state: PluginState;
   readonly manifest: PluginManifest | undefined;
+  /** SHA-256 over every file of the plugin (see `digestPlugin`); undefined when the plugin is invalid. */
+  readonly digest: string | undefined;
   readonly problems: readonly string[];
 }
 
@@ -128,12 +132,14 @@ async function inspect(
     state: PluginState,
     problems: readonly string[],
     manifest?: PluginManifest,
+    digest?: string,
   ): DiscoveredPlugin => ({
     folder,
     directory,
     trust: root.trust,
     state,
     manifest,
+    digest,
     problems,
   });
 
@@ -174,14 +180,19 @@ async function inspect(
   if (problems.length > 0) {
     return done('invalid', problems, manifest);
   }
+  const digest = await digestPlugin(directory);
+  if (!digest.ok) {
+    return done('invalid', [digest.problem], manifest);
+  }
   if (!semver.satisfies(coreVersion, manifest.engines.swellwright, { includePrerelease: true })) {
     return done(
       'incompatible',
       [`needs Swellwright ${manifest.engines.swellwright}, this is ${coreVersion}`],
       manifest,
+      digest.digest,
     );
   }
-  return done('available', [], manifest);
+  return done('available', [], manifest, digest.digest);
 }
 
 /**
@@ -218,6 +229,7 @@ export async function discoverPlugins(
         found.push({
           ...plugin,
           state: 'invalid',
+          digest: undefined,
           problems: [`the plugin id "${id}" is already used by ${first}`],
         });
         continue;

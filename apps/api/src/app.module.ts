@@ -25,6 +25,8 @@ import {
   ReadinessService,
   ValkeyCheck,
 } from './readiness.js';
+import { PluginsController } from './plugins/plugins.controller.js';
+import { PluginsService } from './plugins/plugins.service.js';
 import { RolesController } from './roles.controller.js';
 import { SystemController } from './system.controller.js';
 import { InvitationService } from './users/invitation.service.js';
@@ -80,6 +82,7 @@ export class AppModule implements OnApplicationShutdown {
         AuditController,
         UsersController,
         VaultController,
+        PluginsController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -102,6 +105,7 @@ export class AppModule implements OnApplicationShutdown {
         SetupService,
         InvitationService,
         UsersService,
+        PluginsService,
         { provide: VAULT_KDF, useValue: options.vaultKdf ?? config.vaultKdf },
         VaultService,
         // Guards run in this order: the origin check, the session, the role's permission, the step-up.

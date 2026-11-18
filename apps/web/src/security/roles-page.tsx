@@ -38,6 +38,8 @@ const PERMISSION_KEY = {
   'tokens:create': 'tokensCreate',
   'tokens:read': 'tokensRead',
   'tokens:revoke': 'tokensRevoke',
+  'plugins:read': 'pluginsRead',
+  'plugins:manage': 'pluginsManage',
 } as const satisfies Record<Permission, PermissionKey>;
 
 /**

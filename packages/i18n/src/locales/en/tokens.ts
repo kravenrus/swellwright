@@ -82,6 +82,7 @@ export const tokens = {
     audit: 'Audit',
     sessions: 'Sessions',
     tokens: 'Tokens',
+    plugins: 'Plugins',
   },
 
   create: {

@@ -6,6 +6,7 @@ export type {
   AuditEvent,
   Credential,
   Invitation,
+  PluginApproval,
   RecoveryCode,
   Secret,
   Session,

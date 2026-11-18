@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.12.0",
+    "version": "0.13.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -2408,6 +2408,163 @@
         "x-sw-permission": "tokens:revoke",
         "x-sw-step-up": true
       }
+    },
+    "/plugins": {
+      "get": {
+        "operationId": "listPlugins",
+        "tags": [
+          "plugins"
+        ],
+        "summary": "The plugins of this instance",
+        "responses": {
+          "200": {
+            "description": "The plugins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reads the plugin directories on every call and says, for each plugin, what its files declare, what it asks for, and whether an administrator approved exactly that. A plugin that was enabled and whose files changed, went missing or became invalid is switched off here and the change is recorded.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "plugins:read"
+      }
+    },
+    "/plugins/{id}/enable": {
+      "post": {
+        "operationId": "enablePlugin",
+        "tags": [
+          "plugins"
+        ],
+        "summary": "Enable a plugin and approve what it asks for",
+        "responses": {
+          "200": {
+            "description": "The plugin, now enabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Approves the plugin as it is now: the digest of its files and the permissions of its manifest. The digest in the request is what the administrator was shown; if the files differ now the answer is 409 and nothing is enabled. Only a plugin that is usable can be enabled (not invalid, not for other versions of Swellwright).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 48,
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnablePluginRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "plugins:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/plugins/{id}/disable": {
+      "post": {
+        "operationId": "disablePlugin",
+        "tags": [
+          "plugins"
+        ],
+        "summary": "Disable a plugin",
+        "responses": {
+          "200": {
+            "description": "The plugin, now disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Switches the plugin off at once. The approval stays on record; enabling again needs a new approval of what the files are then. Disabling a plugin that is not enabled succeeds and changes nothing.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 48,
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "plugins:manage",
+        "x-sw-step-up": true
+      }
     }
   },
   "components": {
@@ -2829,7 +2986,9 @@
           "sessions:revoke",
           "tokens:create",
           "tokens:read",
-          "tokens:revoke"
+          "tokens:revoke",
+          "plugins:read",
+          "plugins:manage"
         ]
       },
       "PermissionSummary": {
@@ -2934,7 +3093,9 @@
           "session.revoked",
           "token.created",
           "token.revoked",
-          "auth.token.denied"
+          "auth.token.denied",
+          "plugin.enabled",
+          "plugin.disabled"
         ]
       },
       "AuditOutcome": {
@@ -4171,7 +4332,7 @@
           },
           "permissions": {
             "minItems": 1,
-            "maxItems": 21,
+            "maxItems": 23,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Permission"
@@ -4235,6 +4396,409 @@
         "required": [
           "token",
           "view"
+        ],
+        "additionalProperties": false
+      },
+      "PluginTrust": {
+        "type": "string",
+        "enum": [
+          "official",
+          "local"
+        ]
+      },
+      "PluginDiscoveryState": {
+        "type": "string",
+        "enum": [
+          "available",
+          "incompatible",
+          "invalid"
+        ]
+      },
+      "PluginStatus": {
+        "type": "string",
+        "enum": [
+          "not_enabled",
+          "enabled",
+          "disabled",
+          "changed",
+          "unavailable",
+          "missing"
+        ]
+      },
+      "PluginPermissions": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Hosts it may call, as host:port, only through the core."
+          },
+          "secrets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Kinds of secret it may be handed, for one call."
+          },
+          "panel": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Scopes of the panel API it may use."
+          },
+          "ssh": {
+            "type": "boolean",
+            "description": "Whether it may run commands on servers."
+          }
+        },
+        "required": [
+          "network",
+          "secrets",
+          "panel",
+          "ssh"
+        ],
+        "additionalProperties": false
+      },
+      "PluginPermissionChange": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "removed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "added",
+              "removed"
+            ],
+            "additionalProperties": false
+          },
+          "secrets": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "removed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "added",
+              "removed"
+            ],
+            "additionalProperties": false
+          },
+          "panel": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "removed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "added",
+              "removed"
+            ],
+            "additionalProperties": false
+          },
+          "ssh": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "revoked",
+              "unchanged"
+            ]
+          },
+          "widens": {
+            "type": "boolean",
+            "description": "It may do more than what was approved."
+          }
+        },
+        "required": [
+          "network",
+          "secrets",
+          "panel",
+          "ssh",
+          "widens"
+        ],
+        "additionalProperties": false
+      },
+      "PluginProvided": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "The extension kind, for example `DnsProvider`."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "code",
+              "declarative"
+            ],
+            "description": "Runs its own code, or is described in data."
+          }
+        },
+        "required": [
+          "kind",
+          "mode"
+        ],
+        "additionalProperties": false
+      },
+      "PluginApproval": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "trust": {
+            "$ref": "#/components/schemas/PluginTrust"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/PluginPermissions"
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "approvedBy": {
+            "type": "string",
+            "description": "The user name at the time."
+          }
+        },
+        "required": [
+          "version",
+          "trust",
+          "digest",
+          "permissions",
+          "approvedAt",
+          "approvedBy"
+        ],
+        "additionalProperties": false,
+        "description": "What an administrator approved, and when."
+      },
+      "PluginView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The plugin id; for a directory that is not a plugin, its name."
+          },
+          "folder": {
+            "description": "The directory name; null when it is gone.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trust": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginTrust"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "discovery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginDiscoveryState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the plugin is gone."
+          },
+          "status": {
+            "$ref": "#/components/schemas/PluginStatus"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Why it is invalid or incompatible."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "license": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginProvided"
+            }
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginPermissions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its files ask for now."
+          },
+          "digest": {
+            "description": "SHA-256 over every file of the plugin; approval is tied to it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signed": {
+            "type": "boolean",
+            "description": "The manifest carries a signature. It is not verified yet, so it proves nothing."
+          },
+          "hasSettings": {
+            "type": "boolean",
+            "description": "It brings a settings page of its own."
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginApproval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginPermissionChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a changed plugin: what its permissions differ by from the approved ones."
+          }
+        },
+        "required": [
+          "id",
+          "folder",
+          "trust",
+          "discovery",
+          "status",
+          "problems",
+          "name",
+          "version",
+          "description",
+          "license",
+          "provides",
+          "permissions",
+          "digest",
+          "signed",
+          "hasSettings",
+          "approval",
+          "change"
+        ],
+        "additionalProperties": false
+      },
+      "PluginList": {
+        "type": "object",
+        "properties": {
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginView"
+            }
+          },
+          "directories": {
+            "type": "object",
+            "properties": {
+              "official": {
+                "type": "boolean"
+              },
+              "local": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "official",
+              "local"
+            ],
+            "additionalProperties": false,
+            "description": "Which plugin directories are configured."
+          }
+        },
+        "required": [
+          "plugins",
+          "directories"
+        ],
+        "additionalProperties": false
+      },
+      "EnablePluginRequest": {
+        "type": "object",
+        "properties": {
+          "digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "The digest of the plugin as shown; the plugin is enabled only if it is still this."
+          }
+        },
+        "required": [
+          "digest"
         ],
         "additionalProperties": false
       },

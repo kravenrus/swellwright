@@ -111,6 +111,8 @@ Other extension points: `CertDistributor`, `CertIssuer` (ACME), `ClientProfile` 
 ## 5. Lifecycle
 Discovery (the `plugins/` directory mounted into the container, npm packages `@swellwright/plugin-*` and `swellwright-plugin-*`, local directories) → listing in the UI ("Settings → Plugins") → enabling after approving the permissions → configuration → use → update (no automatic download from the network; permission diff first) → disable → removal (plugin data optional). Plugin events go to the audit log.
 
+**Built in Phase 1 (ADR 0027):** enabling. The approval is of content: a SHA-256 over every file of the plugin (links inside are refused), shown to the administrator and sent back with the request, so only files that were seen can be approved. The approval, its permissions and who gave it are kept; a plugin that is gone, unusable or has other files is switched off on the next read and at start, with a record, and enabling it again is a new approval that shows what changed. `plugins:read` and `plugins:manage` (step-up) gate the routes; Settings → Plugins is the page. Directories: `SW_PLUGINS_OFFICIAL_DIR`, `SW_PLUGINS_LOCAL_DIR`. Nothing runs a plugin yet: the worker host comes next.
+
 ## 6. Plugin security
 A plugin is third-party code with access to secrets, therefore:
 - **Trust levels:** `builtin` (in the image, signed by the project), `official` (in the monorepo, signed), `community` (by explicit permission, with a warning), `local` (a local directory of the instance, the administrator's responsibility).

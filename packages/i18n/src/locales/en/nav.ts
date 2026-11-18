@@ -32,4 +32,5 @@ export const nav = {
   audit: 'Audit',
 
   settings: 'Settings',
+  plugins: 'Plugins',
 } as const;

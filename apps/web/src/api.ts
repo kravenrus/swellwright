@@ -23,6 +23,10 @@ import {
   type LoginRequest,
   type PendingSession,
   PendingSessionSchema,
+  type PluginList,
+  PluginListSchema,
+  type PluginView,
+  PluginViewSchema,
   type ReadyResponse,
   ReadyResponseSchema,
   type RoleCatalog,
@@ -361,6 +365,21 @@ export const createAuditCheckpoint = (): Promise<AuditCheckpoint> =>
 /** Checks the log against a checkpoint noted earlier. A failed check is an answer (`ok: false`), not an error. */
 export const verifyAuditCheckpoint = (checkpoint: string): Promise<AuditCheckpointVerification> =>
   send('POST', '/audit/checkpoints/verify', { checkpoint }, AuditCheckpointVerificationSchema);
+
+/** The plugins found in the configured directories, and where each stands (`plugins:read`). */
+export const listPlugins = (): Promise<PluginList> =>
+  send('GET', '/plugins', undefined, PluginListSchema);
+
+/**
+ * Enables a plugin (`plugins:manage`, needs a fresh confirmation with a code). `digest` is the one the person was
+ * shown: if the files differ now, the server refuses with 409 rather than approve something nobody looked at.
+ */
+export const enablePlugin = (id: string, digest: string): Promise<PluginView> =>
+  send('POST', `/plugins/${id}/enable`, { digest }, PluginViewSchema);
+
+/** Disables a plugin (`plugins:manage`, needs a fresh confirmation with a code). Its approval stays on record. */
+export const disablePlugin = (id: string): Promise<PluginView> =>
+  send('POST', `/plugins/${id}/disable`, undefined, PluginViewSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

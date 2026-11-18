@@ -12,6 +12,7 @@ import {
   IconLayoutDashboard,
   IconListCheck,
   IconPlayerPlay,
+  IconPuzzle,
   IconRadar2,
   IconReportAnalytics,
   IconRoute,
@@ -156,7 +157,14 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
       { id: 'audit', label: t('nav:audit'), icon: IconBook, permission: 'audit:read' },
     ],
   },
-  { id: 'settings', label: t('nav:settings'), icon: IconSettings, disabled: true },
+  {
+    id: 'settings',
+    label: t('nav:settings'),
+    icon: IconSettings,
+    links: [
+      { id: 'plugins', label: t('nav:plugins'), icon: IconPuzzle, permission: 'plugins:read' },
+    ],
+  },
 ];
 
 const pageOf = (link: GatedLink): NavLink => ({
