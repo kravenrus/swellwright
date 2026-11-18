@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -7,6 +8,8 @@ import {
   type OnApplicationBootstrap,
 } from '@nestjs/common';
 import {
+  type PluginConfigField,
+  type PluginConfigView,
   type PluginList,
   type PluginPermissionChange,
   type PluginPermissionsView,
@@ -14,11 +17,19 @@ import {
   type PluginView,
 } from '@swellwright/contracts';
 import { type Database, type PluginApproval } from '@swellwright/db';
-import { permissionDiff, type PluginPermissions, widensPermissions } from '@swellwright/plugin-api';
+import {
+  type ConfigSchemaFile,
+  permissionDiff,
+  type PluginPermissions,
+  secretFields,
+  validateConfig,
+  widensPermissions,
+} from '@swellwright/plugin-api';
 
 import { AuditService } from '../audit/audit.service.js';
 import { type RequestMeta, requireDatabase } from '../auth/context.js';
 import { type AppConfig } from '../config.js';
+import { secretTypeOf } from './broker.js';
 import { CONFIG, DATABASE } from '../tokens.js';
 import { type Actor } from '../users/users.service.js';
 import { type DiscoveredPlugin, discoverPlugins } from './discovery.js';
@@ -153,6 +164,7 @@ export function viewOf(
     digest: plugin?.digest ?? null,
     signed: manifest?.signature !== undefined,
     hasSettings: manifest?.ui !== undefined,
+    hasConfig: manifest?.config !== undefined,
     approval: record
       ? {
           version: record.version,
@@ -256,7 +268,9 @@ export class PluginsService implements OnApplicationBootstrap {
     | {
         readonly kind: 'ok';
         readonly plugin: DiscoveredPlugin;
+        /** What was approved, from the stored approval. */
         readonly network: readonly string[];
+        readonly secretKinds: readonly string[];
       }
     | { readonly kind: 'unknown' }
     | { readonly kind: 'not_enabled'; readonly why: string }
@@ -279,7 +293,8 @@ export class PluginsService implements OnApplicationBootstrap {
         why: `its files are not what was approved (${reason ?? 'missing'}); it was switched off`,
       };
     }
-    return { kind: 'ok', plugin, network: parseApproved(record.permissions).network };
+    const approved = parseApproved(record.permissions);
+    return { kind: 'ok', plugin, network: approved.network, secretKinds: approved.secrets };
   }
 
   async list(): Promise<PluginList> {
@@ -380,6 +395,133 @@ export class PluginsService implements OnApplicationBootstrap {
       );
     });
     return this.viewById(id);
+  }
+
+  // The settings of a plugin (ADR 0029).
+
+  private async withSchema(id: string): Promise<ConfigSchemaFile> {
+    const plugin = indexById(await this.discover()).get(id);
+    if (plugin === undefined) {
+      throw new NotFoundException('There is no such plugin.');
+    }
+    if (plugin.configSchema === undefined) {
+      throw new NotFoundException('This plugin has no settings.');
+    }
+    return plugin.configSchema;
+  }
+
+  private fieldsOf(schema: ConfigSchemaFile): PluginConfigField[] {
+    const required = new Set(schema.required ?? []);
+    return Object.entries(schema.properties).map(([name, field]) => {
+      const text = field.type === 'string' ? field : undefined;
+      return {
+        name,
+        type: field.type,
+        title: field.title ?? null,
+        description: field.description ?? null,
+        required: required.has(name),
+        default: 'default' in field ? (field.default ?? null) : null,
+        minLength: text?.minLength ?? null,
+        maxLength: text?.maxLength ?? null,
+        minimum: 'minimum' in field ? (field.minimum ?? null) : null,
+        maximum: 'maximum' in field ? (field.maximum ?? null) : null,
+        choices: text?.enum ?? null,
+        secretKind: text?.['x-sw-secret'] ?? null,
+      };
+    });
+  }
+
+  private async configView(id: string, schema: ConfigSchemaFile): Promise<PluginConfigView> {
+    const row = await this.db.pluginConfig.findUnique({ where: { pluginId: id } });
+    let stored: Record<string, unknown> = {};
+    if (row !== null) {
+      try {
+        stored = JSON.parse(row.settings) as Record<string, unknown>;
+      } catch {
+        stored = {};
+      }
+    }
+    const { values, problems } = validateConfig(schema, stored);
+    return {
+      fields: this.fieldsOf(schema),
+      values,
+      // Before anything is saved, what is missing is simply not filled in yet.
+      problems: row === null ? [] : problems,
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+      updatedBy: row?.updatedBy ?? null,
+    };
+  }
+
+  async getConfig(id: string): Promise<PluginConfigView> {
+    return this.configView(id, await this.withSchema(id));
+  }
+
+  /** Replaces the settings after checking them against what the plugin declares, secret bindings included. */
+  async updateConfig(
+    actor: Actor,
+    id: string,
+    input: Readonly<Record<string, unknown>>,
+    meta: RequestMeta,
+  ): Promise<PluginConfigView> {
+    const schema = await this.withSchema(id);
+    const { values, problems } = validateConfig(schema, input);
+    for (const { field, kind } of secretFields(schema)) {
+      const bound = values[field];
+      if (typeof bound !== 'string') {
+        continue;
+      }
+      const type = secretTypeOf(kind);
+      const secret = await this.db.secret.findUnique({
+        where: { id: bound },
+        select: { type: true },
+      });
+      if (secret === null || secret.type !== type) {
+        problems.push({ field, message: `must be a secret of the kind "${kind}" that exists` });
+      }
+    }
+    if (problems.length > 0) {
+      throw new BadRequestException(
+        problems
+          .map((p) => `${p.field} ${p.message}`)
+          .join('; ')
+          .slice(0, 500),
+      );
+    }
+    const canonical = JSON.stringify(
+      Object.fromEntries(Object.entries(values).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+    );
+    await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLUGINS_LOCK_KEY})`;
+      const before = await tx.pluginConfig.findUnique({ where: { pluginId: id } });
+      let old: Record<string, unknown> = {};
+      try {
+        old = before === null ? {} : (JSON.parse(before.settings) as Record<string, unknown>);
+      } catch {
+        old = {};
+      }
+      const names = new Set([...Object.keys(old), ...Object.keys(values)]);
+      const changed = [...names].filter(
+        (n) => JSON.stringify(old[n]) !== JSON.stringify(values[n]),
+      );
+      await tx.pluginConfig.upsert({
+        where: { pluginId: id },
+        create: { pluginId: id, settings: canonical, updatedBy: actor?.name ?? 'unknown' },
+        update: { settings: canonical, updatedBy: actor?.name ?? 'unknown' },
+      });
+      await this.audit.record(
+        {
+          action: 'plugin.config.updated',
+          outcome: 'success',
+          actor,
+          object: { type: 'plugin', id },
+          // Which settings changed, never what they are changed to.
+          details: { fields: changed.sort().join(',').slice(0, 200), count: changed.length },
+          meta,
+        },
+        tx,
+      );
+    });
+    return this.configView(id, schema);
   }
 
   /** Switches a plugin off. The approval stays on record; one that is not enabled is left as it is. */

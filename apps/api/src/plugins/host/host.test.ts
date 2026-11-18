@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 
-import { writeFixture } from './fixtures.js';
+import { servicesFor, writeFixture } from './fixtures.js';
 import {
   isPublicAddress,
   NetworkRefused,
@@ -254,8 +254,7 @@ describe('a plugin in its process', () => {
       pluginId: 'dns-example',
       directory,
       modules: [{ kind: 'DnsProvider', entry: 'dist/entry.js' }],
-      network: ['api.example.com:443'],
-      gateway,
+      services: servicesFor({ gateway }),
       runnerPath: RUNNER,
       memoryMiB: 64,
       startTimeoutMs: 15_000,
@@ -293,16 +292,10 @@ describe('a plugin in its process', () => {
     assert.equal(snapshot.modules.length, 1);
     assert.ok(loaded);
     assert.equal(loaded.kind, 'DnsProvider');
-    assert.deepEqual(loaded.methods, [
-      'echo',
-      'hog',
-      'loop',
-      'pid',
-      'probe',
-      'refused',
-      'throws',
-      'viaCore',
-    ]);
+    for (const method of ['echo', 'hog', 'loop', 'pid', 'probe', 'refused', 'throws', 'viaCore']) {
+      assert.ok(loaded.methods.includes(method), method);
+    }
+    assert.deepEqual(loaded.methods, [...loaded.methods].sort(), 'listed in order');
     assert.deepEqual(await plugin.call('DnsProvider', 'echo', { a: [1, 'two'] }, 5000), {
       a: [1, 'two'],
     });
@@ -362,7 +355,12 @@ describe('a plugin in its process', () => {
     );
     assert.deepEqual(answer, { status: 200, ok: true, body: 'answered api.example.com/v1/x' });
     const denied: { host: string; reason: string }[] = [];
-    const watched = await start({ onRefused: (host, reason) => denied.push({ host, reason }) });
+    const watched = await start({
+      services: servicesFor({
+        gateway,
+        onRefused: (host, reason) => denied.push({ host, reason }),
+      }),
+    });
     const message = await watched.call(
       'DnsProvider',
       'refused',
@@ -371,6 +369,59 @@ describe('a plugin in its process', () => {
     );
     assert.match(String(message), /not among the hosts this plugin was approved to call/u);
     assert.deepEqual(denied, [{ host: 'evil.example.org', reason: 'not_allowed' }]);
+  });
+
+  it('gets its settings with every call, never a secret with them, and asks the core for one', async () => {
+    const plugin = await start({
+      services: servicesFor({
+        gateway,
+        settings: { zone: 'example.org', ttl: 300 },
+        secrets: { token: 'hunter2-value' },
+      }),
+    });
+    assert.deepEqual(await plugin.call('DnsProvider', 'config', null, 5000), {
+      zone: 'example.org',
+      ttl: 300,
+    });
+    assert.equal(
+      await plugin.call('DnsProvider', 'secret', { field: 'token' }, 5000),
+      'hunter2-value',
+    );
+    assert.equal(
+      await plugin.call('DnsProvider', 'secretRefused', { field: 'other' }, 5000),
+      'refused: no secret is chosen for other',
+    );
+  });
+
+  it('has a storage of its own that it reads and writes through the core', async () => {
+    const plugin = await start();
+    assert.deepEqual(
+      await plugin.call('DnsProvider', 'store', { key: 'k', value: { n: [1, 2] } }, 5000),
+      {
+        n: [1, 2],
+      },
+    );
+    assert.deepEqual(await plugin.call('DnsProvider', 'storedKeys', null, 5000), ['k']);
+    assert.deepEqual(await plugin.call('DnsProvider', 'forget', { key: 'k' }, 5000), []);
+  });
+
+  it('is not called when its settings are not filled in, and says which', async () => {
+    const services = {
+      ...servicesFor({ gateway }),
+      settings: () => Promise.reject(new Error('The plugin is not configured: zone is required.')),
+    };
+    const plugin = await start({ services });
+    await assert.rejects(plugin.call('DnsProvider', 'echo', 1, 5000), (error: unknown) => {
+      assert.ok(error instanceof PluginCallError);
+      assert.equal(error.reason, 'not_configured');
+      assert.match(error.message, /zone is required/u);
+      return true;
+    });
+    assert.equal(
+      plugin.snapshot().state,
+      'running',
+      'it is the settings that are missing, not the plugin',
+    );
   });
 
   it('reports an error a method throws without going down', async () => {

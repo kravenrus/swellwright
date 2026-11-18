@@ -50,6 +50,7 @@ import { ApiRequestError, checkPlugin, disablePlugin, enablePlugin, listPlugins 
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
+import { PluginSettings } from './plugin-settings.js';
 
 /** Shown where a plugin has no value (a plugin that is gone has no version). */
 const DASH = '—';
@@ -662,12 +663,14 @@ function ReviewBody({
   plugin: opened,
   live,
   canManage,
+  canReadVault,
   onClose,
   onDone,
 }: {
   plugin: PluginView;
   live: PluginView | undefined;
   canManage: boolean;
+  canReadVault: boolean;
   onClose: () => void;
   onDone: (notice: Notice) => void;
 }) {
@@ -748,6 +751,10 @@ function ReviewBody({
         <AsksSection permissions={approvedPermissions} title={t('asks.approvedTitle')} />
       ) : null}
 
+      {plugin.hasConfig && plugin.discovery === 'available' ? (
+        <PluginSettings canManage={canManage} canReadVault={canReadVault} plugin={plugin} />
+      ) : null}
+
       {plugin.status === 'enabled' || plugin.runtime.state !== 'stopped' ? (
         <RuntimeSection canManage={canManage} plugin={plugin} />
       ) : null}
@@ -799,12 +806,14 @@ function ReviewDialog({
   plugin,
   live,
   canManage,
+  canReadVault,
   onClose,
   onDone,
 }: {
   plugin: PluginView | undefined;
   live: PluginView | undefined;
   canManage: boolean;
+  canReadVault: boolean;
   onClose: () => void;
   onDone: (notice: Notice) => void;
 }) {
@@ -819,6 +828,7 @@ function ReviewDialog({
       {plugin ? (
         <ReviewBody
           canManage={canManage}
+          canReadVault={canReadVault}
           key={plugin.id}
           live={live}
           onClose={onClose}
@@ -1044,6 +1054,7 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
   const { t } = useTranslation(['plugins', 'common']);
   const queryClient = useQueryClient();
   const canManage = permissions.includes('plugins:manage');
+  const canReadVault = permissions.includes('vault:read');
   const [reviewing, setReviewing] = useState<PluginView | undefined>(undefined);
   const [disabling, setDisabling] = useState<PluginView | undefined>(undefined);
   const [notice, setNotice] = useState<Notice | undefined>(undefined);
@@ -1136,6 +1147,7 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
 
       <ReviewDialog
         canManage={canManage}
+        canReadVault={canReadVault}
         live={liveReviewing}
         onClose={() => {
           setReviewing(undefined);

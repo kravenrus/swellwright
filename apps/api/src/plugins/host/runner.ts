@@ -5,32 +5,47 @@
  * the process may read only these two places, and a plugin must not be able to learn how the core is built.
  *
  * The protocol over the IPC channel, JSON messages:
- *   core -> plugin   { type: 'call', id, kind, method, params }
- *                    { type: 'fetched', id, ok: true, status, headers, body } | { type: 'fetched', id, ok: false, message }
+ *   core -> plugin   { type: 'call', id, kind, method, params, config }
+ *                    { type: 'reply', id, ok: true, value } | { type: 'reply', id, ok: false, message }
  *   plugin -> core   { type: 'ready', modules: { [kind]: string[] } } | { type: 'failed', message }
  *                    { type: 'result', id, value } | { type: 'error', id, message }
- *                    { type: 'fetch', id, url, init }
+ *                    { type: 'core', id, op: 'fetch', url, init } | { type: 'core', id, op: 'secret', field }
+ *                    { type: 'core', id, op: 'storage', action, key?, value? }
  */
-import type { PluginContext, PluginFetchInit, PluginFetchResponse } from '@swellwright/plugin-api';
+import type {
+  PluginContext,
+  PluginFetchInit,
+  PluginFetchResponse,
+  PluginStorage,
+} from '@swellwright/plugin-api';
 
 const MAX_MESSAGE_CHARS = 500;
 
 type Method = (params: unknown, context: PluginContext) => unknown;
 
 interface Waiting {
-  readonly resolve: (value: PluginFetchResponse) => void;
+  readonly resolve: (value: unknown) => void;
   readonly reject: (error: Error) => void;
 }
 
 const modules = new Map<string, Record<string, Method>>();
-const fetching = new Map<number, Waiting>();
-let nextFetch = 1;
+const asking = new Map<number, Waiting>();
+let nextAsk = 1;
 
 function send(message: unknown): void {
   if (process.send === undefined) {
     throw new Error('This file is run by the Swellwright core and has no other use.');
   }
   process.send(message);
+}
+
+/** A request to the core: the one way this process gets anything from outside. */
+function ask(payload: Record<string, unknown>): Promise<unknown> {
+  return new Promise<unknown>((resolve, reject) => {
+    const id = nextAsk++;
+    asking.set(id, { resolve, reject });
+    send({ type: 'core', id, ...payload });
+  });
 }
 
 function describe(error: unknown): string {
@@ -52,37 +67,50 @@ function responseOf(
   };
 }
 
-function contextOf(pluginId: string): PluginContext {
+function contextOf(pluginId: string, config: PluginContext['config']): PluginContext {
+  const storage: PluginStorage = {
+    get: (key) => ask({ op: 'storage', action: 'get', key }),
+    set: async (key, value) => {
+      await ask({ op: 'storage', action: 'set', key, value });
+    },
+    delete: async (key) => {
+      await ask({ op: 'storage', action: 'delete', key });
+    },
+    keys: () => ask({ op: 'storage', action: 'keys' }) as Promise<string[]>,
+  };
   return {
     pluginId,
-    fetch: (url: string, init?: PluginFetchInit) =>
-      new Promise<PluginFetchResponse>((resolve, reject) => {
-        const id = nextFetch++;
-        fetching.set(id, { resolve, reject });
-        send({ type: 'fetch', id, url, init: init ?? {} });
-      }),
+    config,
+    secret: (field) => ask({ op: 'secret', field }) as Promise<string>,
+    storage,
+    fetch: async (url: string, init?: PluginFetchInit) => {
+      const answer = (await ask({ op: 'fetch', url, init: init ?? {} })) as {
+        status: number;
+        headers: Record<string, string>;
+        body: string;
+      };
+      return responseOf(answer.status, answer.headers, answer.body);
+    },
   };
 }
 
-interface FetchedMessage {
+interface ReplyMessage {
   readonly id: number;
   readonly ok: boolean;
-  readonly status?: number;
-  readonly headers?: Record<string, string>;
-  readonly body?: string;
+  readonly value?: unknown;
   readonly message?: string;
 }
 
-function settleFetch(message: FetchedMessage): void {
-  const waiting = fetching.get(message.id);
+function settle(message: ReplyMessage): void {
+  const waiting = asking.get(message.id);
   if (waiting === undefined) {
     return;
   }
-  fetching.delete(message.id);
+  asking.delete(message.id);
   if (message.ok) {
-    waiting.resolve(responseOf(message.status ?? 0, message.headers ?? {}, message.body ?? ''));
+    waiting.resolve(message.value);
   } else {
-    waiting.reject(new Error(message.message ?? 'The request was refused.'));
+    waiting.reject(new Error(message.message ?? 'The core refused the request.'));
   }
 }
 
@@ -91,6 +119,7 @@ interface CallMessage {
   readonly kind: string;
   readonly method: string;
   readonly params: unknown;
+  readonly config: PluginContext['config'];
 }
 
 async function handleCall(pluginId: string, message: CallMessage): Promise<void> {
@@ -109,7 +138,7 @@ async function handleCall(pluginId: string, message: CallMessage): Promise<void>
     return;
   }
   try {
-    const value = await handler(message.params, contextOf(pluginId));
+    const value = await handler(message.params, contextOf(pluginId, message.config));
     send({ type: 'result', id: message.id, value: value === undefined ? null : value });
   } catch (error) {
     send({ type: 'error', id: message.id, message: describe(error) });
@@ -140,8 +169,8 @@ async function load(pluginId: string, specs: readonly string[]): Promise<void> {
   process.on('message', (message: { type?: string } & Record<string, unknown>) => {
     if (message.type === 'call') {
       void handleCall(pluginId, message as unknown as CallMessage);
-    } else if (message.type === 'fetched') {
-      settleFetch(message as unknown as FetchedMessage);
+    } else if (message.type === 'reply') {
+      settle(message as unknown as ReplyMessage);
     }
   });
   send({ type: 'ready', modules: listing });

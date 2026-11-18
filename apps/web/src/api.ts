@@ -23,6 +23,8 @@ import {
   type LoginRequest,
   type PendingSession,
   PendingSessionSchema,
+  type PluginConfigView,
+  PluginConfigViewSchema,
   type PluginList,
   PluginListSchema,
   type PluginView,
@@ -63,6 +65,7 @@ import {
   TokenListSchema,
   type UnsealVaultRequest,
   type UpdateSecretRequest,
+  type UpdatePluginConfigRequest,
   type UpdatePreferencesRequest,
   type UpdateUserRequest,
   type UserInvitation,
@@ -134,7 +137,7 @@ async function getJson<T>(path: string, schema: { parse: (data: unknown) => T })
  * `schema` is undefined for a response without a body.
  */
 async function send<T>(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body: unknown,
   schema: { parse: (data: unknown) => T } | undefined,
@@ -387,6 +390,23 @@ export const disablePlugin = (id: string): Promise<PluginView> =>
  */
 export const checkPlugin = (id: string): Promise<PluginView> =>
   send('POST', `/plugins/${id}/check`, undefined, PluginViewSchema);
+
+/**
+ * The settings a plugin declares and what is set now (`plugins:read`). A secret field holds the id of a vault
+ * secret, never its value. 404 for a plugin that has no settings.
+ */
+export const getPluginConfig = (id: string): Promise<PluginConfigView> =>
+  send('GET', `/plugins/${id}/config`, undefined, PluginConfigViewSchema);
+
+/**
+ * Replaces the settings of a plugin (`plugins:manage`, needs a fresh confirmation with a code). A value the server
+ * does not accept is a 400 whose message names each field; nothing is stored then.
+ */
+export const updatePluginConfig = (
+  id: string,
+  values: UpdatePluginConfigRequest['values'],
+): Promise<PluginConfigView> =>
+  send('PUT', `/plugins/${id}/config`, { values }, PluginConfigViewSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

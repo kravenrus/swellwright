@@ -28,4 +28,17 @@ export {
   type PluginFetchResponse,
   type PluginMethod,
   type PluginModule,
+  type PluginStorage,
 } from './module.js';
+export {
+  ConfigFieldSchema,
+  ConfigSchemaFileSchema,
+  MAX_CONFIG_FIELDS,
+  secretFields,
+  validateConfig,
+  type ConfigField,
+  type ConfigProblem,
+  type ConfigSchemaFile,
+  type ConfigValue,
+  type ConfigValues,
+} from './config-schema.js';

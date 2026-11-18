@@ -32,6 +32,7 @@ import {
   ReadinessService,
   ValkeyCheck,
 } from './readiness.js';
+import { PluginBroker } from './plugins/broker.js';
 import { PluginNetwork } from './plugins/host/network.js';
 import { PluginHostService } from './plugins/host/plugin-host.service.js';
 import { PluginsController } from './plugins/plugins.controller.js';
@@ -118,6 +119,7 @@ export class AppModule implements OnApplicationShutdown {
         InvitationService,
         UsersService,
         PluginRuntime,
+        PluginBroker,
         PluginsService,
         PluginHostService,
         { provide: PLUGIN_NETWORK, useValue: options.pluginNetwork ?? new PluginNetwork() },

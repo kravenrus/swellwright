@@ -421,6 +421,32 @@ export class VaultService implements OnApplicationShutdown {
     });
   }
 
+  /**
+   * The value of a secret for a plugin that was bound to it (ADR 0029). Not a reveal: no person asked, so there is
+   * no `secret.revealed`; the broker records the plugin's use instead. The type must be the one the plugin
+   * declared, so a plugin cannot be pointed at a secret of another kind.
+   */
+  readForPlugin(id: string, type: string): Promise<string> {
+    return this.serial.run(async () => {
+      const kek = this.openKey();
+      const row = await this.db.secret.findUnique({ where: { id } });
+      if (!row) {
+        throw new NotFoundException('The secret chosen for this setting no longer exists.');
+      }
+      if (row.type !== type) {
+        throw new ConflictException('The secret chosen for this setting is not of the right kind.');
+      }
+      try {
+        return decryptSecret(kek, { id, version: row.version, type: row.type }, row);
+      } catch {
+        this.logger.error(
+          `secret ${id} did not decrypt: the stored blobs do not match their context`,
+        );
+        throw new InternalServerErrorException('The secret could not be decrypted.');
+      }
+    });
+  }
+
   /** The only way a value leaves. Recorded first: no record, no value. */
   reveal(actor: Actor, id: string, meta: RequestMeta): Promise<RevealedSecret> {
     return this.serial.run(() => this.revealNow(actor, id, meta));

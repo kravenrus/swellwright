@@ -28,9 +28,11 @@ import {
 import { ApiErrorSchema } from './errors.js';
 import {
   EnablePluginRequestSchema,
+  PluginConfigViewSchema,
   PluginIdParamsSchema,
   PluginListSchema,
   PluginViewSchema,
+  UpdatePluginConfigRequestSchema,
 } from './plugins.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
 import {
@@ -881,6 +883,35 @@ export const checkPluginRoute = defineRoute({
   responses: { 200: { description: 'The plugin and its runtime.', schema: PluginViewSchema } },
 });
 
+export const getPluginConfigRoute = defineRoute({
+  operationId: 'getPluginConfig',
+  method: 'get',
+  path: '/plugins/{id}/config',
+  tags: ['plugins'],
+  summary: 'The settings of a plugin',
+  description:
+    'The form the plugin declares (its `config.schema`) and what is set now. A secret field holds the id of a vault secret, never the secret.',
+  auth: 'any',
+  permission: 'plugins:read',
+  request: { params: PluginIdParamsSchema },
+  responses: { 200: { description: 'The settings.', schema: PluginConfigViewSchema } },
+});
+
+export const updatePluginConfigRoute = defineRoute({
+  operationId: 'updatePluginConfig',
+  method: 'put',
+  path: '/plugins/{id}/config',
+  tags: ['plugins'],
+  summary: 'Change the settings of a plugin',
+  description:
+    'Replaces the settings. Every value is checked against what the plugin declares, a field it does not declare is refused, and a secret field must name an existing vault secret of the right kind. Which fields changed is recorded, never the values.',
+  auth: 'session',
+  permission: 'plugins:manage',
+  stepUp: true,
+  request: { params: PluginIdParamsSchema, body: UpdatePluginConfigRequestSchema },
+  responses: { 200: { description: 'The settings as stored.', schema: PluginConfigViewSchema } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -951,6 +982,8 @@ export const routes = [
   enablePluginRoute,
   disablePluginRoute,
   checkPluginRoute,
+  getPluginConfigRoute,
+  updatePluginConfigRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

@@ -3,9 +3,9 @@ import { realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { PLUGIN_LIMITS, type PluginFetchInit } from '@swellwright/plugin-api';
+import { type ConfigValues, PLUGIN_LIMITS, type PluginFetchInit } from '@swellwright/plugin-api';
 
-import { NetworkRefused, type PluginNetwork } from './network.js';
+import { type NetworkResponse } from './network.js';
 
 export type ProcessState = 'running' | 'failed' | 'stopped';
 
@@ -15,18 +15,32 @@ export interface ModuleSpec {
   readonly entry: string;
 }
 
+/**
+ * What the core does for a plugin when it asks (ADR 0028, 0029): the network, the secret bound to one of its
+ * settings, its storage, and the settings that go with every call. Each is already limited to this plugin and to
+ * what was approved; a refusal is an error that reaches the plugin.
+ */
+export interface CoreServices {
+  /** The settings for a call. Throws when the plugin is not configured. */
+  settings(): Promise<ConfigValues>;
+  fetch(url: string, init: PluginFetchInit): Promise<NetworkResponse>;
+  secret(field: string): Promise<string>;
+  storage: {
+    get(key: unknown): Promise<unknown>;
+    set(key: unknown, value: unknown): Promise<void>;
+    delete(key: unknown): Promise<void>;
+    keys(): Promise<string[]>;
+  };
+}
+
 export interface StartOptions {
   readonly pluginId: string;
   readonly directory: string;
   readonly modules: readonly ModuleSpec[];
-  /** The approved `network` permission: `host:port` entries. */
-  readonly network: readonly string[];
-  readonly gateway: PluginNetwork;
+  readonly services: CoreServices;
   readonly runnerPath: string;
   readonly memoryMiB: number;
   readonly startTimeoutMs: number;
-  /** Called when the plugin's request through the core was refused (it is also an error for the plugin). */
-  readonly onRefused?: (host: string, reason: string) => void;
   /** Called whenever the state of the process changes (it ended, it was ended, a call timed out). */
   readonly onChange?: (snapshot: RuntimeSnapshot) => void;
   readonly execPath?: string;
@@ -44,7 +58,8 @@ export interface RuntimeSnapshot {
 export class PluginCallError extends Error {
   constructor(
     message: string,
-    readonly reason: 'timeout' | 'crashed' | 'busy' | 'refused' | 'failed' | 'not_running',
+    readonly reason:
+      'timeout' | 'crashed' | 'busy' | 'refused' | 'failed' | 'not_running' | 'not_configured',
   ) {
     super(message);
     this.name = 'PluginCallError';
@@ -62,7 +77,16 @@ type FromPlugin =
   | { type: 'failed'; message: string }
   | { type: 'result'; id: number; value: unknown }
   | { type: 'error'; id: number; message: string }
-  | { type: 'fetch'; id: number; url: string; init: PluginFetchInit };
+  | { type: 'core'; id: number; op: 'fetch'; url: string; init: PluginFetchInit }
+  | { type: 'core'; id: number; op: 'secret'; field: string }
+  | {
+      type: 'core';
+      id: number;
+      op: 'storage';
+      action: 'get' | 'set' | 'delete' | 'keys';
+      key?: unknown;
+      value?: unknown;
+    };
 
 const TAIL_BYTES = 2048;
 
@@ -187,33 +211,33 @@ export class PluginProcess {
       } else {
         waiting.reject(new PluginCallError(message.message, 'failed'));
       }
-    } else if (message.type === 'fetch') {
+    } else if (message.type === 'core') {
       void this.relay(message);
     }
   }
 
-  /** The plugin asked the core for a request. The core decides; the plugin gets an answer or an error. */
-  private async relay(message: Extract<FromPlugin, { type: 'fetch' }>): Promise<void> {
+  /** The plugin asked the core for something. The core decides; the plugin gets an answer or an error. */
+  private async relay(message: Extract<FromPlugin, { type: 'core' }>): Promise<void> {
+    const { services } = this.options;
     try {
-      const response = await this.options.gateway.fetch(
-        this.options.pluginId,
-        this.options.network,
-        message.url,
-        message.init,
-      );
-      this.reply({ type: 'fetched', id: message.id, ok: true, ...response });
-    } catch (error) {
-      if (error instanceof NetworkRefused) {
-        let host: string;
-        try {
-          host = new URL(message.url).host;
-        } catch {
-          host = '(not a URL)';
-        }
-        this.options.onRefused?.(host, error.reason);
+      let value: unknown = null;
+      if (message.op === 'fetch') {
+        value = await services.fetch(message.url, message.init);
+      } else if (message.op === 'secret') {
+        value = await services.secret(message.field);
+      } else if (message.action === 'get') {
+        value = await services.storage.get(message.key);
+      } else if (message.action === 'set') {
+        await services.storage.set(message.key, message.value);
+      } else if (message.action === 'delete') {
+        await services.storage.delete(message.key);
+      } else {
+        value = await services.storage.keys();
       }
+      this.reply({ type: 'reply', id: message.id, ok: true, value: value as Serializable });
+    } catch (error) {
       this.reply({
-        type: 'fetched',
+        type: 'reply',
         id: message.id,
         ok: false,
         message: (error instanceof Error ? error.message : 'The request failed.').slice(0, 300),
@@ -258,14 +282,25 @@ export class PluginProcess {
   }
 
   /** Calls a method of the plugin. The call has a deadline: when it passes, the process is ended. */
-  call(kind: string, method: string, params: unknown, timeoutMs: number): Promise<unknown> {
+  async call(kind: string, method: string, params: unknown, timeoutMs: number): Promise<unknown> {
     if (this.state !== 'running') {
-      return Promise.reject(
-        new PluginCallError(this.lastError ?? 'The plugin is not running.', 'not_running'),
-      );
+      throw new PluginCallError(this.lastError ?? 'The plugin is not running.', 'not_running');
     }
     if (this.pending.size >= PLUGIN_LIMITS.concurrentCalls) {
-      return Promise.reject(new PluginCallError('The plugin is busy.', 'busy'));
+      throw new PluginCallError('The plugin is busy.', 'busy');
+    }
+    let config: ConfigValues;
+    try {
+      config = await this.options.services.settings();
+    } catch (error) {
+      throw new PluginCallError(
+        error instanceof Error ? error.message : 'The plugin is not configured.',
+        'not_configured',
+      );
+    }
+    // The settings were fetched while the process could have ended.
+    if (!this.running) {
+      throw new PluginCallError(this.lastError ?? 'The plugin is not running.', 'not_running');
     }
     const id = this.nextId++;
     this.calls += 1;
@@ -277,7 +312,7 @@ export class PluginProcess {
       }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       try {
-        this.child.send({ type: 'call', id, kind, method, params });
+        this.child.send({ type: 'call', id, kind, method, params: params as Serializable, config });
       } catch {
         clearTimeout(timer);
         this.pending.delete(id);

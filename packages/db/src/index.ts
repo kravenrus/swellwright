@@ -7,6 +7,8 @@ export type {
   Credential,
   Invitation,
   PluginApproval,
+  PluginConfig,
+  PluginStorageItem,
   RecoveryCode,
   Secret,
   Session,

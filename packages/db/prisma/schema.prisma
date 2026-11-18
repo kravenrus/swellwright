@@ -292,3 +292,28 @@ model PluginApproval {
 
   @@map("plugin_approvals")
 }
+
+/// What an administrator entered in a plugin's settings (ADR 0029). A secret field holds the id of a vault secret,
+/// never its value.
+model PluginConfig {
+  pluginId  String   @id @map("plugin_id") @db.VarChar(48)
+  /// The settings as canonical JSON text.
+  settings  String
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// The user name at the time. No foreign key, like the audit log.
+  updatedBy String   @map("updated_by") @db.VarChar(64)
+
+  @@map("plugin_configs")
+}
+
+/// A plugin's own key-value storage (ADR 0029): no other plugin and no part of the core reads it.
+model PluginStorageItem {
+  pluginId  String   @map("plugin_id") @db.VarChar(48)
+  key       String   @db.VarChar(128)
+  /// JSON text.
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([pluginId, key])
+  @@map("plugin_storage")
+}
