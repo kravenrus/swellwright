@@ -100,6 +100,15 @@ describe('sign-in configuration', () => {
     assert.equal(c.lockoutMs, 15 * 60_000);
     assert.equal(c.stepUpMs, 5 * 60_000, 'the elevation window is five minutes by default');
     assert.equal(loadConfig({ SW_STEP_UP_MINUTES: '30' }, 'v').stepUpMs, 30 * 60_000);
+    assert.deepEqual(c.vaultKdf, { memoryKib: 256 * 1024, passes: 3, parallelism: 1 });
+    assert.equal(
+      loadConfig({ SW_VAULT_KDF_MEMORY_MIB: '1024', SW_VAULT_KDF_PASSES: '4' }, 'v').vaultKdf
+        .passes,
+      4,
+    );
+    for (const bad of [{ SW_VAULT_KDF_MEMORY_MIB: '8' }, { SW_VAULT_KDF_PASSES: '0' }]) {
+      assert.throws(() => loadConfig(bad, 'v'), /SW_VAULT_KDF/u);
+    }
     for (const bad of ['0', '31', 'soon']) {
       assert.throws(() => loadConfig({ SW_STEP_UP_MINUTES: bad }, 'v'), /SW_STEP_UP_MINUTES/u);
     }

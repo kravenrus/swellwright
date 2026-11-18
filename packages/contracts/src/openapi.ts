@@ -44,6 +44,18 @@ import {
   UserViewSchema,
 } from './users.js';
 import {
+  CreateSecretRequestSchema,
+  InitializeVaultRequestSchema,
+  RevealedSecretSchema,
+  SecretListSchema,
+  SecretTypeSchema,
+  SecretViewSchema,
+  UnsealVaultRequestSchema,
+  UpdateSecretRequestSchema,
+  VaultInitializedSchema,
+  VaultStatusSchema,
+} from './vault.js';
+import {
   CheckResultSchema,
   HealthResponseSchema,
   ReadyResponseSchema,
@@ -51,7 +63,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.5.0';
+export const OPENAPI_INFO_VERSION = '0.6.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -94,6 +106,16 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   UserListSchema,
   CreateUserRequestSchema,
   UpdateUserRequestSchema,
+  SecretTypeSchema,
+  VaultStatusSchema,
+  InitializeVaultRequestSchema,
+  VaultInitializedSchema,
+  UnsealVaultRequestSchema,
+  SecretViewSchema,
+  SecretListSchema,
+  CreateSecretRequestSchema,
+  UpdateSecretRequestSchema,
+  RevealedSecretSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -225,6 +247,11 @@ export function buildOpenApi(): Json {
       { name: 'setup', description: 'First-run setup of a new instance.' },
       { name: 'auth', description: 'Sign-in with a password and an authenticator, sessions.' },
       { name: 'users', description: 'Users, their roles, invitations and credential resets.' },
+      {
+        name: 'vault',
+        description:
+          'The secrets vault: sealed on start, opened with a passphrase, values write-only.',
+      },
       { name: 'roles', description: 'Built-in roles and the permission catalogue.' },
       { name: 'audit', description: 'The append-only audit log and its integrity check.' },
     ],

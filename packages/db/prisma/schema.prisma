@@ -160,6 +160,64 @@ model AuditEvent {
   @@map("audit_events")
 }
 
+/// What a secret is for (docs/en/design/02-data-model.md). A closed list; a new kind is a migration.
+enum SecretType {
+  panel_token
+  ssh_key
+  ssh_password
+  ssh_ca
+  dns_oauth
+  provider_token
+  telegram
+  generic
+
+  @@map("secret_type")
+}
+
+/// The one row that says how the vault opens (docs/adr/0018). The KEK is random; it is stored wrapped twice,
+/// under a key derived from the owner's passphrase and under the recovery key. Never the KEK itself.
+model VaultMeta {
+  /// Always 1: the migration adds a check that there is only one row.
+  id                  Int      @id @default(1)
+  kdfSalt             Bytes    @map("kdf_salt")
+  /// Argon2id parameters, kept so they can be raised later without losing the ability to open the vault.
+  kdfMemoryKib        Int      @map("kdf_memory_kib")
+  kdfPasses           Int      @map("kdf_passes")
+  kdfParallelism      Int      @map("kdf_parallelism")
+  passphraseWrappedKek Bytes   @map("passphrase_wrapped_kek")
+  recoveryWrappedKek  Bytes    @map("recovery_wrapped_kek")
+  kekVersion          Int      @default(1) @map("kek_version")
+  /// The owner who set the vault up. No foreign key, like the audit chain.
+  createdById         String?  @map("created_by_id") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("vault_meta")
+}
+
+/// One secret. The value is encrypted with its own data key, which is wrapped under the KEK; the name, type
+/// and dates are not secret. Only the metadata is ever returned by a list.
+model Secret {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  name           String     @unique @db.VarChar(100)
+  type           SecretType
+  description    String?    @db.VarChar(500)
+  /// Moves forward with every new value; part of what the blobs are bound to.
+  version        Int        @default(1)
+  /// AES-256-GCM under the data key.
+  ciphertext     Bytes
+  /// The data key, AES-256-GCM under the KEK.
+  wrappedDek     Bytes      @map("wrapped_dek")
+  expiresAt      DateTime?  @map("expires_at") @db.Timestamptz(3)
+  createdById    String?    @map("created_by_id") @db.Uuid
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// When the value last changed (created or replaced), as opposed to the metadata.
+  valueChangedAt DateTime   @default(now()) @map("value_changed_at") @db.Timestamptz(3)
+
+  @@index([type])
+  @@map("secrets")
+}
+
 /// A browser session. The cookie holds a random token; only its SHA-256 hash is stored.
 model Session {
   id                String       @id @default(uuid(7)) @db.Uuid

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -30,6 +30,10 @@
     {
       "name": "users",
       "description": "Users, their roles, invitations and credential resets."
+    },
+    {
+      "name": "vault",
+      "description": "The secrets vault: sealed on start, opened with a passphrase, values write-only."
     },
     {
       "name": "roles",
@@ -854,6 +858,423 @@
         "x-sw-step-up": true
       }
     },
+    "/vault/status": {
+      "get": {
+        "operationId": "getVaultStatus",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Whether the vault exists and is open",
+        "responses": {
+          "200": {
+            "description": "The status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Also the number of secrets. Works while the vault is sealed.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:read"
+      }
+    },
+    "/vault/initialize": {
+      "post": {
+        "operationId": "initializeVault",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Set the vault up",
+        "responses": {
+          "201": {
+            "description": "The vault and its recovery key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultInitialized"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Once. Makes the key, wraps it under the passphrase and under a recovery key, and leaves the vault open. The recovery key is in the answer and nowhere else: it is the only way back in when the passphrase is lost. Answers 409 when a vault exists.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializeVaultRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/vault/unseal": {
+      "post": {
+        "operationId": "unsealVault",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Open the vault with the passphrase or the recovery key",
+        "responses": {
+          "200": {
+            "description": "The vault is open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "A wrong passphrase or key answers 401 and is recorded; ten failures in fifteen minutes answer 429 for everyone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsealVaultRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/vault/seal": {
+      "post": {
+        "operationId": "sealVault",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Close the vault",
+        "responses": {
+          "200": {
+            "description": "The vault is sealed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaultStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Wipes the key from memory. Nothing that needs a secret works until it is opened again.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/secrets": {
+      "get": {
+        "operationId": "listSecrets",
+        "tags": [
+          "vault"
+        ],
+        "summary": "List the secrets, without their values",
+        "responses": {
+          "200": {
+            "description": "The secrets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Works while the vault is sealed: names, types and dates are not secret.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:read"
+      },
+      "post": {
+        "operationId": "createSecret",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Store a secret",
+        "responses": {
+          "201": {
+            "description": "The secret, without its value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The vault must be open (423 `vault_sealed` otherwise). The value is encrypted with a key of its own and is write-only from now on. A taken name answers 409.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSecretRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/secrets/{id}": {
+      "patch": {
+        "operationId": "updateSecret",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Rename a secret, change its details or replace its value",
+        "responses": {
+          "200": {
+            "description": "The secret after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "A new `value` needs the vault open and moves the version forward; the old value is not kept. Renaming and the details work while sealed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSecretRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      },
+      "delete": {
+        "operationId": "deleteSecret",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Delete a secret",
+        "responses": {
+          "204": {
+            "description": "The secret is gone."
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Works while the vault is sealed. Cannot be undone.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:manage",
+        "x-sw-step-up": true
+      }
+    },
+    "/secrets/{id}/reveal": {
+      "post": {
+        "operationId": "revealSecret",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Show the value of a secret",
+        "responses": {
+          "200": {
+            "description": "The value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevealedSecret"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The only way a value leaves the vault. Needs the vault open, the reveal permission and a fresh second factor, and is recorded before the value is sent.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "vault:reveal",
+        "x-sw-step-up": true
+      }
+    },
     "/roles": {
       "get": {
         "operationId": "getRoles",
@@ -1041,6 +1462,7 @@
           "unauthorized",
           "forbidden",
           "step_up_required",
+          "vault_sealed",
           "not_found",
           "conflict",
           "rate_limited",
@@ -1502,6 +1924,14 @@
           "user.created",
           "user.updated",
           "user.credentials.reset",
+          "vault.initialized",
+          "vault.unsealed",
+          "vault.unseal.failed",
+          "vault.sealed",
+          "secret.created",
+          "secret.updated",
+          "secret.deleted",
+          "secret.revealed",
           "authz.denied",
           "audit.chain.verified"
         ]
@@ -2046,6 +2476,309 @@
         },
         "additionalProperties": false,
         "description": "Fields that are absent stay as they are; `null` clears the display name or the e-mail address."
+      },
+      "SecretType": {
+        "type": "string",
+        "enum": [
+          "panel_token",
+          "ssh_key",
+          "ssh_password",
+          "ssh_ca",
+          "dns_oauth",
+          "provider_token",
+          "telegram",
+          "generic"
+        ]
+      },
+      "VaultStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "uninitialized",
+              "sealed",
+              "unsealed"
+            ],
+            "description": "`uninitialized`: no vault yet. `sealed`: it exists and the key is not in memory. `unsealed`: it can be used."
+          },
+          "secretCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "kekVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "secretCount",
+          "kekVersion",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "InitializeVaultRequest": {
+        "type": "object",
+        "properties": {
+          "passphrase": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "passphrase"
+        ],
+        "additionalProperties": false
+      },
+      "VaultInitialized": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/VaultStatus"
+          },
+          "recoveryKey": {
+            "type": "string",
+            "description": "Shown once, never stored. With it the vault can be opened when the passphrase is lost: keep it away from this server."
+          }
+        },
+        "required": [
+          "status",
+          "recoveryKey"
+        ],
+        "additionalProperties": false
+      },
+      "UnsealVaultRequest": {
+        "type": "object",
+        "properties": {
+          "passphrase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "recoveryKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "additionalProperties": false
+      },
+      "SecretView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SecretType"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Moves forward every time the value is replaced."
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "valueChangedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "description",
+          "version",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+          "valueChangedAt"
+        ],
+        "additionalProperties": false,
+        "description": "A secret without its value. Values are write-only."
+      },
+      "SecretList": {
+        "type": "object",
+        "properties": {
+          "secrets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecretView"
+            },
+            "description": "Ordered by name."
+          }
+        },
+        "required": [
+          "secrets"
+        ],
+        "additionalProperties": false
+      },
+      "CreateSecretRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "type": {
+            "$ref": "#/components/schemas/SecretType"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32768
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateSecretRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "description": "A new value. Needs the vault open; the version moves forward.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32768
+          }
+        },
+        "additionalProperties": false,
+        "description": "Fields that are absent stay as they are; `null` clears the description or the expiry."
+      },
+      "RevealedSecret": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SecretType"
+          },
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "value": {
+            "type": "string",
+            "description": "The secret. Not kept anywhere by the console after it is hidden."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "version",
+          "value"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
