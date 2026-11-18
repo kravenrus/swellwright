@@ -6,3 +6,9 @@ packages:
 # install a version published less than three days ago (value is in minutes).
 onlyBuiltDependencies: []
 minimumReleaseAge: 4320
+
+# GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, denial of service). typescript-estree 8.72.x asks for
+# minimatch ^10; 8.73.0 already asks for ^11 but is younger than the release-age window above.
+# Drop this override once typescript-eslint is upgraded to 8.73 or newer.
+overrides:
+  "@typescript-eslint/typescript-estree>minimatch": 11.0.8
