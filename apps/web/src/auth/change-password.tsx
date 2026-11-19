@@ -1,12 +1,15 @@
-import { Alert, Button, Group, Modal, PasswordInput, Stack, Text } from '@mantine/core';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { Button, Modal, PasswordInput, Stack, Text } from '@mantine/core';
+import { IconKey } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
+import { ModalFooter, OverlayHeader } from '@swellwright/ui';
 
 import { changePassword } from '../api.js';
+import { notifySuccess } from '../shell/feedback.js';
+import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 import { useStepUp } from './step-up.js';
 
@@ -33,20 +36,18 @@ export function ChangePasswordDialog({
     mutationFn: () =>
       step.run(() => changePassword({ currentPassword: current, newPassword: next })),
     onSuccess: () => {
-      setCurrent('');
-      setNext('');
-      setRepeat('');
-      setTouched(false);
+      notifySuccess(t('changePassword.title'), t('changePassword.success'));
+      close();
     },
   });
-  const close = () => {
+  function close() {
     mutation.reset();
     setCurrent('');
     setNext('');
     setRepeat('');
     setTouched(false);
     onClose();
-  };
+  }
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     setTouched(true);
@@ -56,69 +57,72 @@ export function ChangePasswordDialog({
   };
 
   return (
-    <Modal centered onClose={close} opened={opened} title={t('changePassword.title')}>
-      {mutation.isSuccess ? (
+    <Modal
+      centered
+      onClose={close}
+      opened={opened}
+      title={<OverlayHeader icon={IconKey} iconColor="teal" title={t('changePassword.title')} />}
+    >
+      <form onSubmit={submit}>
         <Stack gap="md">
-          <Alert color="teal" icon={<IconCheck size={16} />} variant="light">
-            {t('changePassword.success')}
-          </Alert>
-          <Group justify="flex-end">
-            <Button onClick={close}>{t('changePassword.done')}</Button>
-          </Group>
+          <PasswordInput
+            autoComplete="current-password"
+            data-autofocus
+            label={t('changePassword.currentLabel')}
+            onChange={(e) => {
+              setCurrent(e.currentTarget.value);
+            }}
+            required
+            value={current}
+          />
+          <PasswordInput
+            autoComplete="new-password"
+            description={t('changePassword.newHint', { count: PASSWORD_MIN_LENGTH })}
+            error={touched && !check.success ? t('shared.passwordTooShort') : undefined}
+            label={t('changePassword.newLabel')}
+            onChange={(e) => {
+              setNext(e.currentTarget.value);
+            }}
+            required
+            value={next}
+          />
+          <PasswordInput
+            autoComplete="new-password"
+            error={mismatch ? t('shared.passwordsDiffer') : undefined}
+            label={t('changePassword.repeatLabel')}
+            onChange={(e) => {
+              setRepeat(e.currentTarget.value);
+            }}
+            required
+            value={repeat}
+          />
+          <FormError
+            message={
+              mutation.error
+                ? describeError(t, mutation.error, t('changePassword.currentWrong'))
+                : undefined
+            }
+          />
+          <Text c="dimmed" fz="xs">
+            {t('changePassword.lockoutNote')}
+          </Text>
         </Stack>
-      ) : (
-        <form onSubmit={submit}>
-          <Stack gap="md">
-            <PasswordInput
-              autoComplete="current-password"
-              data-autofocus
-              label={t('changePassword.currentLabel')}
-              onChange={(e) => {
-                setCurrent(e.currentTarget.value);
-              }}
-              required
-              value={current}
-            />
-            <PasswordInput
-              autoComplete="new-password"
-              description={t('changePassword.newHint', { count: PASSWORD_MIN_LENGTH })}
-              error={touched && !check.success ? t('shared.passwordTooShort') : undefined}
-              label={t('changePassword.newLabel')}
-              onChange={(e) => {
-                setNext(e.currentTarget.value);
-              }}
-              required
-              value={next}
-            />
-            <PasswordInput
-              autoComplete="new-password"
-              error={mismatch ? t('shared.passwordsDiffer') : undefined}
-              label={t('changePassword.repeatLabel')}
-              onChange={(e) => {
-                setRepeat(e.currentTarget.value);
-              }}
-              required
-              value={repeat}
-            />
-            {mutation.error ? (
-              <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-                {describeError(t, mutation.error, t('changePassword.currentWrong'))}
-              </Alert>
-            ) : null}
-            <Text c="dimmed" fz="xs">
-              {t('changePassword.lockoutNote')}
-            </Text>
-            <Group justify="flex-end">
-              <Button onClick={close} variant="default">
-                {t('common:cancel')}
-              </Button>
-              <Button loading={mutation.isPending} type="submit">
-                {t('changePassword.submit')}
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      )}
+        <ModalFooter>
+          <Button onClick={close} variant="subtle">
+            {t('common:cancel')}
+          </Button>
+          <Button
+            color="teal"
+            leftSection={<IconKey size={16} />}
+            loading={mutation.isPending}
+            size="md"
+            type="submit"
+            variant="soft"
+          >
+            {t('changePassword.submit')}
+          </Button>
+        </ModalFooter>
+      </form>
     </Modal>
   );
 }

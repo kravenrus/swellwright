@@ -74,6 +74,11 @@ RUN node packages/db/scripts/prisma.mjs --verify-engine \
 FROM base AS runtime
 ARG SW_VERSION=0.0.0-dev
 ARG SW_COMMIT=unknown
+# Optional build facts for the console's "Build info" (GET /api/v1/version); empty means "not recorded".
+ARG SW_BUILD_TIME=
+ARG SW_BUILD_NUMBER=
+ARG SW_GIT_BRANCH=
+ARG SW_GIT_COMMIT=
 LABEL org.opencontainers.image.title="Swellwright" \
       org.opencontainers.image.description="Console and API for deploying and operating Remnawave fleets" \
       org.opencontainers.image.source="https://github.com/swellwright/swellwright" \
@@ -87,6 +92,10 @@ ENV NODE_ENV=production \
     SW_WEB_DIR=/app/web \
     SW_VERSION=${SW_VERSION} \
     SW_COMMIT=${SW_COMMIT} \
+    SW_BUILD_TIME=${SW_BUILD_TIME} \
+    SW_BUILD_NUMBER=${SW_BUILD_NUMBER} \
+    SW_GIT_BRANCH=${SW_GIT_BRANCH} \
+    SW_GIT_COMMIT=${SW_GIT_COMMIT} \
     CHECKPOINT_DISABLE=1 \
     PRISMA_HIDE_UPDATE_MESSAGE=1
 COPY --from=server-deps /app ./

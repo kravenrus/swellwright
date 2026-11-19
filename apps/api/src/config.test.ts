@@ -34,6 +34,57 @@ describe('configuration', () => {
     assert.equal(c.commit, 'abc1234');
   });
 
+  it('reads what the build recorded and builds the commit link from the repository', () => {
+    const none = loadConfig({}, 'v');
+    assert.deepEqual(none.build, { time: null, number: null });
+    assert.deepEqual(none.git, { branch: null, commit: null, commitUrl: null });
+    const c = loadConfig(
+      {
+        SW_BUILD_TIME: '2026-11-19T10:00:00Z',
+        SW_BUILD_NUMBER: ' 42 ',
+        SW_GIT_BRANCH: 'main',
+        SW_GIT_COMMIT: '0123456789abcdef0123456789abcdef01234567',
+      },
+      'v',
+    );
+    assert.deepEqual(c.build, { time: '2026-11-19T10:00:00Z', number: '42' });
+    assert.equal(c.git.branch, 'main');
+    assert.equal(
+      c.git.commitUrl,
+      'https://github.com/swellwright/swellwright/commit/0123456789abcdef0123456789abcdef01234567',
+    );
+    const fork = loadConfig({ SW_GIT_COMMIT: 'abc1234', SW_REPOSITORY: 'someone/fork' }, 'v');
+    assert.equal(fork.git.commitUrl, 'https://github.com/someone/fork/commit/abc1234');
+    assert.equal(fork.repositoryUrl, 'https://github.com/someone/fork');
+  });
+
+  it('treats empty build values as not set and builds no link from text that is not a hash', () => {
+    const empty = loadConfig(
+      { SW_BUILD_TIME: '', SW_BUILD_NUMBER: '  ', SW_GIT_BRANCH: '', SW_GIT_COMMIT: '' },
+      'v',
+    );
+    assert.deepEqual(empty.build, { time: null, number: null });
+    assert.deepEqual(empty.git, { branch: null, commit: null, commitUrl: null });
+    const odd = loadConfig({ SW_GIT_COMMIT: 'not a hash/../x' }, 'v');
+    assert.equal(odd.git.commit, 'not a hash/../x');
+    assert.equal(odd.git.commitUrl, null);
+    assert.equal(loadConfig({ SW_GIT_BRANCH: 'x'.repeat(400) }, 'v').git.branch?.length, 255);
+  });
+
+  it('uses SW_COMMIT for the revision when SW_GIT_COMMIT is missing, except the image placeholder', () => {
+    assert.equal(loadConfig({ SW_COMMIT: 'abc1234' }, 'v').git.commit, 'abc1234');
+    assert.equal(
+      loadConfig({ SW_COMMIT: 'abc1234', SW_GIT_COMMIT: 'def5678' }, 'v').git.commit,
+      'def5678',
+    );
+    assert.equal(loadConfig({ SW_COMMIT: 'unknown' }, 'v').git.commit, null);
+    assert.equal(
+      loadConfig({ SW_COMMIT: 'unknown' }, 'v').commit,
+      'unknown',
+      'commit is unchanged',
+    );
+  });
+
   it('rejects an invalid port and a malformed URL with a readable message', () => {
     assert.throws(() => loadConfig({ SW_HTTP_PORT: '70000' }, 'v'), /SW_HTTP_PORT/u);
     assert.throws(() => loadConfig({ SW_DATABASE_URL: 'not a url' }, 'v'), /SW_DATABASE_URL/u);
@@ -137,5 +188,74 @@ describe('sign-in configuration', () => {
     assert.equal(loadConfig({ SW_SETUP_TOKEN: 'x'.repeat(16) }, 'v').setupToken, 'x'.repeat(16));
     assert.equal(loadConfig({ SW_SETUP_TOKEN: '' }, 'v').setupToken, undefined);
     assert.throws(() => loadConfig({ SW_SETUP_TOKEN: 'short' }, 'v'), /SW_SETUP_TOKEN/u);
+  });
+});
+
+describe('update check configuration', () => {
+  it('is on by default, asks GitHub and the project repository', () => {
+    const c = loadConfig({}, 'v');
+    assert.deepEqual(c.updateCheck, { enabled: true, apiBase: 'https://api.github.com' });
+    assert.equal(c.repository, 'swellwright/swellwright');
+    assert.equal(c.repositoryUrl, 'https://github.com/swellwright/swellwright');
+  });
+
+  it('is switched off with off (and the usual spellings), empty means the default', () => {
+    for (const off of ['off', 'OFF', 'false', '0', 'no']) {
+      assert.equal(loadConfig({ SW_UPDATE_CHECK: off }, 'v').updateCheck.enabled, false, off);
+    }
+    for (const on of ['on', 'true', '1', '']) {
+      assert.equal(loadConfig({ SW_UPDATE_CHECK: on }, 'v').updateCheck.enabled, true, on);
+    }
+    assert.throws(() => loadConfig({ SW_UPDATE_CHECK: 'sometimes' }, 'v'), /SW_UPDATE_CHECK/u);
+  });
+
+  it('takes only owner/name as the repository', () => {
+    assert.equal(loadConfig({ SW_REPOSITORY: 'a/b' }, 'v').repository, 'a/b');
+    assert.equal(
+      loadConfig({ SW_REPOSITORY: 'my-org/my.repo_2' }, 'v').repository,
+      'my-org/my.repo_2',
+    );
+    assert.equal(loadConfig({ SW_REPOSITORY: '' }, 'v').repository, 'swellwright/swellwright');
+    for (const bad of [
+      'swellwright',
+      'a/b/c',
+      '/b',
+      'a/',
+      '-a/b',
+      'a-/b',
+      'a b/c',
+      'a/b c',
+      'a/..',
+      'a/.',
+      'https://github.com/a/b',
+      'a/b?x=1',
+      'a/b#x',
+      '../b',
+      `${'a'.repeat(40)}/b`,
+    ]) {
+      assert.throws(() => loadConfig({ SW_REPOSITORY: bad }, 'v'), /SW_REPOSITORY/u, bad);
+    }
+  });
+
+  it('wants an https API address, or http on the same machine', () => {
+    assert.equal(
+      loadConfig({ SW_UPDATE_API_BASE: 'https://github.example.org/api/v3/' }, 'v').updateCheck
+        .apiBase,
+      'https://github.example.org/api/v3',
+    );
+    for (const ok of ['http://127.0.0.1:8080', 'http://localhost:9', 'http://[::1]:1234']) {
+      assert.equal(loadConfig({ SW_UPDATE_API_BASE: ok }, 'v').updateCheck.apiBase, ok);
+    }
+    for (const bad of [
+      'http://api.github.com',
+      'http://example.org',
+      'ftp://127.0.0.1',
+      'api.github.com',
+      ['https://user:pw', 'api.github.com'].join(String.fromCharCode(64)),
+      'https://api.github.com/?x=1',
+      'https://api.github.com/#x',
+    ]) {
+      assert.throws(() => loadConfig({ SW_UPDATE_API_BASE: bad }, 'v'), /SW_UPDATE_API_BASE/u, bad);
+    }
   });
 });

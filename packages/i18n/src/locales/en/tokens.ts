@@ -21,6 +21,12 @@ export const tokens = {
     expires: 'Expires',
     lastUsed: 'Last used',
     state: 'State',
+    id: 'ID',
+  },
+
+  /** The title of a toast after something worked; the text says what. */
+  toast: {
+    success: 'Success',
   },
 
   states: {
@@ -35,9 +41,14 @@ export const tokens = {
     anywhere: 'anywhere',
     neverUsed: 'never used',
     revokedOn: 'Revoked {{when}}',
+    view: 'View',
     revoke: 'Revoke',
-    revokeAria: 'Revoke the token “{{name}}”',
-    revokeAriaOther: 'Revoke the token “{{name}}” of {{username}}',
+    actionsFor: 'Actions for the token “{{name}}”',
+  },
+
+  /** The details of one token (the View entry of the menu of a row). */
+  view: {
+    copyPermissions: 'Copy permissions',
   },
 
   mine: {
@@ -68,6 +79,14 @@ export const tokens = {
     warningOther:
       'Whatever uses this token of {{username}} stops working at once. Revoking cannot be undone; {{username}} can create a new token.',
     submit: 'Revoke token',
+    done: 'The token “{{name}}” was revoked.',
+  },
+
+  /** The two groups of permissions of a resource: looking at things, and doing things. */
+  permissionKinds: {
+    read: 'Read',
+    actions: 'Actions',
+    aria: '{{kind}} permissions: {{resource}}',
   },
 
   /** The kinds of permission a token can carry, named after the part before the colon. */
@@ -87,6 +106,11 @@ export const tokens = {
 
   create: {
     title: 'Create an API token',
+    onceTitle: 'Shown only once',
+    once: 'The value of the token appears once, right after you create it. Only a hash of it is kept, so a lost token cannot be recovered.',
+    presetRead: 'Read only',
+    presetAll: 'Everything I may',
+    clear: 'Clear the permissions',
     nameLabel: 'Name',
     nameDescription: 'What the token is for, for example “deploy script”',
     nameError: 'Enter a name of up to {{max}} characters.',

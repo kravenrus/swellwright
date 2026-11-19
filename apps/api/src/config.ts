@@ -11,6 +11,48 @@ import type { KdfParams } from './vault/kdf.js';
 const unsetIfEmpty = (v: unknown): unknown => (v === '' ? undefined : v);
 const optionalUrl = z.preprocess(unsetIfEmpty, z.url().optional());
 const optionalString = z.preprocess(unsetIfEmpty, z.string().optional());
+/** A text the build recorded about itself: trimmed, cut to a sane length, empty means "not set". */
+const buildNote = (max: number) =>
+  z.preprocess((v) => {
+    if (typeof v !== 'string' || v.trim() === '') {
+      return undefined;
+    }
+    return v.trim().slice(0, max);
+  }, z.string().optional());
+
+/** `owner/name` of a GitHub repository: the owner is up to 39 letters, digits and hyphens (not at the ends). */
+const REPOSITORY =
+  /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/u;
+/** Only a hash is put into a URL. */
+const COMMIT_HASH = /^[0-9a-f]{7,64}$/iu;
+export const DEFAULT_REPOSITORY = 'swellwright/swellwright';
+export const DEFAULT_UPDATE_API_BASE = 'https://api.github.com';
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Where the update check asks. https only; plain http is for a stand-in server on the same machine (tests).
+ * No credentials, query or fragment: the base is only a place to append `/repos/...` to.
+ */
+function checkUpdateApiBase(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('Invalid configuration: SW_UPDATE_API_BASE is not a URL.');
+  }
+  const loopbackHttp = url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname);
+  if (url.protocol !== 'https:' && !loopbackHttp) {
+    throw new Error(
+      'Invalid configuration: SW_UPDATE_API_BASE must be an https URL (http only for localhost).',
+    );
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error(
+      'Invalid configuration: SW_UPDATE_API_BASE has no credentials, query or fragment.',
+    );
+  }
+  return value.replace(/\/+$/u, '');
+}
 
 const EnvSchema = z.object({
   SW_HTTP_HOST: z.string().min(1).default('127.0.0.1'),
@@ -22,6 +64,23 @@ const EnvSchema = z.object({
   SW_LOG_LEVEL: z.enum(['normal', 'silent']).default('normal'),
   SW_VERSION: z.string().min(1).optional(),
   SW_COMMIT: z.string().min(1).optional(),
+  /** What the image build recorded about itself, shown in the console's "Build info" (build arguments, ADR 0019). */
+  SW_BUILD_TIME: buildNote(64),
+  SW_BUILD_NUMBER: buildNote(64),
+  SW_GIT_BRANCH: buildNote(255),
+  SW_GIT_COMMIT: buildNote(64),
+  /** Ask GitHub for the newest release and the star count (once a day). `off` sends nothing, ever. */
+  SW_UPDATE_CHECK: z.preprocess(unsetIfEmpty, z.stringbool().default(true)),
+  /** The GitHub repository the project lives in, `owner/name`. Forks and mirrors set their own. */
+  SW_REPOSITORY: z.preprocess(
+    unsetIfEmpty,
+    z
+      .string()
+      .regex(REPOSITORY, 'must be owner/name of a GitHub repository')
+      .default(DEFAULT_REPOSITORY),
+  ),
+  /** The GitHub API. For tests only: a stand-in server on the same machine. */
+  SW_UPDATE_API_BASE: z.preprocess(unsetIfEmpty, z.string().default(DEFAULT_UPDATE_API_BASE)),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   /** Base64 of 32 random bytes. Seals the TOTP secrets in the database (ADR 0014). */
   SW_AUTH_KEY: optionalString,
@@ -87,6 +146,20 @@ export interface AppConfig {
   readonly silent: boolean;
   readonly version: string;
   readonly commit: string | undefined;
+  /** What the image build recorded; each is null when the build did not say. */
+  readonly build: { readonly time: string | null; readonly number: string | null };
+  readonly git: {
+    readonly branch: string | null;
+    readonly commit: string | null;
+    /** The page of the revision on GitHub: set only when the revision looks like a commit hash. */
+    readonly commitUrl: string | null;
+  };
+  /** The GitHub repository, `owner/name`. */
+  readonly repository: string;
+  /** The page of the repository on GitHub. */
+  readonly repositoryUrl: string;
+  /** The check for a newer release (the console's version button) and where it asks. */
+  readonly updateCheck: { readonly enabled: boolean; readonly apiBase: string };
   readonly production: boolean;
   readonly authKey: Buffer;
   /** True when no key was configured and a random one was made for this process (development only). */
@@ -196,6 +269,10 @@ export function loadConfig(
   }
   const e = parsed.data;
   const production = e.NODE_ENV === 'production';
+  // The revision comes from its own variable; the older `SW_COMMIT` (the image label) stands in when it is
+  // missing, unless it holds the image's "unknown" placeholder.
+  const gitCommit =
+    e.SW_GIT_COMMIT ?? (e.SW_COMMIT && e.SW_COMMIT !== 'unknown' ? e.SW_COMMIT : null);
   if (production && e.SW_DATABASE_URL && !e.SW_AUTH_KEY) {
     throw new Error('Invalid configuration: SW_AUTH_KEY is required in production.');
   }
@@ -219,6 +296,18 @@ export function loadConfig(
     silent: e.SW_LOG_LEVEL === 'silent',
     version: e.SW_VERSION ?? packageVersion,
     commit: e.SW_COMMIT,
+    build: { time: e.SW_BUILD_TIME ?? null, number: e.SW_BUILD_NUMBER ?? null },
+    git: {
+      branch: e.SW_GIT_BRANCH ?? null,
+      commit: gitCommit,
+      commitUrl:
+        gitCommit !== null && COMMIT_HASH.test(gitCommit)
+          ? `https://github.com/${e.SW_REPOSITORY}/commit/${gitCommit}`
+          : null,
+    },
+    repository: e.SW_REPOSITORY,
+    repositoryUrl: `https://github.com/${e.SW_REPOSITORY}`,
+    updateCheck: { enabled: e.SW_UPDATE_CHECK, apiBase: checkUpdateApiBase(e.SW_UPDATE_API_BASE) },
     production,
     authKey: e.SW_AUTH_KEY ? decodeAuthKey(e.SW_AUTH_KEY) : randomBytes(AUTH_KEY_BYTES),
     authKeyEphemeral: !e.SW_AUTH_KEY,

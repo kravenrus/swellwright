@@ -6,6 +6,8 @@ import {
   openApiRoute,
   readyRoute,
   type ReadyResponse,
+  type UpdatesResponse,
+  updatesRoute,
   versionRoute,
   type VersionResponse,
 } from '@swellwright/contracts';
@@ -15,12 +17,14 @@ import { type AppConfig } from './config.js';
 import { CONFIG } from './tokens.js';
 import { ContractRoute } from './contract-route.js';
 import { ReadinessService } from './readiness.js';
+import { UpdatesService } from './system/updates.service.js';
 
 @Controller()
 export class SystemController {
   constructor(
     @Inject(ReadinessService) private readonly readiness: ReadinessService,
     @Inject(CONFIG) private readonly config: AppConfig,
+    @Inject(UpdatesService) private readonly updates: UpdatesService,
   ) {}
 
   @ContractRoute(healthRoute)
@@ -42,7 +46,14 @@ export class SystemController {
       version: this.config.version,
       apiVersion: 'v1',
       ...(this.config.commit ? { commit: this.config.commit } : {}),
+      build: { ...this.config.build },
+      git: { ...this.config.git },
     };
+  }
+
+  @ContractRoute(updatesRoute)
+  latestRelease(): Promise<UpdatesResponse> {
+    return this.updates.current();
   }
 
   @ContractRoute(openApiRoute)

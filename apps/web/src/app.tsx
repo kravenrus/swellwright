@@ -1,136 +1,19 @@
-import { ActionIcon, Badge, Group, Menu, Text } from '@mantine/core';
-import {
-  IconBell,
-  IconCheck,
-  IconKey,
-  IconLanguage,
-  IconLogout,
-  IconSearch,
-  IconUser,
-} from '@tabler/icons-react';
-import { useLayoutEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { RouterProvider } from 'react-router';
 
 import type { SessionInfo } from '@swellwright/contracts';
-import { LANGUAGES, LANGUAGE_NAMES, isLanguage } from '@swellwright/i18n';
-import { AppHeader, HeaderIconButton } from '@swellwright/ui';
 
-import { updatePreferences } from './api.js';
-import { ChangePasswordDialog } from './auth/change-password.js';
 import { AuthGate } from './auth/gate.js';
 import { StepUpProvider } from './auth/step-up.js';
-import { followSavedLanguage, setLanguage } from './i18n.js';
-import { navFor } from './nav.js';
-import { Overview } from './overview.js';
-import { AuditPage } from './security/audit-page.js';
-import { RolesPage } from './security/roles-page.js';
-import { SessionsPage } from './security/sessions-page.js';
-import { TokensPage } from './security/tokens-page.js';
-import { UsersPage } from './security/users-page.js';
-import { VaultPage } from './security/vault-page.js';
-import { PluginsPage } from './settings/plugins-page.js';
+import { followSavedLanguage } from './i18n.js';
+import { createConsoleRouter } from './router.js';
+import { ConsoleProvider } from './shell/console-context.js';
 
-function AccountMenu({
-  session,
-  onSignOut,
-}: {
-  session: SessionInfo;
-  onSignOut: () => Promise<void>;
-}) {
-  const [changing, setChanging] = useState(false);
-  return (
-    <>
-      <ChangePasswordDialog
-        onClose={() => {
-          setChanging(false);
-        }}
-        opened={changing}
-      />
-      <AccountDropdown
-        onChangePassword={() => {
-          setChanging(true);
-        }}
-        onSignOut={onSignOut}
-        session={session}
-      />
-    </>
-  );
-}
-
-function AccountDropdown({
-  session,
-  onSignOut,
-  onChangePassword,
-}: {
-  session: SessionInfo;
-  onSignOut: () => Promise<void>;
-  onChangePassword: () => void;
-}) {
-  const { t, i18n } = useTranslation(['common', 'roles']);
-  return (
-    <Menu position="bottom-end" shadow="md" withinPortal>
-      <Menu.Target>
-        <ActionIcon aria-label={t('account')} color="gray" size={36}>
-          <IconUser size={18} />
-        </ActionIcon>
-      </Menu.Target>
-      <Menu.Dropdown>
-        <Menu.Label>
-          <Group gap="xs" wrap="nowrap">
-            <Text fw={600} fz="sm">
-              {session.user.displayName ?? session.user.username}
-            </Text>
-            <Badge size="xs">{t(`roles:names.${session.user.role}`)}</Badge>
-          </Group>
-        </Menu.Label>
-        <Menu.Item leftSection={<IconKey size={16} />} onClick={onChangePassword}>
-          {t('changePassword')}
-        </Menu.Item>
-        <Menu.Divider />
-        <Menu.Label>
-          <Group gap={6} wrap="nowrap">
-            <IconLanguage size={14} />
-            {t('language')}
-          </Group>
-        </Menu.Label>
-        {LANGUAGES.map((language) => (
-          <Menu.Item
-            key={language}
-            leftSection={
-              i18n.language === language ? <IconCheck size={16} /> : <span style={{ width: 16 }} />
-            }
-            lang={language}
-            onClick={() => {
-              if (isLanguage(language)) {
-                void setLanguage(language);
-                // The choice already works here. Saving it on the account only makes it follow the person to
-                // other browsers, so a failure is not worth a message.
-                void updatePreferences(language).catch(() => undefined);
-              }
-            }}
-          >
-            {LANGUAGE_NAMES[language]}
-          </Menu.Item>
-        ))}
-        <Menu.Divider />
-        <Menu.Item
-          leftSection={<IconLogout size={16} />}
-          onClick={() => {
-            void onSignOut();
-          }}
-        >
-          {t('signOut')}
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
-  );
-}
+/** Made once, the first time the console is shown, and kept when the person signs out and in again. */
+let router: ReturnType<typeof createConsoleRouter> | undefined;
+const consoleRouter = () => (router ??= createConsoleRouter());
 
 function Console({ session, signOut }: { session: SessionInfo; signOut: () => Promise<void> }) {
-  const { t } = useTranslation(['common', 'nav']);
-  const [activeId, setActiveId] = useState('overview');
-  const { permissions } = session;
-
   // The language saved on the account wins once, when the session is first known. Later changes in this browser
   // are the person's own and must not be undone by an older value read back from the server. A layout effect
   // switches before the first paint, so the console does not flash in the wrong language.
@@ -142,46 +25,14 @@ function Console({ session, signOut }: { session: SessionInfo; signOut: () => Pr
       followSavedLanguage(savedLanguage);
     }
   }, [userId, savedLanguage]);
+
+  const value = useMemo(() => ({ session, signOut }), [session, signOut]);
   return (
-    <StepUpProvider>
-      <AppHeader
-        activeId={activeId}
-        controls={
-          <>
-            <HeaderIconButton icon={IconSearch} label={t('searchAndCommands')} />
-            <HeaderIconButton icon={IconBell} label={t('alerts')} />
-            <AccountMenu onSignOut={signOut} session={session} />
-          </>
-        }
-        navLabel={t('mainNavigation')}
-        onNavigate={setActiveId}
-        sections={navFor(permissions, t)}
-      />
-      <main className="sw-page">
-        {activeId === 'overview' ? <Overview /> : null}
-        {activeId === 'vault' && permissions.includes('vault:read') ? (
-          <VaultPage permissions={permissions} />
-        ) : null}
-        {activeId === 'users' && permissions.includes('users:read') ? (
-          <UsersPage currentUserId={session.user.id} permissions={permissions} />
-        ) : null}
-        {activeId === 'roles' && permissions.includes('roles:read') ? (
-          <RolesPage currentRole={session.user.role} />
-        ) : null}
-        {activeId === 'sessions' ? (
-          <SessionsPage currentUserId={session.user.id} permissions={permissions} />
-        ) : null}
-        {activeId === 'tokens' ? (
-          <TokensPage permissions={permissions} role={session.user.role} />
-        ) : null}
-        {activeId === 'audit' && permissions.includes('audit:read') ? (
-          <AuditPage permissions={permissions} />
-        ) : null}
-        {activeId === 'plugins' && permissions.includes('plugins:read') ? (
-          <PluginsPage permissions={permissions} />
-        ) : null}
-      </main>
-    </StepUpProvider>
+    <ConsoleProvider value={value}>
+      <StepUpProvider>
+        <RouterProvider router={consoleRouter()} />
+      </StepUpProvider>
+    </ConsoleProvider>
   );
 }
 

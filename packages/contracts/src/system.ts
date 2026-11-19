@@ -37,6 +37,63 @@ export const VersionResponseSchema = z
     version: z.string().describe('Semantic version of the running build.'),
     apiVersion: z.literal(API_VERSION),
     commit: z.string().optional().describe('Source revision, when the build embeds it.'),
+    build: z
+      .object({
+        time: z
+          .string()
+          .nullable()
+          .describe('When the image was built, as the build recorded it (usually ISO 8601).'),
+        number: z.string().nullable().describe('The number of the build in the CI that made it.'),
+      })
+      .describe(
+        'What the build recorded about itself. A field is null when the build did not say.',
+      ),
+    git: z
+      .object({
+        branch: z.string().nullable().describe('The branch the build was made from.'),
+        commit: z
+          .string()
+          .nullable()
+          .describe('The source revision (the full or abbreviated hash).'),
+        commitUrl: z
+          .string()
+          .nullable()
+          .describe('The page of that revision on GitHub; null unless the revision is a hash.'),
+      })
+      .describe('The source of the build. A field is null when the build did not say.'),
   })
   .meta({ id: 'VersionResponse', description: 'Build and API version.' });
 export type VersionResponse = z.infer<typeof VersionResponseSchema>;
+
+export const UpdatesResponseSchema = z
+  .object({
+    enabled: z
+      .boolean()
+      .describe('False when the administrator switched the check off (`SW_UPDATE_CHECK=off`).'),
+    latestVersion: z
+      .string()
+      .nullable()
+      .describe(
+        'The newest published release, without a leading "v". Null while it is not known yet, when the repository has no release, or when the check is off.',
+      ),
+    releaseUrl: z.string().nullable().describe('The page of that release.'),
+    stars: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullable()
+      .describe('How many people starred the repository; null while not known.'),
+    repositoryUrl: z
+      .string()
+      .nullable()
+      .describe('The page of the repository (taken from the settings, no request needed).'),
+    checkedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe('When the server last learned something from GitHub; null while it has not.'),
+  })
+  .meta({
+    id: 'UpdatesResponse',
+    description: 'What the server knows about newer releases and the project page.',
+  });
+export type UpdatesResponse = z.infer<typeof UpdatesResponseSchema>;

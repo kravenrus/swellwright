@@ -78,6 +78,9 @@ describe('API, every dependency up', () => {
     assert.equal(body.name, 'swellwright');
     assert.equal(body.version, '0.0.0-test');
     assert.equal(body.apiVersion, 'v1');
+    // A build that recorded nothing says so with nulls, never with made-up values.
+    assert.deepEqual(body.build, { time: null, number: null });
+    assert.deepEqual(body.git, { branch: null, commit: null, commitUrl: null });
   });
 
   it('serves exactly the generated OpenAPI document', async () => {

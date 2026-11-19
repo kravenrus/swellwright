@@ -1,22 +1,41 @@
-import { Alert, Button, Code, CopyButton, Group, List, Modal, Stack, Text } from '@mantine/core';
 import {
-  IconAlertCircle,
-  IconAlertTriangle,
+  ActionIcon,
+  Button,
+  Code,
+  CopyButton,
+  List,
+  Modal,
+  Stack,
+  Text,
+  Tooltip,
+} from '@mantine/core';
+import {
+  IconBox,
   IconCheck,
   IconCopy,
   IconDownload,
   IconFileCode,
+  IconListNumbers,
 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
-import { type ReactNode, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import type { PluginView } from '@swellwright/contracts';
+import {
+  Callout,
+  CopyableCodeBlock,
+  CopyableDataListItem,
+  ModalFooter,
+  OverlayHeader,
+  SectionCard,
+} from '@swellwright/ui';
 
 import { getPluginSidecar } from '../api.js';
-import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useNumber } from '../format.js';
+import { useIsMobile } from '../shell/use-is-mobile.js';
+import { DetailList, DetailRow, useCopyLabels, usePluginFailure } from './plugin-shared.js';
 
 /** The file the compose fragment is saved as, and the command that applies it. */
 const fragmentFile = (pluginId: string): string => `plugin-${pluginId}.yml`;
@@ -36,18 +55,6 @@ function saveFile(content: string, name: string): void {
   }, 60_000);
 }
 
-/** A label and its value, side by side (the same layout as the other sections of the review dialog). */
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Group align="baseline" gap="md" wrap="nowrap">
-      <Text c="dimmed" fz="sm" style={{ flexShrink: 0 }} w={120}>
-        {label}
-      </Text>
-      <div style={{ minWidth: 0 }}>{children}</div>
-    </Group>
-  );
-}
-
 /**
  * The compose fragment as the server made it. It holds the token the container proves itself with, so the dialog says
  * so before anything else, and it is not kept once it is closed.
@@ -62,84 +69,108 @@ function FragmentDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation(['plugins', 'common']);
+  const labels = useCopyLabels();
+  const isMobile = useIsMobile();
   return (
     <Modal
-      centered
+      fullScreen={isMobile}
       onClose={onClose}
       opened={fragment !== undefined}
       size="xl"
-      title={t('fragment.title')}
+      title={<OverlayHeader icon={IconFileCode} iconColor="orange" title={t('fragment.title')} />}
       // Above the review dialog it was opened from, below the confirmation with a code.
       zIndex={300}
     >
       {fragment ? (
-        <Stack gap="md">
-          <Alert color="orange" icon={<IconAlertTriangle size={16} />} variant="light">
-            <Text fz="sm">{t('fragment.warning')}</Text>
-          </Alert>
-          <Group gap="xs">
-            <Text c="dimmed" fz="sm">
-              {t('fragment.service')}
-            </Text>
-            <Code>{fragment.service}</Code>
-          </Group>
-          <Code
-            aria-label={t('fragment.file', { name: fragmentFile(pluginId) })}
-            block
-            mah={360}
-            role="region"
-            style={{ overflow: 'auto', whiteSpace: 'pre' }}
-            tabIndex={0}
-          >
-            {fragment.compose}
-          </Code>
-          <Group gap="xs">
-            <CopyButton timeout={2000} value={fragment.compose}>
-              {({ copied, copy }) => (
-                <Button
-                  leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                  onClick={copy}
-                  size="xs"
-                  variant="default"
-                >
-                  {copied ? t('common:copied') : t('common:copy')}
-                </Button>
-              )}
-            </CopyButton>
-            <Button
-              leftSection={<IconDownload size={14} />}
-              onClick={() => {
-                saveFile(fragment.compose, fragmentFile(pluginId));
-              }}
-              size="xs"
-              variant="default"
-            >
-              {t('common:download')}
-            </Button>
-          </Group>
-          <Stack gap={6}>
-            <Text fw={600} fz="sm">
-              {t('fragment.applyTitle')}
-            </Text>
-            <List fz="sm" size="sm" spacing={4} type="ordered">
-              <List.Item>{t('fragment.applySave')}</List.Item>
-              <List.Item>
-                <Trans
-                  components={{ code: <Code style={{ overflowWrap: 'anywhere' }} /> }}
-                  i18nKey="fragment.applyRun"
-                  ns="plugins"
-                  values={{ command: applyCommand(pluginId) }}
+        <>
+          <Stack gap="md">
+            <Callout color="orange">{t('fragment.warning')}</Callout>
+
+            <SectionCard.Root>
+              <SectionCard.Section>
+                <DetailList>
+                  <CopyableDataListItem
+                    {...labels}
+                    label={t('fragment.service')}
+                    monospace
+                    value={fragment.service}
+                  />
+                </DetailList>
+              </SectionCard.Section>
+              <SectionCard.Section>
+                <CopyableCodeBlock
+                  {...labels}
+                  maxHeight={360}
+                  multiline
+                  regionLabel={t('fragment.file', { name: fragmentFile(pluginId) })}
+                  value={fragment.compose}
                 />
-              </List.Item>
-              <List.Item>{t('fragment.applyCheck')}</List.Item>
-            </List>
+              </SectionCard.Section>
+            </SectionCard.Root>
+
+            <SectionCard.Root>
+              <SectionCard.Section>
+                <OverlayHeader
+                  icon={IconListNumbers}
+                  iconColor="blue"
+                  iconSize={18}
+                  title={t('fragment.applyTitle')}
+                  titleOrder={5}
+                />
+              </SectionCard.Section>
+              <SectionCard.Section>
+                <List fz="sm" size="sm" spacing={4} type="ordered">
+                  <List.Item>{t('fragment.applySave')}</List.Item>
+                  <List.Item>
+                    <Trans
+                      components={{ code: <Code style={{ overflowWrap: 'anywhere' }} /> }}
+                      i18nKey="fragment.applyRun"
+                      ns="plugins"
+                      values={{ command: applyCommand(pluginId) }}
+                    />
+                  </List.Item>
+                  <List.Item>{t('fragment.applyCheck')}</List.Item>
+                </List>
+              </SectionCard.Section>
+            </SectionCard.Root>
           </Stack>
-          <Group justify="flex-end">
-            <Button onClick={onClose} variant="default">
+
+          <ModalFooter isMobile={isMobile}>
+            <ActionIcon.Group ml="auto">
+              <CopyButton timeout={1600} value={fragment.compose}>
+                {({ copied, copy }) => (
+                  <Tooltip label={copied ? t('common:copied') : t('common:copy')}>
+                    <ActionIcon
+                      aria-label={copied ? t('common:copied') : t('common:copy')}
+                      color={copied ? 'teal' : 'gray'}
+                      onClick={copy}
+                      size="input-md"
+                      variant="soft"
+                    >
+                      {copied ? <IconCheck size={24} /> : <IconCopy size={24} />}
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </CopyButton>
+              <Tooltip label={t('common:download')}>
+                <ActionIcon
+                  aria-label={t('common:download')}
+                  color="gray"
+                  onClick={() => {
+                    saveFile(fragment.compose, fragmentFile(pluginId));
+                  }}
+                  size="input-md"
+                  variant="soft"
+                >
+                  <IconDownload size={24} />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
+            <Button color="teal" onClick={onClose} size="md" variant="light">
               {t('common:close')}
             </Button>
-          </Group>
-        </Stack>
+          </ModalFooter>
+        </>
       ) : null}
     </Modal>
   );
@@ -162,10 +193,15 @@ export function SidecarSection({
   const { t } = useTranslation(['plugins', 'errors', 'common']);
   const formatNumber = useNumber();
   const step = useStepUp();
+  const fail = usePluginFailure();
+  const labels = useCopyLabels();
   // The fragment holds a token: it is kept only while its dialog is open (no cache after it is closed).
   const fetchFragment = useMutation({
     gcTime: 0,
     mutationFn: () => step.run(() => getPluginSidecar(plugin.id)),
+    onError: (error) => {
+      fail(t('container.fragmentButton'), error, t('container.forbidden'));
+    },
   });
   const fragment = fetchFragment.data;
   const dialogOpen = fragment !== undefined;
@@ -181,49 +217,52 @@ export function SidecarSection({
     return null;
   }
   return (
-    <Stack gap="xs">
-      <Text fw={600} fz="sm">
-        {t('container.title')}
-      </Text>
-      <Row label={t('container.image')}>
-        <Code block fz="xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-          {sidecar.image}
-        </Code>
-      </Row>
-      <Row label={t('container.port')}>
-        <Text fz="sm">{sidecar.port}</Text>
-      </Row>
-      <Row label={t('container.memory')}>
-        <Text fz="sm">
-          {t('container.memoryValue', { memory: formatNumber(sidecar.memoryMiB) })}
-        </Text>
-      </Row>
-      <Row label={t('container.cpus')}>
-        <Text fz="sm">{formatNumber(sidecar.cpus)}</Text>
-      </Row>
-      <Text fz="sm">{t('container.note')}</Text>
-      {canManage && plugin.discovery === 'available' ? (
-        <Stack gap={6}>
-          {fetchFragment.error ? (
-            <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-              {describeError(t, fetchFragment.error, t('signInAgain'), t('container.forbidden'))}
-            </Alert>
-          ) : null}
-          <Group>
-            <Button
-              leftSection={<IconFileCode size={16} />}
-              loading={fetchFragment.isPending}
-              onClick={() => {
-                fetchFragment.mutate();
-              }}
-              size="xs"
-              variant="default"
-            >
-              {t('container.fragmentButton')}
-            </Button>
-          </Group>
-        </Stack>
-      ) : null}
+    <>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={IconBox}
+            iconColor="cyan"
+            iconSize={18}
+            title={t('container.title')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap="sm">
+            <CopyableCodeBlock
+              {...labels}
+              inputWrapperProps={{ label: t('container.image') }}
+              size="small"
+              value={sidecar.image}
+            />
+            <DetailList>
+              <DetailRow label={t('container.port')}>{sidecar.port}</DetailRow>
+              <DetailRow label={t('container.memory')}>
+                {t('container.memoryValue', { memory: formatNumber(sidecar.memoryMiB) })}
+              </DetailRow>
+              <DetailRow label={t('container.cpus')}>{formatNumber(sidecar.cpus)}</DetailRow>
+            </DetailList>
+            <Text c="dimmed" size="sm">
+              {t('container.note')}
+            </Text>
+            {canManage && plugin.discovery === 'available' ? (
+              <Button
+                leftSection={<IconFileCode size={16} />}
+                loading={fetchFragment.isPending}
+                onClick={() => {
+                  fetchFragment.mutate();
+                }}
+                size="sm"
+                variant="soft"
+                w="fit-content"
+              >
+                {t('container.fragmentButton')}
+              </Button>
+            ) : null}
+          </Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
       <FragmentDialog
         fragment={fragment}
         onClose={() => {
@@ -231,6 +270,6 @@ export function SidecarSection({
         }}
         pluginId={plugin.id}
       />
-    </Stack>
+    </>
   );
 }

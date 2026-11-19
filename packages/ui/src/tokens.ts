@@ -30,7 +30,22 @@ export const SHADED_GRAY = [
   '#383838',
 ] as const;
 
-export const FONT_FAMILY = "Montserrat, Vazirmatn, 'Noto Sans SC', sans-serif";
+export const FONT_FAMILY =
+  "Montserrat, Vazirmatn, 'Apple Color Emoji', 'Noto Sans SC', 'Twemoji Country Flags', sans-serif";
+/** The font of the brand title (the panel uses it for the title and nothing else). */
+export const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
+
+/** The panel moves every breakpoint: `lg` (64em, 1024 px) is where its mobile layout ends. */
+export const BREAKPOINTS = {
+  xs: '30em',
+  sm: '40em',
+  md: '48em',
+  lg: '64em',
+  xl: '80em',
+  '2xl': '96em',
+  '3xl': '120em',
+  '4xl': '160em',
+} as const;
 export const FONT_FAMILY_MONOSPACE = "'Fira Mono', monospace";
 
 /** The panel paints cards as translucent white over the page background. */

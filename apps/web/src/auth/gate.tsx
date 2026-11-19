@@ -1,10 +1,11 @@
-import { Alert, Button, Group, Loader, Stack, Text } from '@mantine/core';
-import { IconApi } from '@tabler/icons-react';
+import { Button, Stack } from '@mantine/core';
+import { IconRefresh } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { PendingSession, SessionInfo } from '@swellwright/contracts';
+import { ErrorMessageBlock, LoadingScreen } from '@swellwright/ui';
 
 import { ApiRequestError, ApiUnreachableError, getMe, getSetupStatus, logout } from '../api.js';
 import { EnrollmentStep, RecoveryCodes } from './enrollment.js';
@@ -15,14 +16,6 @@ import { AuthLayout } from './layout.js';
 type Step = 'login' | 'setup' | 'totp' | 'enroll' | 'invite';
 
 const ME_KEY = ['auth', 'me'] as const;
-
-function Centered({ children }: { children: ReactNode }) {
-  return (
-    <main className="sw-auth">
-      <Group justify="center">{children}</Group>
-    </main>
-  );
-}
 
 /**
  * Shows the console only to a signed-in person. Before that it walks through what the server asks for:
@@ -82,34 +75,27 @@ export function AuthGate({
     );
   }
   if (me.isPending) {
-    return (
-      <Centered>
-        <Loader size="sm" />
-      </Centered>
-    );
+    return <LoadingScreen />;
   }
   if (me.isError) {
     const unreachable = me.error instanceof ApiUnreachableError;
     return (
       <AuthLayout title={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}>
-        <Alert color="red" icon={<IconApi size={18} />} variant="light">
-          <Stack gap="xs">
-            <Text fz="sm">
-              {unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
-            </Text>
-            <Group>
-              <Button
-                onClick={() => {
-                  void me.refetch();
-                }}
-                size="xs"
-                variant="default"
-              >
-                {t('common:retry')}
-              </Button>
-            </Group>
-          </Stack>
-        </Alert>
+        <Stack gap="md">
+          <ErrorMessageBlock
+            message={unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
+          />
+          <Button
+            fullWidth
+            leftSection={<IconRefresh size={16} />}
+            onClick={() => {
+              void me.refetch();
+            }}
+            variant="soft"
+          >
+            {t('common:retry')}
+          </Button>
+        </Stack>
       </AuthLayout>
     );
   }
@@ -119,19 +105,15 @@ export function AuthGate({
 
   // Nobody is signed in. A server without a database cannot say whether it has an owner.
   if (setup.isPending) {
-    return (
-      <Centered>
-        <Loader size="sm" />
-      </Centered>
-    );
+    return <LoadingScreen />;
   }
   if (setup.isError) {
     const noDatabase = setup.error instanceof ApiRequestError && setup.error.code === 'not_ready';
     return (
       <AuthLayout title={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}>
-        <Alert color="red" icon={<IconApi size={18} />} variant="light">
-          <Text fz="sm">{noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}</Text>
-        </Alert>
+        <ErrorMessageBlock
+          message={noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}
+        />
       </AuthLayout>
     );
   }

@@ -4,6 +4,7 @@ import { join, sep } from 'node:path';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 
 import { AppModule, type AppOptions } from './app.module.js';
 import { type AppConfig } from './config.js';
@@ -51,6 +52,47 @@ export function consoleHeaders(
   res.setHeader('cross-origin-opener-policy', 'same-origin');
 }
 
+/**
+ * Whether a request is a browser asking for a page of the console (a deep link such as
+ * `/dashboard/security/users`) and so gets `index.html`, and the router in the browser takes it from there.
+ * Only GET and HEAD, only what is not the API (`/api/...` keeps its JSON 404), not a file (a dot in the last
+ * segment: a missing `/favicon.svg` is a 404, not a page) and not the folder of the hashed assets, and only
+ * for clients that accept HTML (`Accept: application/json` gets the 404).
+ */
+export function isConsolePage(req: Pick<Request, 'method' | 'path' | 'accepts'>): boolean {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return false;
+  }
+  let path: string;
+  try {
+    path = decodeURIComponent(req.path);
+  } catch {
+    return false;
+  }
+  if (
+    path === '/api' ||
+    path.startsWith('/api/') ||
+    path === '/assets' ||
+    path.startsWith('/assets/')
+  ) {
+    return false;
+  }
+  const segments = path.split('/');
+  // `..` and `.` are never a page; a dot in the last segment means a file; a NUL or a backslash is no path.
+  if (
+    segments.includes('..') ||
+    segments.includes('.') ||
+    path.includes('\\') ||
+    path.includes('\0')
+  ) {
+    return false;
+  }
+  if ((segments.at(-1) ?? '').includes('.')) {
+    return false;
+  }
+  return req.accepts('html') !== false;
+}
+
 /** Builds the application with every cross-cutting piece wired. Used by `main` and by the tests. */
 export async function createApp(
   config: AppConfig,
@@ -76,6 +118,21 @@ export async function createApp(
     }
     // Before the API routes: a file that exists is served, everything else falls through to them.
     app.useStaticAssets(config.webDir, { index: 'index.html', setHeaders: consoleHeaders });
+    // The console has real URLs, so a deep link must open the page, not a 404. No API route lives outside
+    // `/api`, so this cannot take a request away from one.
+    const webDir = config.webDir;
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (!isConsolePage(req)) {
+        next();
+        return;
+      }
+      consoleHeaders(res, join(webDir, 'index.html'));
+      res.sendFile('index.html', { root: webDir }, (error) => {
+        if (error && !res.headersSent) {
+          next(error);
+        }
+      });
+    });
   }
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalFilters(new ApiExceptionFilter());

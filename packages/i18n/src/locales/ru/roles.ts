@@ -11,6 +11,14 @@ export const roles = {
     description: 'Встроенные роли и разрешения каждой из них',
   },
 
+  matrix: {
+    title: 'Роли и разрешения',
+    subtitle: 'Какая роль какими разрешениями обладает',
+  },
+  descriptions: {
+    title: 'Для чего каждая роль',
+  },
+
   permissionColumn: 'Разрешение',
   you: 'вы',
   held: 'У роли «{{role}}» есть разрешение {{permission}}',

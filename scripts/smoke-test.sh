@@ -38,13 +38,20 @@ asset="$(grep -o '/assets/[^"]*\.js' "$work/page.html" | head -n 1)"
 curl -fsS -D "$work/asset.headers" -o /dev/null "$base$asset"
 grep -qi '^cache-control: public, max-age=31536000, immutable' "$work/asset.headers" || fail "the asset is not cached for good"
 pass "hashed assets are cached for good"
+# The console has real URLs: a deep link opens the same page, with the same headers.
+curl -fsS -H 'accept: text/html' -D "$work/deep.headers" -o "$work/deep.html" "$base/dashboard/security/users"
+cmp -s "$work/page.html" "$work/deep.html" || fail "a deep link does not open the console page"
+grep -qi '^content-security-policy:.*frame-ancestors' "$work/deep.headers" || fail "a deep link has no content security policy"
+grep -qi '^cache-control: no-cache' "$work/deep.headers" || fail "a deep link may be cached"
+pass "a deep link opens the console"
 
 # 3. The API is still the API: JSON, never cached, without the page headers.
 curl -fsS -D "$work/api.headers" -o "$work/version.json" "$base/api/v1/version"
 grep -q '"version"' "$work/version.json" || fail "/api/v1/version is not the version document"
 grep -qi '^cache-control: no-store' "$work/api.headers" || fail "an API answer may be cached"
 if grep -qi '^content-security-policy:' "$work/api.headers"; then fail "an API answer carries the page policy"; fi
-[ "$(status "$base/nothing-here")" = 404 ] || fail "an unknown path is not 404"
+[ "$(status "$base/api/v1/nothing-here")" = 404 ] || fail "an unknown API path is not 404"
+[ "$(status "$base/nothing-here.js")" = 404 ] || fail "a missing file is not 404"
 pass "the API answers as before"
 
 # 4. First run: nobody yet, the wrong token is refused, the right one creates the owner, once.

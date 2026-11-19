@@ -23,6 +23,8 @@ The first build downloads and compiles everything and takes a few minutes. When 
 
 What starts: `postgres`, `valkey`, then `migrate` (applies the database migrations and exits), then the server. The server container has a read-only file system, no capabilities and runs as a normal user; the database and the cache sit on a network nothing outside can reach; the only published port is the server's, on the loopback address.
 
+The image can carry facts about its build for the console's "Build info" (`GET /api/v1/version`): the build arguments `SW_BUILD_TIME`, `SW_BUILD_NUMBER`, `SW_GIT_BRANCH` and `SW_GIT_COMMIT`, all optional (`docker build --build-arg SW_GIT_COMMIT="$(git rev-parse HEAD)" .`; with Compose, under `build.args`). Whatever is not given is shown as unknown. The server also asks `api.github.com` once a day for the newest release and the star count; `SW_UPDATE_CHECK=off` in `.env` stops that.
+
 ## When `binaries.prisma.sh` is not reachable
 
 The build downloads the Prisma schema engine from `binaries.prisma.sh`. From some networks (a residential connection in Russia, for example) that host does not answer and the build stops with `ECONNRESET` or a timeout. Point the build at a mirror of it:

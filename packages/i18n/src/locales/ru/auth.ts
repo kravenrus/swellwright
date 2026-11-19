@@ -46,6 +46,7 @@ export const auth = {
   login: {
     title: 'Вход',
     description: 'Войдите в консоль Swellwright.',
+    submit: 'Войти',
     wrongCredentials: 'Неверное имя для входа или пароль.',
   },
 

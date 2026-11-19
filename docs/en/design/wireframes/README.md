@@ -28,7 +28,8 @@ Swellwright must look like the panel it manages, so every visual decision below 
 | Tabs | pill tabs with a thin border; the active tab is tinted cyan | `overrides/tabs` |
 | Theme icon | the custom "soft" variant: tinted gradient with a thin tinted border | `colors-resolver.tsx` |
 | Drawer and modal | translucent header, overlay 60% black | `overrides/drawer`, `overrides/modal` |
-| Layout | compact by default: header of 116 px (64 px brand row, 52 px navigation row), 32 px page padding, a header card at the top of every page; the floating 300 px sidebar is the "legacy" option | `layout-variants` |
+| Layout | compact by default: a fixed header of 116 px (64 px brand row, 52 px navigation row; 64 px with the tabs in the brand row from 2048 px, where pages get 10vw side padding), 32 px page padding, a header card at the top of every page; below 64em a 64 px header with a burger and a floating 300 px drawer; the floating sidebar is the panel's "legacy" option and is not built | `layout-variants`, `navbar` |
+| Header controls | 44 px squares, radius 16 px, a dark gradient, a cyan sheen on hover; Version (a pill, glows when a release is newer), GitHub (a pill with the gold star and the count), language, sign out | `shared/ui/header-buttons` |
 | Icons | Tabler Icons, outline | dependencies |
 
 Things to do in `packages/ui` before building screens: mirror these values as tokens, self-host the two fonts instead of loading them from a CDN (no visitor address leaks, works offline), and re-check the table on every supported panel minor version.

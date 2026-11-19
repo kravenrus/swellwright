@@ -1,30 +1,40 @@
 import {
-  Alert,
+  ActionIcon,
   Badge,
-  Button,
-  Card,
+  Box,
+  DataList,
   Group,
-  Modal,
   Select,
-  Skeleton,
   Stack,
-  Table,
   Text,
-  Title,
+  Tooltip,
+  VisuallyHidden,
 } from '@mantine/core';
 import {
-  IconAlertCircle,
-  IconCheck,
   IconDevices,
+  IconFilterOff,
   IconLogout,
   IconRefresh,
+  IconUsersGroup,
 } from '@tabler/icons-react';
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Permission, SessionSummary } from '@swellwright/contracts';
-import { PageHeader } from '@swellwright/ui';
+import {
+  CopyableDataListItem,
+  DataTableCard,
+  EmptyPageLayout,
+  HeaderAction,
+  HeaderActions,
+  ListTable,
+  type ListTableColumn,
+  LoaderModal,
+  OverlayHeader,
+  PageHeader,
+  SectionCard,
+} from '@swellwright/ui';
 
 import {
   listMySessions,
@@ -36,12 +46,10 @@ import {
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime } from '../format.js';
-
-/** What the page says after sessions were ended. Kept as data so the text follows a change of language. */
-type Notice =
-  | { readonly kind: 'others'; readonly count: number }
-  | { readonly kind: 'user'; readonly count: number; readonly username: string };
+import { confirmAction, notifyError, notifySuccess } from '../shell/feedback.js';
+import { FilterPopover } from './filter-popover.js';
+import { QueryErrorCard } from './query-error.js';
+import { useTimeFirst } from './time-first.js';
 
 /** A user the administrator is about to sign out everywhere. */
 interface Target {
@@ -49,305 +57,255 @@ interface Target {
   readonly username: string;
 }
 
-/** `fallback` is what a refusal for lack of permission says, already translated. */
-function ErrorNote({ error, fallback }: { error: unknown; fallback: string }) {
+const BROWSERS: readonly (readonly [RegExp, string])[] = [
+  [/Edg(?:e|A|iOS)?\//u, 'Edge'],
+  [/OPR\/|Opera/u, 'Opera'],
+  [/Firefox\/|FxiOS\//u, 'Firefox'],
+  [/Chrome\/|CriOS\//u, 'Chrome'],
+  [/Safari\//u, 'Safari'],
+];
+
+/** Order matters: an Android user agent also says Linux, and an iPhone one says Mac OS X. */
+const SYSTEMS: readonly (readonly [RegExp, string])[] = [
+  [/Windows/u, 'Windows'],
+  [/Android/u, 'Android'],
+  [/iPhone|iPad|iPod/u, 'iOS'],
+  [/Mac OS X|Macintosh/u, 'macOS'],
+  [/CrOS/u, 'ChromeOS'],
+  [/Linux|X11/u, 'Linux'],
+];
+
+/** The browser and the system a user agent string names, for a title; null where it is not one we know. */
+function recognise(userAgent: string | null): { browser: string; system: string | null } | null {
+  if (!userAgent) {
+    return null;
+  }
+  const browser = BROWSERS.find(([pattern]) => pattern.test(userAgent))?.[1];
+  if (browser === undefined) {
+    return null;
+  }
+  return { browser, system: SYSTEMS.find(([pattern]) => pattern.test(userAgent))?.[1] ?? null };
+}
+
+/** The "Current" and "Elevated" chips of a session. */
+function SessionBadges({ session, nowrap = false }: { session: SessionSummary; nowrap?: boolean }) {
   const { t } = useTranslation('sessions');
-  if (!error) {
+  if (!session.current && !session.elevated) {
     return null;
   }
   return (
-    <Alert color="red" icon={<IconAlertCircle size={16} />} role="alert" variant="light">
-      {describeError(t, error, t('signInAgain'), fallback)}
-    </Alert>
-  );
-}
-
-function NoticeAlert({ notice, onClose }: { notice: Notice; onClose: () => void }) {
-  const { t } = useTranslation(['sessions', 'common']);
-  const text =
-    notice.kind === 'others'
-      ? notice.count === 0
-        ? t('notice.noOthers')
-        : t('notice.others', { count: notice.count })
-      : notice.count === 0
-        ? t('notice.noneForUser', { username: notice.username })
-        : t('notice.user', { count: notice.count, username: notice.username });
-  return (
-    <Alert
-      closeButtonLabel={t('common:close')}
-      color="teal"
-      icon={<IconCheck size={16} />}
-      mb="md"
-      onClose={onClose}
-      role="status"
-      variant="light"
-      withCloseButton
-    >
-      {text}
-    </Alert>
-  );
-}
-
-function SectionHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description: string;
-  actions?: ReactNode;
-}) {
-  return (
-    <Group align="flex-end" gap="sm" justify="space-between" wrap="wrap">
-      <Stack gap={0}>
-        <Title order={5}>{title}</Title>
-        <Text c="dimmed" fz="sm">
-          {description}
-        </Text>
-      </Stack>
-      {actions ? (
-        <Group gap="sm" justify="flex-end" wrap="wrap">
-          {actions}
-        </Group>
+    <Group gap="xs" wrap={nowrap ? 'nowrap' : 'wrap'}>
+      {session.current ? (
+        <Badge color="cyan" size="lg" variant="soft">
+          {t('badges.current')}
+        </Badge>
+      ) : null}
+      {session.elevated ? (
+        <Tooltip label={t('badges.elevatedHint')} withArrow>
+          <Badge color="teal" size="lg" variant="soft">
+            {t('badges.elevated')}
+          </Badge>
+        </Tooltip>
       ) : null}
     </Group>
   );
 }
 
-const FIRST_COLUMN = { pl: 'md' } as const;
-
 /**
- * The sessions as a table. The session in use has no end action: ending it is signing out, and the server
- * refuses it. `onEnd` is left out when the viewer may not end any.
+ * One of your own sessions as a card, as the panel lists the passkeys of an account: a header with the browser, the
+ * chips and, unless it is the session in use, a red soft sign-out button; under it the facts. The session in use has
+ * no end action: ending it is signing out, and the server refuses it.
  */
-function SessionsTable({
-  sessions,
-  kind,
+function MySessionCard({
+  session,
   onEnd,
-  pendingId,
+  ending,
 }: {
-  sessions: readonly SessionSummary[];
-  kind: 'mine' | 'all';
-  onEnd: ((session: SessionSummary) => void) | undefined;
-  pendingId: string | undefined;
+  session: SessionSummary;
+  onEnd: () => void;
+  ending: boolean;
 }) {
   const { t } = useTranslation('sessions');
-  const formatDate = useDateTime('short');
-  const showUser = kind === 'all';
-  const dash = (
-    <Text c="dimmed" component="span">
-      —
-    </Text>
-  );
+  const formatTime = useTimeFirst();
+  const known = recognise(session.userAgent);
+  const title = known
+    ? known.system
+      ? t('mine.browserOn', { browser: known.browser, system: known.system })
+      : known.browser
+    : t('mine.unknownBrowser');
+  const when = formatTime(session.createdAt);
+
   return (
-    <Table.ScrollContainer minWidth={showUser ? 900 : 780}>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            {showUser ? <Table.Th {...FIRST_COLUMN}>{t('columns.user')}</Table.Th> : null}
-            <Table.Th {...(showUser ? {} : FIRST_COLUMN)}>{t('columns.started')}</Table.Th>
-            <Table.Th>{t('columns.lastActive')}</Table.Th>
-            <Table.Th>{t('columns.address')}</Table.Th>
-            <Table.Th>{t('columns.browser')}</Table.Th>
-            <Table.Th>{t('columns.state')}</Table.Th>
-            {onEnd ? <Table.Th pr="md" /> : null}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {sessions.map((session) => {
-            const when = formatDate(session.createdAt);
-            return (
-              <Table.Tr key={session.id}>
-                {showUser ? (
-                  <Table.Td {...FIRST_COLUMN}>
-                    <Text fw={500} fz="sm">
-                      {session.username}
-                    </Text>
-                  </Table.Td>
-                ) : null}
-                <Table.Td
-                  {...(showUser ? {} : FIRST_COLUMN)}
-                  style={{ whiteSpace: 'nowrap' }}
-                  title={session.createdAt}
+    <SectionCard.Root>
+      <SectionCard.Section>
+        <Group gap="xs" justify="space-between" wrap="wrap">
+          <Box miw={0}>
+            <OverlayHeader
+              icon={IconDevices}
+              iconColor={session.current ? 'teal' : 'cyan'}
+              title={title}
+              titleOrder={5}
+              truncateTitle
+            />
+          </Box>
+          <Group gap="xs" wrap="nowrap">
+            <SessionBadges session={session} />
+            {session.current ? null : (
+              <Tooltip label={t('mine.signOut')} withArrow>
+                <ActionIcon
+                  aria-label={t('mine.signOutAria', { when })}
+                  color="red"
+                  loading={ending}
+                  onClick={onEnd}
+                  size="lg"
+                  variant="soft"
                 >
-                  {when}
-                </Table.Td>
-                <Table.Td style={{ whiteSpace: 'nowrap' }} title={session.lastSeenAt}>
-                  {formatDate(session.lastSeenAt)}
-                </Table.Td>
-                <Table.Td ff="monospace" fz="sm">
-                  {session.ip ?? dash}
-                </Table.Td>
-                <Table.Td>
-                  {session.userAgent ? (
-                    <Text fz="sm" maw={260} title={session.userAgent} truncate="end">
-                      {session.userAgent}
-                    </Text>
-                  ) : (
-                    dash
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={6} wrap="wrap">
-                    {session.current ? <Badge size="sm">{t('badges.current')}</Badge> : null}
-                    {session.elevated ? (
-                      <Badge
-                        color="teal"
-                        size="sm"
-                        title={t('badges.elevatedHint')}
-                        variant="light"
-                      >
-                        {t('badges.elevated')}
-                      </Badge>
-                    ) : null}
-                  </Group>
-                </Table.Td>
-                {onEnd ? (
-                  <Table.Td pr="md" style={{ textAlign: 'right' }}>
-                    {session.current ? null : (
-                      <Button
-                        aria-label={
-                          showUser
-                            ? t('all.endAria', { username: session.username, when })
-                            : t('mine.signOutAria', { when })
-                        }
-                        leftSection={<IconLogout size={14} />}
-                        loading={pendingId === session.id}
-                        onClick={() => {
-                          onEnd(session);
-                        }}
-                        size="xs"
-                        variant="default"
-                      >
-                        {showUser ? t('all.end') : t('mine.signOut')}
-                      </Button>
-                    )}
-                  </Table.Td>
-                ) : null}
-              </Table.Tr>
-            );
-          })}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+                  <IconLogout size={18} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
+        </Group>
+      </SectionCard.Section>
+      <SectionCard.Section>
+        <DataList orientation="vertical" size="xs" withDivider>
+          <CopyableDataListItem
+            emptyValue="–"
+            label={t('columns.started')}
+            monospace
+            value={when}
+          />
+          <CopyableDataListItem
+            emptyValue="–"
+            label={t('columns.lastActive')}
+            monospace
+            value={formatTime(session.lastSeenAt)}
+          />
+          <CopyableDataListItem
+            emptyValue="–"
+            label={t('columns.address')}
+            monospace
+            value={session.ip}
+          />
+          <CopyableDataListItem
+            emptyValue="–"
+            label={t('columns.browser')}
+            monospace
+            value={session.userAgent}
+          />
+        </DataList>
+      </SectionCard.Section>
+    </SectionCard.Root>
   );
 }
 
 /** Your own sessions: any signed-in user may list them and end the others. */
-function MySessions({ onNotice }: { onNotice: (notice: Notice) => void }) {
+function MySessions() {
   const { t } = useTranslation(['sessions', 'common']);
   const queryClient = useQueryClient();
-  const [confirming, setConfirming] = useState(false);
   const list = useQuery({ queryKey: ['sessions', 'mine'], queryFn: listMySessions, retry: false });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['sessions'] });
-  const endOne = useMutation({ mutationFn: revokeMySession, onSuccess: refresh });
+  const endOne = useMutation({
+    mutationFn: revokeMySession,
+    onSuccess: refresh,
+    onError: (error) => {
+      notifyError(
+        t('mine.signOut'),
+        describeError(t, error, t('signInAgain'), t('mine.endForbidden')),
+      );
+    },
+  });
   const endOthers = useMutation({
     mutationFn: revokeOtherSessions,
     onSuccess: (result) => {
-      setConfirming(false);
-      onNotice({ kind: 'others', count: result.revoked });
+      notifySuccess(
+        t('endOthers.submit'),
+        result.revoked === 0 ? t('notice.noOthers') : t('notice.others', { count: result.revoked }),
+      );
       return refresh();
+    },
+    onError: (error) => {
+      notifyError(
+        t('endOthers.submit'),
+        describeError(t, error, t('signInAgain'), t('mine.endForbidden')),
+      );
     },
   });
 
   const sessions = list.data?.sessions ?? [];
   const hasOthers = sessions.some((session) => !session.current);
-  const closeConfirm = () => {
-    endOthers.reset();
-    setConfirming(false);
-  };
 
   return (
-    <Stack gap="sm">
-      <SectionHeader
+    <DataTableCard.Container>
+      <DataTableCard.Title
         actions={
-          <Button
-            color="red"
-            disabled={!hasOthers}
-            leftSection={<IconLogout size={16} />}
-            onClick={() => {
-              setConfirming(true);
-            }}
-            variant="light"
-          >
-            {t('mine.endOthers')}
-          </Button>
-        }
-        description={t('mine.description')}
-        title={t('mine.title')}
-      />
-      <ErrorNote error={endOne.error} fallback={t('mine.endForbidden')} />
-      <Card padding={0}>
-        {list.isPending ? (
-          <Stack gap="xs" p="md">
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
-        ) : list.isError ? (
-          <Alert color="red" m="md" variant="light">
-            {describeError(t, list.error, t('signInAgain'))}
-          </Alert>
-        ) : sessions.length === 0 ? (
-          <Text c="dimmed" fz="sm" p="md">
-            {t('mine.empty')}
-          </Text>
-        ) : (
-          <>
-            <SessionsTable
-              kind="mine"
-              onEnd={(session) => {
-                endOne.mutate(session.id);
-              }}
-              pendingId={endOne.isPending ? endOne.variables : undefined}
-              sessions={sessions}
-            />
-            <Text c="dimmed" fz="xs" p="md">
-              {t('mine.currentNote')}
-            </Text>
-          </>
-        )}
-      </Card>
-
-      <Modal centered onClose={closeConfirm} opened={confirming} title={t('endOthers.title')}>
-        <Stack gap="md">
-          <Text fz="sm">{t('endOthers.warning')}</Text>
-          <ErrorNote error={endOthers.error} fallback={t('mine.endForbidden')} />
-          <Group justify="flex-end">
-            <Button onClick={closeConfirm} variant="default">
-              {t('common:cancel')}
-            </Button>
-            <Button
+          <HeaderActions>
+            <HeaderAction
               color="red"
-              leftSection={<IconLogout size={16} />}
+              disabled={!hasOthers}
+              icon={IconLogout}
+              label={t('mine.endOthers')}
               loading={endOthers.isPending}
               onClick={() => {
-                endOthers.mutate();
+                confirmAction({
+                  title: t('endOthers.title'),
+                  message: t('endOthers.warning'),
+                  confirmLabel: t('endOthers.submit'),
+                  cancelLabel: t('common:cancel'),
+                  onConfirm: () => {
+                    endOthers.mutate();
+                  },
+                });
               }}
-            >
-              {t('endOthers.submit')}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </Stack>
+            />
+          </HeaderActions>
+        }
+        description={t('mine.description')}
+        icon={<IconDevices size={24} />}
+        title={t('mine.title')}
+      />
+      <DataTableCard.Content>
+        <Box p="md">
+          {list.isPending ? (
+            <LoaderModal label={t('common:loading')} mih="200px" />
+          ) : list.isError ? (
+            <QueryErrorCard
+              message={describeError(t, list.error, t('signInAgain'))}
+              onRetry={() => void list.refetch()}
+              title={t('mine.title')}
+            />
+          ) : sessions.length === 0 ? (
+            <EmptyPageLayout icon={<IconDevices size="3rem" />} title={t('mine.empty')} />
+          ) : (
+            <Stack gap="xs">
+              {sessions.map((session) => (
+                <MySessionCard
+                  ending={endOne.isPending && endOne.variables === session.id}
+                  key={session.id}
+                  onEnd={() => {
+                    endOne.mutate(session.id);
+                  }}
+                  session={session}
+                />
+              ))}
+              <Text c="dimmed" mt="xs" size="xs">
+                {t('mine.currentNote')}
+              </Text>
+            </Stack>
+          )}
+        </Box>
+      </DataTableCard.Content>
+    </DataTableCard.Container>
   );
 }
 
 /** The sessions of every user (`sessions:read`). Ending them needs `sessions:revoke` and a fresh code. */
-function AllSessions({
-  currentUserId,
-  canRevoke,
-  onNotice,
-}: {
-  currentUserId: string;
-  canRevoke: boolean;
-  onNotice: (notice: Notice) => void;
-}) {
+function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canRevoke: boolean }) {
   const { t } = useTranslation(['sessions', 'common']);
   const queryClient = useQueryClient();
   const step = useStepUp();
+  const formatTime = useTimeFirst();
   const [userId, setUserId] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<Target | undefined>(undefined);
   const list = useQuery({
     queryKey: ['sessions', 'all'],
     queryFn: () => listSessions({}),
@@ -357,14 +315,27 @@ function AllSessions({
   const endOne = useMutation({
     mutationFn: (id: string) => step.run(() => revokeSession(id)),
     onSuccess: refresh,
+    onError: (error) => {
+      notifyError(t('all.end'), describeError(t, error, t('signInAgain'), t('all.endForbidden')));
+    },
   });
   const endUser = useMutation({
     mutationFn: (target: Target) => step.run(() => revokeUserSessions(target.id)),
     onSuccess: (result, target) => {
-      setConfirming(undefined);
       setUserId(null);
-      onNotice({ kind: 'user', count: result.revoked, username: target.username });
+      notifySuccess(
+        t('endUser.submit'),
+        result.revoked === 0
+          ? t('notice.noneForUser', { username: target.username })
+          : t('notice.user', { count: result.revoked, username: target.username }),
+      );
       return refresh();
+    },
+    onError: (error) => {
+      notifyError(
+        t('endUser.submit'),
+        describeError(t, error, t('signInAgain'), t('all.endForbidden')),
+      );
     },
   });
 
@@ -382,99 +353,176 @@ function AllSessions({
   const selected = users.find((user) => user.value === userId);
   const shown = selected ? (all ?? []).filter((s) => s.userId === selected.value) : (all ?? []);
   const canEndUser = canRevoke && selected !== undefined && selected.value !== currentUserId;
-  const closeConfirm = () => {
-    endUser.reset();
-    setConfirming(undefined);
-  };
+
+  const columns: ListTableColumn<SessionSummary>[] = [
+    {
+      accessor: 'username',
+      title: t('columns.user'),
+      width: 160,
+      render: (session) => (
+        <Text fw={500} size="sm" truncate="end">
+          {session.username}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'createdAt',
+      title: t('columns.started'),
+      width: 260,
+      render: (session) => (
+        <Text ff="monospace" size="sm" title={session.createdAt}>
+          {formatTime(session.createdAt)}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'lastSeenAt',
+      title: t('columns.lastActive'),
+      width: 260,
+      render: (session) => (
+        <Text ff="monospace" size="sm" title={session.lastSeenAt}>
+          {formatTime(session.lastSeenAt)}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'ip',
+      title: t('columns.address'),
+      width: 150,
+      render: (session) => (
+        <Text ff="monospace" size="sm">
+          {session.ip ?? '–'}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'userAgent',
+      title: t('columns.browser'),
+      width: 300,
+      render: (session) => (
+        <Text size="sm" title={session.userAgent ?? ''} truncate="end">
+          {session.userAgent ?? '–'}
+        </Text>
+      ),
+    },
+    {
+      accessor: 'state',
+      title: t('columns.state'),
+      width: 360,
+      render: (session) => <SessionBadges nowrap session={session} />,
+    },
+    ...(canRevoke
+      ? [
+          {
+            accessor: 'actions',
+            title: <VisuallyHidden>{t('columns.actions')}</VisuallyHidden>,
+            width: 72,
+            pinned: 'right' as const,
+            textAlign: 'right' as const,
+            render: (session: SessionSummary) =>
+              session.current ? null : (
+                <Tooltip label={t('all.end')} withArrow>
+                  <ActionIcon
+                    aria-label={t('all.endAria', {
+                      username: session.username,
+                      when: formatTime(session.createdAt),
+                    })}
+                    color="red"
+                    loading={endOne.isPending && endOne.variables === session.id}
+                    onClick={() => {
+                      endOne.mutate(session.id);
+                    }}
+                    size="md"
+                    variant="outline"
+                  >
+                    <IconLogout size={18} />
+                  </ActionIcon>
+                </Tooltip>
+              ),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <Stack gap="sm">
-      <SectionHeader description={t('all.description')} title={t('all.title')} />
-      <ErrorNote error={endOne.error} fallback={t('all.endForbidden')} />
-      <Card padding={0}>
-        <Group gap="sm" justify="space-between" p="md">
-          <Select
-            aria-label={t('all.userFilterLabel')}
-            clearable
-            data={users}
-            onChange={setUserId}
-            placeholder={t('all.userFilterPlaceholder')}
-            searchable
-            value={selected?.value ?? null}
-            w={240}
-          />
-          {canEndUser ? (
-            <Button
-              color="red"
-              leftSection={<IconLogout size={16} />}
+    <DataTableCard.Container>
+      <DataTableCard.Title
+        actions={
+          <HeaderActions>
+            <FilterPopover active={selected !== undefined} label={t('all.userFilterLabel')}>
+              <Select
+                aria-label={t('all.userFilterLabel')}
+                clearable
+                comboboxProps={{ withinPortal: false }}
+                data={users}
+                onChange={setUserId}
+                placeholder={t('all.userFilterPlaceholder')}
+                searchable
+                value={selected?.value ?? null}
+              />
+            </FilterPopover>
+            <HeaderAction
+              color="gray"
+              disabled={selected === undefined}
+              icon={IconFilterOff}
+              label={t('all.clearFilter')}
               onClick={() => {
-                setConfirming({ id: selected.value, username: selected.label });
+                setUserId(null);
               }}
-              variant="light"
-            >
-              {t('all.endUser')}
-            </Button>
-          ) : null}
-        </Group>
-
-        {list.isPending ? (
-          <Stack gap="xs" p="md" pt={0}>
-            <Skeleton h={28} />
-            <Skeleton h={28} />
-          </Stack>
-        ) : list.isError ? (
-          <Alert color="red" m="md" mt={0} variant="light">
-            {describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
-          </Alert>
-        ) : shown.length === 0 ? (
-          <Text c="dimmed" fz="sm" p="md" pt={0}>
-            {selected ? t('all.emptyFiltered') : t('all.empty')}
-          </Text>
+            />
+            {canEndUser ? (
+              <HeaderAction
+                color="red"
+                icon={IconLogout}
+                label={t('all.endUser')}
+                loading={endUser.isPending}
+                onClick={() => {
+                  confirmAction({
+                    title: t('endUser.title', { username: selected.label }),
+                    message: t('endUser.warning', { username: selected.label }),
+                    confirmLabel: t('endUser.submit'),
+                    cancelLabel: t('common:cancel'),
+                    onConfirm: () => {
+                      endUser.mutate({ id: selected.value, username: selected.label });
+                    },
+                  });
+                }}
+              />
+            ) : null}
+          </HeaderActions>
+        }
+        description={
+          selected ? t('all.filteredBy', { username: selected.label }) : t('all.description')
+        }
+        icon={<IconUsersGroup size={24} />}
+        title={t('all.title')}
+      />
+      <DataTableCard.Content>
+        {list.isError ? (
+          <Box p="md">
+            <QueryErrorCard
+              message={describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
+              onRetry={() => void list.refetch()}
+              title={t('all.title')}
+            />
+          </Box>
         ) : (
-          <SessionsTable
-            kind="all"
-            onEnd={
-              canRevoke
-                ? (session) => {
-                    endOne.mutate(session.id);
-                  }
-                : undefined
-            }
-            pendingId={endOne.isPending ? endOne.variables : undefined}
-            sessions={shown}
+          <ListTable
+            aria-label={t('all.title')}
+            borderRadius={0}
+            columns={columns}
+            emptyText={selected ? t('all.emptyFiltered') : t('all.empty')}
+            fetching={list.isPending}
+            idAccessor="id"
+            loadingLabel={t('common:loading')}
+            maxHeight="65vh"
+            {...(list.isPending ? { minHeight: 240 } : {})}
+            records={shown}
+            withTableBorder={false}
           />
         )}
-      </Card>
-
-      <Modal
-        centered
-        onClose={closeConfirm}
-        opened={confirming !== undefined}
-        title={t('endUser.title', { username: confirming?.username ?? '' })}
-      >
-        <Stack gap="md">
-          <Text fz="sm">{t('endUser.warning', { username: confirming?.username ?? '' })}</Text>
-          <ErrorNote error={endUser.error} fallback={t('all.endForbidden')} />
-          <Group justify="flex-end">
-            <Button onClick={closeConfirm} variant="default">
-              {t('common:cancel')}
-            </Button>
-            <Button
-              color="red"
-              leftSection={<IconLogout size={16} />}
-              loading={endUser.isPending}
-              onClick={() => {
-                if (confirming) {
-                  endUser.mutate(confirming);
-                }
-              }}
-            >
-              {t('endUser.submit')}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </Stack>
+      </DataTableCard.Content>
+    </DataTableCard.Container>
   );
 }
 
@@ -492,42 +540,31 @@ export function SessionsPage({
   const { t } = useTranslation(['sessions', 'common']);
   const queryClient = useQueryClient();
   const fetching = useIsFetching({ queryKey: ['sessions'] }) > 0;
-  const [notice, setNotice] = useState<Notice | undefined>(undefined);
 
   return (
     <>
       <PageHeader
         actions={
-          <Button
-            leftSection={<IconRefresh size={16} />}
-            loading={fetching}
-            onClick={() => void queryClient.invalidateQueries({ queryKey: ['sessions'] })}
-            variant="default"
-          >
-            {t('common:refresh')}
-          </Button>
+          <HeaderActions>
+            <HeaderAction
+              icon={IconRefresh}
+              label={t('common:refresh')}
+              loading={fetching}
+              onClick={() => void queryClient.invalidateQueries({ queryKey: ['sessions'] })}
+            />
+          </HeaderActions>
         }
         description={t('header.description')}
-        icon={<IconDevices size={22} />}
+        icon={<IconDevices size={24} />}
         title={t('header.title')}
       />
 
-      {notice ? (
-        <NoticeAlert
-          notice={notice}
-          onClose={() => {
-            setNotice(undefined);
-          }}
-        />
-      ) : null}
-
-      <Stack gap="xl">
-        <MySessions onNotice={setNotice} />
+      <Stack gap="md">
+        <MySessions />
         {permissions.includes('sessions:read') ? (
           <AllSessions
             canRevoke={permissions.includes('sessions:revoke')}
             currentUserId={currentUserId}
-            onNotice={setNotice}
           />
         ) : null}
       </Stack>

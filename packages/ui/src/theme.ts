@@ -3,24 +3,35 @@ import {
   Badge,
   Button,
   Card,
+  CloseButton,
+  Combobox,
   createTheme,
   defaultVariantColorsResolver,
+  Drawer,
+  DrawerOverlay,
   InputBase,
+  LoadingOverlay,
+  Menu,
+  Modal,
   Notification,
   PasswordInput,
   Paper,
   parseThemeColor,
   rgba,
+  RingProgress,
+  SegmentedControl,
   Select,
   Switch,
   Table,
   Tabs,
   TextInput,
+  Tooltip,
+  v8CssVariablesResolver,
   type MantineColorsTuple,
   type VariantColorsResolver,
 } from '@mantine/core';
 
-import { DARK, FONT_FAMILY, FONT_FAMILY_MONOSPACE, SHADED_GRAY } from './tokens.js';
+import { BREAKPOINTS, DARK, FONT_FAMILY, FONT_FAMILY_MONOSPACE, SHADED_GRAY } from './tokens.js';
 
 const tuple = (values: readonly string[]): MantineColorsTuple =>
   values as unknown as MantineColorsTuple;
@@ -46,12 +57,21 @@ const variantColorResolver: VariantColorsResolver = (input) => {
   return resolved;
 };
 
+/**
+ * The panel renders every "light" surface (buttons, badges, theme icons, alerts) as a translucent tint with the -3
+ * text shade, which is how Mantine 8 did it. Mantine 9 paints flat swatches instead, so the panel opts back in with
+ * this resolver. Pass it to the MantineProvider as `cssVariablesResolver`.
+ */
+export const cssVariablesResolver = v8CssVariablesResolver;
+
 /** Component defaults of the panel: radius md, tinted "light" buttons, outline badges and icon buttons. */
 export const theme = createTheme({
   variantColorResolver,
   cursorType: 'pointer',
   fontFamily: FONT_FAMILY,
   fontFamilyMonospace: FONT_FAMILY_MONOSPACE,
+  breakpoints: { ...BREAKPOINTS },
+  scale: 1,
   fontSmoothing: true,
   focusRing: 'never',
   white: '#ffffff',
@@ -71,14 +91,60 @@ export const theme = createTheme({
       styles: { root: { transition: 'all 0.2s ease' } },
     }),
     Card: Card.extend({ defaultProps: { radius: 'md', withBorder: true } }),
+    CloseButton: CloseButton.extend({ defaultProps: { size: 'lg' } }),
+    Combobox: Combobox.extend({
+      defaultProps: { transitionProps: { transition: 'fade', duration: 200 } },
+    }),
+    Drawer: Drawer.extend({ defaultProps: { radius: 'md' } }),
+    DrawerOverlay: DrawerOverlay.extend({ defaultProps: { backgroundOpacity: 0.6, blur: 0 } }),
     InputBase: InputBase.extend({ defaultProps: { radius: 'md' } }),
+    LoadingOverlay: LoadingOverlay.extend({
+      defaultProps: { zIndex: 1000, overlayProps: { radius: 'sm', blur: 4 } },
+    }),
+    Menu: Menu.extend({
+      defaultProps: {
+        shadow: 'lg',
+        withArrow: false,
+        radius: 'md',
+        transitionProps: { transition: 'fade', duration: 180, timingFunction: 'ease-out' },
+      },
+      styles: {
+        dropdown: {
+          backgroundColor: 'var(--mantine-color-dark-6)',
+          border: '1px solid var(--mantine-color-dark-4)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+        },
+        divider: { borderColor: 'var(--mantine-color-dark-5)', margin: '4px 0' },
+      },
+    }),
+    Modal: Modal.extend({
+      defaultProps: {
+        radius: 'md',
+        centered: true,
+        transitionProps: { transition: 'fade', duration: 200 },
+      },
+    }),
     Notification: Notification.extend({ defaultProps: { radius: 'md' } }),
     PasswordInput: PasswordInput.extend({ defaultProps: { radius: 'md' } }),
     Paper: Paper.extend({ defaultProps: { radius: 'md' } }),
+    RingProgress: RingProgress.extend({ defaultProps: { thickness: 6, roundCaps: true } }),
+    SegmentedControl: SegmentedControl.extend({
+      defaultProps: { radius: 'md', transitionDuration: 200 },
+    }),
     Select: Select.extend({ defaultProps: { radius: 'md' } }),
     Switch: Switch.extend({ defaultProps: { radius: 'md' } }),
     Table: Table.extend({ defaultProps: { highlightOnHover: true } }),
     Tabs: Tabs.extend({ defaultProps: { variant: 'unstyled' } }),
     TextInput: TextInput.extend({ defaultProps: { radius: 'md' } }),
+    Tooltip: Tooltip.extend({
+      defaultProps: {
+        radius: 'md',
+        withArrow: true,
+        arrowSize: 2,
+        color: 'dark.6',
+        transitionProps: { transition: 'scale-x', duration: 300 },
+      },
+      styles: { tooltip: { border: '1px solid var(--mantine-color-dark-4)' } },
+    }),
   },
 });
