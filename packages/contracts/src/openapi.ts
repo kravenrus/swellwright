@@ -48,6 +48,31 @@ import {
   TotpEnrollmentSchema,
   UserSummarySchema,
 } from './auth.js';
+import {
+  BooleanParameterSchema,
+  CommandOutputPageSchema,
+  CommandOutputSchema,
+  CommandRunCountsSchema,
+  CommandRunListSchema,
+  CommandRunModeSchema,
+  CommandRunStateSchema,
+  CommandRunSummarySchema,
+  CommandRunViewSchema,
+  CommandTargetStateSchema,
+  CommandTargetViewSchema,
+  CreateCommandRunRequestSchema,
+  CreateScriptRequestSchema,
+  DangerLevelSchema,
+  EnumParameterSchema,
+  IntegerParameterSchema,
+  ParameterValuesSchema,
+  ScriptListSchema,
+  ScriptParameterSchema,
+  ScriptSummarySchema,
+  ScriptViewSchema,
+  StringParameterSchema,
+  UpdateScriptRequestSchema,
+} from './commands.js';
 import { ApiErrorSchema, ErrorCodeSchema } from './errors.js';
 import {
   EnablePluginRequestSchema,
@@ -140,7 +165,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.21.0';
+export const OPENAPI_INFO_VERSION = '0.22.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -247,6 +272,29 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   AcceptHostKeyRequestSchema,
   HostKeyAcceptedSchema,
   AccessVerificationSchema,
+  DangerLevelSchema,
+  StringParameterSchema,
+  IntegerParameterSchema,
+  EnumParameterSchema,
+  BooleanParameterSchema,
+  ScriptParameterSchema,
+  ParameterValuesSchema,
+  ScriptSummarySchema,
+  ScriptViewSchema,
+  ScriptListSchema,
+  CreateScriptRequestSchema,
+  UpdateScriptRequestSchema,
+  CommandRunStateSchema,
+  CommandTargetStateSchema,
+  CommandRunModeSchema,
+  CommandOutputSchema,
+  CommandTargetViewSchema,
+  CommandRunCountsSchema,
+  CommandRunSummarySchema,
+  CommandRunViewSchema,
+  CommandRunListSchema,
+  CreateCommandRunRequestSchema,
+  CommandOutputPageSchema,
   ArtifactInterpreterSchema,
   ArtifactStepSchema,
   ArtifactParamSchema,
@@ -432,6 +480,11 @@ export function buildOpenApi(): Json {
         name: 'artifacts',
         description:
           'The catalogue of built-in artifacts: versioned files whose SHA-256 is checked before they are served or sent to a server.',
+      },
+      {
+        name: 'commands',
+        description:
+          'The script library and runs of a script or a command on several servers at once, with the output of each server (ADR 0038). Writing scripts and starting or stopping runs need `servers:exec` and a fresh authenticator code; reading the history needs `servers:read`.',
       },
     ],
     paths,

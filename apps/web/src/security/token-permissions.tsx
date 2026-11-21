@@ -49,6 +49,7 @@ export type Resource = ResourceOf<Permission>;
 const RESOURCE_OF = {
   'servers:read': 'servers',
   'servers:write': 'servers',
+  'servers:exec': 'servers',
   'panel:read': 'panel',
   'panel:write': 'panel',
   'runs:read': 'runs',

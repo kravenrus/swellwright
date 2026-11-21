@@ -88,7 +88,7 @@ Online, Xray uptime, users, traffic, load, disk, memory, kernel, versions, certi
 Selecting nodes by tags and conditions, strategies (sequential, canary, batches of N, maximum failures, pause on failure, windows), a pre-calculation (which nodes, how much time, impact), approval, a single progress view across all nodes, retry for the failed ones.
 
 ### N25 Ad-hoc commands and scripts (M/H)
-A script library (audit, diagnostics), parameters, danger level, permissions; run on selected nodes, output per node, `sudo` by policy, approval for dangerous ones.
+A script library (audit, diagnostics), parameters, danger level, permissions; run on selected nodes, output per node, `sudo` by policy, approval for dangerous ones. **Built in Phase 2 (ADR 0038):** thirteen built-in read-only diagnostics and scripts of the instance with typed parameters and a danger level; a script or an inline command runs on one to fifty selected servers, each as a target of its own with its state, exit status and output (kept up to a limit, read by offset, live while it runs); stored access and the pinned host key, `sudo` through the stored sudo secret, a time limit, cancel, and a history of runs that keeps the exact text that ran. It needs `servers:exec` and a fresh authenticator code; a run that is not `read` has to be confirmed (the approvals of the engine come in phase 4).
 
 ### N26 Files (M)
 Browsing, upload and download over SFTP, distributing a file to selected nodes with a checksum, permissions, rollback (a backup copy of the replaced file).

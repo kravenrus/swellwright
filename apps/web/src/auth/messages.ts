@@ -39,6 +39,7 @@ export function describeError(
       case 'not_ready':
         return t('errors:notReady');
       case 'conflict':
+      case 'confirmation_required':
       case 'bad_request':
         // The server says what is in the way (a name that is taken, the last owner, a secret of the wrong kind);
         // it speaks English.

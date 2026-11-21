@@ -12,6 +12,7 @@ export const nav = {
   operations: 'Операции',
   artifacts: 'Артефакты',
   runs: 'Запуски',
+  scripts: 'Скрипты',
   scenarios: 'Сценарии',
   schedules: 'Расписания',
 

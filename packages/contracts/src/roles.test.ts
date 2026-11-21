@@ -65,6 +65,11 @@ describe('permission catalogue', () => {
     }
     assert.ok(hasPermission('terminal', 'terminal:use'));
     assert.ok(!hasPermission('operator', 'terminal:use'));
+    // Running code on servers is the operator's job, and the observer's, the terminal's and the auditor's it is not.
+    assert.ok(hasPermission('operator', 'servers:exec'));
+    for (const role of ['observer', 'terminal', 'auditor'] as const) {
+      assert.ok(!hasPermission(role, 'servers:exec'), `${role} must not have servers:exec`);
+    }
     assert.ok(!hasPermission('observer', 'servers:write'));
     assert.ok(!hasPermission('operator', 'audit:read'));
   });
@@ -157,12 +162,16 @@ describe('step-up authentication on routes', () => {
       .map((r) => r.operationId)
       .sort();
     assert.deepEqual(stepped, [
+      'cancelCommandRun',
       'changePassword',
       'changeVaultPassphrase',
       'checkPlugin',
+      'createCommandRun',
+      'createScript',
       'createSecret',
       'createToken',
       'createUser',
+      'deleteScript',
       'deleteSecret',
       'deleteUser',
       'disablePlugin',
@@ -181,6 +190,7 @@ describe('step-up authentication on routes', () => {
       'sealVault',
       'unsealVault',
       'updatePluginConfig',
+      'updateScript',
       'updateSecret',
       'updateUser',
     ]);

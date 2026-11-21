@@ -39,6 +39,21 @@ import {
   UpdatePreferencesRequestSchema,
   UserSummarySchema,
 } from './auth.js';
+import {
+  CommandOutputPageSchema,
+  CommandOutputQuerySchema,
+  CommandRunIdParamsSchema,
+  CommandRunListQuerySchema,
+  CommandRunListSchema,
+  CommandRunViewSchema,
+  CommandTargetParamsSchema,
+  CreateCommandRunRequestSchema,
+  CreateScriptRequestSchema,
+  ScriptIdParamsSchema,
+  ScriptListSchema,
+  ScriptViewSchema,
+  UpdateScriptRequestSchema,
+} from './commands.js';
 import { ApiErrorSchema } from './errors.js';
 import {
   EnablePluginRequestSchema,
@@ -1218,6 +1233,150 @@ export const getFactsRoute = defineRoute({
   responses: { 200: { description: 'The facts.', schema: ServerFactsRecordSchema } },
 });
 
+const RUN_ERRORS =
+  'Errors: 400 `validation_failed` (the body, or a parameter value that does not fit its definition: `details` names it), 404 (no such script or server), 409 `confirmation_required` (the level of the run is not `read` and `confirmedLevel` is missing or different; `details.level` says which), 429 `rate_limited`. A server that cannot be used (no pinned host key, no access entry) is not an error of the request: its target is `skipped` with the reason, and the others run.';
+
+export const listScriptsRoute = defineRoute({
+  operationId: 'listScripts',
+  method: 'get',
+  path: '/scripts',
+  tags: ['commands'],
+  summary: 'The script library',
+  description:
+    'The built-in diagnostics and the scripts of this instance, with their parameters and danger level. The text of a script is in `GET /scripts/{id}`.',
+  auth: 'any',
+  permission: 'servers:read',
+  responses: { 200: { description: 'The scripts.', schema: ScriptListSchema } },
+});
+
+export const getScriptRoute = defineRoute({
+  operationId: 'getScript',
+  method: 'get',
+  path: '/scripts/{id}',
+  tags: ['commands'],
+  summary: 'One script with its text',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ScriptIdParamsSchema },
+  responses: { 200: { description: 'The script.', schema: ScriptViewSchema } },
+});
+
+export const createScriptRoute = defineRoute({
+  operationId: 'createScript',
+  method: 'post',
+  path: '/scripts',
+  tags: ['commands'],
+  summary: 'Add a script to the library',
+  description:
+    'A script is code that will run on servers, usually as root, so writing one needs the permission to run commands (`servers:exec`) and a fresh authenticator code, not only the permission to read servers. A taken name answers 409. The parameters are checked as a whole: duplicate names, a default outside its range or pattern, a pattern that is not a regular expression all answer 400.',
+  auth: 'session',
+  permission: 'servers:exec',
+  stepUp: true,
+  request: { body: CreateScriptRequestSchema },
+  responses: { 201: { description: 'The script.', schema: ScriptViewSchema } },
+});
+
+export const updateScriptRoute = defineRoute({
+  operationId: 'updateScript',
+  method: 'patch',
+  path: '/scripts/{id}',
+  tags: ['commands'],
+  summary: 'Change a script',
+  description:
+    'Changing the text raises the version. Runs that happened before keep the text they ran. A built-in script cannot be changed: 409.',
+  auth: 'session',
+  permission: 'servers:exec',
+  stepUp: true,
+  request: { params: ScriptIdParamsSchema, body: UpdateScriptRequestSchema },
+  responses: { 200: { description: 'The script after the change.', schema: ScriptViewSchema } },
+});
+
+export const deleteScriptRoute = defineRoute({
+  operationId: 'deleteScript',
+  method: 'delete',
+  path: '/scripts/{id}',
+  tags: ['commands'],
+  summary: 'Delete a script',
+  description:
+    'The history keeps what every run executed, so deleting a script loses nothing of it. A built-in script cannot be deleted: 409.',
+  auth: 'session',
+  permission: 'servers:exec',
+  stepUp: true,
+  request: { params: ScriptIdParamsSchema },
+  responses: { 204: { description: 'The script is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const createCommandRunRoute = defineRoute({
+  operationId: 'createCommandRun',
+  method: 'post',
+  path: '/command-runs',
+  tags: ['commands'],
+  summary: 'Run a script or a command on several servers',
+  description: `Queues a run and returns at once; the servers are worked on in the background, at most \`SW_COMMAND_CONCURRENCY\` at a time, each as a target of its own with its own state, exit status and output: one server failing never fails another. The script runs on the server as a detached step, so it survives a dropped connection and a restart of this API. Values of parameters reach it only as environment variables. The host key must be pinned and the address policy applies. A run whose level is not \`read\` must be confirmed (\`confirmedLevel\`); the engine's approvals come in a later phase. Output can hold secrets: whoever may read servers may read it. ${RUN_ERRORS}`,
+  auth: 'session',
+  permission: 'servers:exec',
+  stepUp: true,
+  request: { body: CreateCommandRunRequestSchema },
+  responses: { 201: { description: 'The run as it was queued.', schema: CommandRunViewSchema } },
+});
+
+export const listCommandRunsRoute = defineRoute({
+  operationId: 'listCommandRuns',
+  method: 'get',
+  path: '/command-runs',
+  tags: ['commands'],
+  summary: 'The history of runs',
+  description:
+    'Newest first, with the number of servers in each state. Needs only `servers:read`: the history shows who ran what where, and the output of a run may contain whatever the script printed.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { query: CommandRunListQuerySchema },
+  responses: { 200: { description: 'One page of runs.', schema: CommandRunListSchema } },
+});
+
+export const getCommandRunRoute = defineRoute({
+  operationId: 'getCommandRun',
+  method: 'get',
+  path: '/command-runs/{id}',
+  tags: ['commands'],
+  summary: 'One run with its servers',
+  description:
+    'The exact text that ran, the parameters, and every target with its state, exit status, error and the end of its output (`tail`). Poll it while the run is `pending` or `running`; the rest of the output is paged through `.../targets/{targetId}/output`.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: CommandRunIdParamsSchema },
+  responses: { 200: { description: 'The run.', schema: CommandRunViewSchema } },
+});
+
+export const getCommandOutputRoute = defineRoute({
+  operationId: 'getCommandOutput',
+  method: 'get',
+  path: '/command-runs/{id}/targets/{targetId}/output',
+  tags: ['commands'],
+  summary: 'A page of the output of one server',
+  description:
+    'Reads what Swellwright kept of one stream, by byte offset. Start at 0 and continue with `nextOffset` until `eof`; while the run is going, `eof` only means "up to now". At most 256 KiB a page, ended between two UTF-8 characters.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: CommandTargetParamsSchema, query: CommandOutputQuerySchema },
+  responses: { 200: { description: 'The page.', schema: CommandOutputPageSchema } },
+});
+
+export const cancelCommandRunRoute = defineRoute({
+  operationId: 'cancelCommandRun',
+  method: 'post',
+  path: '/command-runs/{id}/cancel',
+  tags: ['commands'],
+  summary: 'Stop a run',
+  description:
+    'Servers that have not started are cancelled at once; on those that run, the script gets TERM and then KILL. Asking twice is harmless (the second answer is the same run). A run that has ended answers 409.',
+  auth: 'session',
+  permission: 'servers:exec',
+  stepUp: true,
+  request: { params: CommandRunIdParamsSchema },
+  responses: { 200: { description: 'The run after the request.', schema: CommandRunViewSchema } },
+});
+
 export const listArtifactsRoute = defineRoute({
   operationId: 'listArtifacts',
   method: 'get',
@@ -1442,6 +1601,16 @@ export const routes = [
   verifyAccessRoute,
   refreshFactsRoute,
   getFactsRoute,
+  listScriptsRoute,
+  getScriptRoute,
+  createScriptRoute,
+  updateScriptRoute,
+  deleteScriptRoute,
+  createCommandRunRoute,
+  listCommandRunsRoute,
+  getCommandRunRoute,
+  getCommandOutputRoute,
+  cancelCommandRunRoute,
   listArtifactsRoute,
   getArtifactRoute,
   getArtifactVersionRoute,

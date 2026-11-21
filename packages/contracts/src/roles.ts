@@ -11,7 +11,10 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
  */
 export const PERMISSION_INFO = {
   'servers:read': 'See servers, their facts and state.',
-  'servers:write': 'Add, change and retire servers; run maintenance on them.',
+  'servers:write':
+    'Add, change and retire servers; read host keys, try the access entries and collect facts over SSH.',
+  'servers:exec':
+    'Run scripts and commands on servers, stop a run, and write the scripts of the library.',
   'panel:read': 'See the connected Remnawave panel: nodes, hosts, profiles, squads.',
   'panel:write': 'Change panel objects through Swellwright.',
   'runs:read': 'See runs, their steps and logs.',
@@ -44,6 +47,7 @@ export const PermissionSchema = z
 /** A permission that cannot be used without another one (writing a thing without seeing it makes no sense). */
 export const IMPLIED_PERMISSIONS: Readonly<Partial<Record<Permission, Permission>>> = {
   'servers:write': 'servers:read',
+  'servers:exec': 'servers:read',
   'panel:write': 'panel:read',
   'runs:execute': 'runs:read',
   'vault:manage': 'vault:read',
@@ -65,6 +69,7 @@ export const STEP_UP_PERMISSIONS: readonly Permission[] = [
   'vault:manage',
   'vault:reveal',
   'terminal:use',
+  'servers:exec',
   'audit:export',
   'sessions:revoke',
   'tokens:create',
@@ -89,10 +94,11 @@ export const ROLE_INFO: Readonly<
   },
   operator: {
     description:
-      'Runs and changes servers and the panel. Cannot reveal a secret, open the terminal or manage users.',
+      'Runs scripts and changes servers and the panel. Cannot reveal a secret, open the terminal or manage users.',
     permissions: [
       'servers:read',
       'servers:write',
+      'servers:exec',
       'panel:read',
       'panel:write',
       'runs:read',

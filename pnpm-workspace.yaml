@@ -18,3 +18,7 @@ ignoredOptionalDependencies:
 # takes the newest 3.22 release that is old enough for the wait above (the fix is in 3.22.1); drop it when Prisma is upgraded.
 overrides:
   "@prisma/config>effect": 3.22.4
+  # monaco-editor 0.56.0 pins dompurify 3.4.8 exactly, which has eight advisories (the newest, 3.4.18, fixes all of them;
+  # ADR 0038). The patch release is API-compatible; drop the override when a monaco-editor that depends on a fixed
+  # version is used.
+  dompurify: 3.4.18

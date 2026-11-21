@@ -36,6 +36,12 @@ const AuditPage = lazy(() =>
 const ServersPage = lazy(() =>
   import('./fleet/servers-page.js').then((m) => ({ default: m.ServersPage })),
 );
+const RunsPage = lazy(() =>
+  import('./commands/runs-page.js').then((m) => ({ default: m.RunsPage })),
+);
+const ScriptsPage = lazy(() =>
+  import('./commands/scripts-page.js').then((m) => ({ default: m.ScriptsPage })),
+);
 const ArtifactsPage = lazy(() =>
   import('./operations/artifacts-page.js').then((m) => ({ default: m.ArtifactsPage })),
 );
@@ -168,6 +174,26 @@ function ServersRoute() {
   );
 }
 
+function RunsRoute() {
+  const { t } = useTranslation('nav');
+  const { session } = useConsole();
+  return (
+    <Guarded permission="servers:read" title={t('runs')}>
+      <RunsPage permissions={session.permissions} />
+    </Guarded>
+  );
+}
+
+function ScriptsRoute() {
+  const { t } = useTranslation('nav');
+  const { session } = useConsole();
+  return (
+    <Guarded permission="servers:read" title={t('scripts')}>
+      <ScriptsPage permissions={session.permissions} />
+    </Guarded>
+  );
+}
+
 function ArtifactsRoute() {
   const { t } = useTranslation('nav');
   return (
@@ -198,6 +224,8 @@ export const routes: RouteObject[] = [
           { path: relative(D.FLEET.ROOT), element: <AreaIndex area="fleet" /> },
           { path: relative(D.FLEET.SERVERS), element: <ServersRoute /> },
           { path: relative(D.OPERATIONS.ROOT), element: <AreaIndex area="operations" /> },
+          { path: relative(D.OPERATIONS.RUNS), element: <RunsRoute /> },
+          { path: relative(D.OPERATIONS.SCRIPTS), element: <ScriptsRoute /> },
           { path: relative(D.OPERATIONS.ARTIFACTS), element: <ArtifactsRoute /> },
           { path: relative(D.SECURITY.ROOT), element: <AreaIndex area="security" /> },
           { path: relative(D.SECURITY.VAULT), element: <VaultRoute /> },
