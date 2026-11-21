@@ -225,7 +225,7 @@ jobs:
         run: |
           sh -n artifacts/node-installer/install.sh
           dash -n artifacts/node-installer/install.sh
-      - name: shellcheck (the installer: warnings and errors; the test scripts: errors)
+      - name: shellcheck (warnings and errors in the installer, errors in the test scripts)
         run: |
           shellcheck -s sh -S warning artifacts/node-installer/install.sh
           shellcheck -s sh -S error artifacts/node-installer/test/*.sh
