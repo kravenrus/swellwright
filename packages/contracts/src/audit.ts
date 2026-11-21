@@ -117,6 +117,14 @@ export const AuditQuerySchema = z.object({
     .positive()
     .optional()
     .describe('Return events older than this sequence number (`nextCursor` of the previous page).'),
+  offset: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      'Events to skip, newest first: the page number times `limit`, for a table with page numbers. With `cursor`, counted from there.',
+    ),
   action: z.string().min(1).max(64).optional(),
   // Not the named schema: a query parameter describes itself inline instead of pointing into the components.
   outcome: z.enum(AUDIT_OUTCOMES).optional(),
@@ -128,6 +136,13 @@ export const AuditPageSchema = z
   .object({
     events: z.array(AuditEventSchema).describe('Newest first.'),
     nextCursor: z.number().int().positive().nullable().describe('Null on the last page.'),
+    total: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe(
+        'How many events match the filters (and the cursor), whatever `limit` and `offset` say: the page count of a table.',
+      ),
   })
   .meta({ id: 'AuditPage' });
 export type AuditPage = z.infer<typeof AuditPageSchema>;

@@ -117,13 +117,34 @@ describe('the audit log through the API', { skip: !databaseUrl }, () => {
       [2, 1],
     );
     assert.equal(second.nextCursor, null);
+    assert.equal(first.total, 4);
+
+    // A table with page numbers asks by offset, and learns how many events the filters match.
+    const third = await page(owner, '?limit=2&offset=2');
+    assert.deepEqual(
+      third.events.map((e) => e.seq),
+      [2, 1],
+    );
+    assert.equal(third.nextCursor, null);
+    assert.equal(third.total, 4);
+    const beyond = await page(owner, '?limit=2&offset=4');
+    assert.deepEqual(beyond.events, []);
+    assert.equal(beyond.total, 4);
+    const middle = await page(owner, '?limit=1&offset=1');
+    assert.deepEqual(
+      middle.events.map((e) => e.seq),
+      [3],
+    );
+    assert.equal(middle.nextCursor, 3);
 
     const logins = await page(owner, '?action=auth.login.succeeded');
+    assert.equal(logins.total, 2);
     assert.deepEqual(
       logins.events.map((e) => e.seq),
       [4, 3],
     );
     assert.equal((await page(owner, '?outcome=failure')).events.length, 0);
+    assert.equal((await page(owner, '?outcome=failure')).total, 0);
     const actorId = (await stored(instance))[0]?.actor?.id ?? '';
     assert.equal((await page(owner, `?actorId=${actorId}`)).events.length, 4);
     assert.equal(
@@ -139,6 +160,7 @@ describe('the audit log through the API', { skip: !databaseUrl }, () => {
       '?outcome=maybe',
       '?actorId=nobody',
       '?cursor=0',
+      '?offset=-1',
     ]) {
       const reply = await owner.get(`/audit${bad}`);
       assert.equal(reply.status, 400, bad);

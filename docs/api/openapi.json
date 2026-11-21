@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.17.0",
+    "version": "0.18.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -1682,7 +1682,7 @@
             }
           }
         },
-        "description": "Newest first. Page back with `cursor`. Filters combine.",
+        "description": "Newest first. Page back with `cursor`, or by page number with `offset`; `total` counts what the filters match. Filters combine.",
         "parameters": [
           {
             "name": "limit",
@@ -1705,6 +1705,18 @@
               "description": "Return events older than this sequence number (`nextCursor` of the previous page).",
               "type": "integer",
               "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Events to skip, newest first: the page number times `limit`, for a table with page numbers. With `cursor`, counted from there.",
+              "type": "integer",
+              "minimum": 0,
               "maximum": 9007199254740991
             }
           },
@@ -3718,11 +3730,18 @@
               }
             ],
             "description": "Null on the last page."
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How many events match the filters (and the cursor), whatever `limit` and `offset` say: the page count of a table."
           }
         },
         "required": [
           "events",
-          "nextCursor"
+          "nextCursor",
+          "total"
         ],
         "additionalProperties": false
       },
