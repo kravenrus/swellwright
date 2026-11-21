@@ -122,7 +122,7 @@ describe('validateTargetAddress', () => {
     ]) {
       const check = validateTargetAddress(bad);
       assert.equal(check.allowed, false, bad);
-      if (!check.allowed) assert.ok(check.reason.length > 0);
+      assert.ok(check.reason.length > 0);
     }
   });
 
