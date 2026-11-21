@@ -5,6 +5,7 @@ export * from './openapi.js';
 export * from './plugins.js';
 export * from './roles.js';
 export * from './routes.js';
+export * from './servers.js';
 export * from './sessions.js';
 export * from './system.js';
 export * from './tokens.js';

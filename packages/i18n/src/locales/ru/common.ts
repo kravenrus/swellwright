@@ -19,6 +19,8 @@ export const common = {
   create: 'Создать',
   delete: 'Удалить',
   refresh: 'Обновить',
+  clear: 'Очистить',
+  remove: 'Убрать',
   clearFilters: 'Сбросить фильтры',
   resetTable: 'Сбросить таблицу',
   filterBy: 'Фильтр…',
@@ -31,4 +33,17 @@ export const common = {
   never: 'никогда',
   yes: 'Да',
   no: 'Нет',
+
+  /** Строка под таблицей страницы (элементы управления datatable панели). */
+  datatable: {
+    reset: 'Сбросить',
+    resetSort: 'Сбросить сортировку',
+    columnWidth: 'Ширина колонок',
+    columnOrder: 'Порядок колонок',
+    columnToggle: 'Показ колонок',
+    showAll: 'Показать все',
+    hideAll: 'Скрыть все',
+    columns: 'Колонки',
+    all: 'Все',
+  },
 } as const;

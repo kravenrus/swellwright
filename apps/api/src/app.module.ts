@@ -40,6 +40,8 @@ import { PluginsController } from './plugins/plugins.controller.js';
 import { PluginsService } from './plugins/plugins.service.js';
 import { PluginRuntime } from './plugins/runtime.js';
 import { RolesController } from './roles.controller.js';
+import { ServersController } from './servers/servers.controller.js';
+import { ServersService } from './servers/servers.service.js';
 import { SystemController } from './system.controller.js';
 import { UpdatesService } from './system/updates.service.js';
 import { InvitationService } from './users/invitation.service.js';
@@ -100,6 +102,7 @@ export class AppModule implements OnApplicationShutdown {
         UsersController,
         VaultController,
         PluginsController,
+        ServersController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -124,6 +127,7 @@ export class AppModule implements OnApplicationShutdown {
         SetupService,
         InvitationService,
         UsersService,
+        ServersService,
         PluginRuntime,
         PluginBroker,
         PluginsService,

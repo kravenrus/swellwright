@@ -6,6 +6,7 @@ import { nav } from './nav.js';
 import { overview } from './overview.js';
 import { plugins } from './plugins.js';
 import { roles } from './roles.js';
+import { servers } from './servers.js';
 import { sessions } from './sessions.js';
 import { shell } from './shell.js';
 import { tokens } from './tokens.js';
@@ -26,4 +27,5 @@ export const ru = {
   sessions,
   tokens,
   plugins,
+  servers,
 } as const;

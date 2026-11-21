@@ -221,6 +221,11 @@ model Secret {
   /// When the value last changed (created or replaced), as opposed to the metadata.
   valueChangedAt DateTime   @default(now()) @map("value_changed_at") @db.Timestamptz(3)
 
+  /// The access entries of servers that log in with this secret, and those that use it as the sudo password.
+  /// Both relations restrict: a secret in use cannot be deleted (ADR 0034).
+  serverAccess     ServerAccess[] @relation("ServerAccessSecret")
+  serverSudoAccess ServerAccess[] @relation("ServerAccessSudoSecret")
+
   @@index([type])
   @@map("secrets")
 }
@@ -316,4 +321,110 @@ model PluginStorageItem {
 
   @@id([pluginId, key])
   @@map("plugin_storage")
+}
+
+/// Where a server is in its life (docs/en/design/02-data-model.md). Any state may follow any other; the workflows of
+/// later phases will constrain that where it matters.
+enum ServerState {
+  draft
+  provisioning
+  active
+  draining
+  retired
+
+  @@map("server_state")
+}
+
+/// How Swellwright logs in to a server. Certificates come later, with a migration.
+enum AccessMethod {
+  password
+  key
+
+  @@map("access_method")
+}
+
+/// A server of the fleet: what it is and how to reach it (ADR 0034). What was found on it is a `ServerFact`.
+model Server {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  name        String      @unique @db.VarChar(64)
+  /// A host name, an IPv4 or an IPv6 address; what SSH connects to.
+  address     String      @db.VarChar(255)
+  sshPort     Int         @default(22) @map("ssh_port")
+  /// ISO 3166-1 alpha-2, upper case.
+  country     String?     @db.VarChar(2)
+  provider    String?     @db.VarChar(64)
+  state       ServerState @default(draft)
+  tags        String[]
+  notes       String?     @db.VarChar(2000)
+  /// The user who added it. No foreign key, like the audit chain: removing the user keeps the server.
+  createdById String?     @map("created_by_id") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hostKeys ServerHostKey[]
+  access   ServerAccess[]
+  fact     ServerFact?
+
+  @@index([state])
+  @@index([tags], type: Gin)
+  @@map("servers")
+}
+
+/// A pinned SSH host key of a server. A connection is trusted only when the key it shows is pinned here.
+model ServerHostKey {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  serverId          String   @map("server_id") @db.Uuid
+  /// The key type as OpenSSH names it, for example `ssh-ed25519`.
+  algorithm         String   @db.VarChar(32)
+  /// OpenSSH style: `SHA256:` and 43 base64 characters, no padding.
+  fingerprintSha256 String   @map("fingerprint_sha256") @db.VarChar(50)
+  /// How the key got here: `manual` (typed in) now; `scan` when the SSH layer reads it from the server.
+  source            String   @default("manual") @db.VarChar(16)
+  /// The user who pinned it. No foreign key, like the audit chain.
+  acceptedById      String?  @map("accepted_by_id") @db.Uuid
+  acceptedAt        DateTime @default(now()) @map("accepted_at") @db.Timestamptz(3)
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, fingerprintSha256])
+  @@map("server_host_keys")
+}
+
+/// One way to log in to a server. Holds references to vault secrets, never a value; the secrets cannot be deleted
+/// while an entry names them.
+model ServerAccess {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  serverId     String       @map("server_id") @db.Uuid
+  method       AccessMethod
+  username     String       @db.VarChar(64)
+  /// The password (`ssh_password`) or the private key (`ssh_key`), by method.
+  secretId     String       @map("secret_id") @db.Uuid
+  /// The password to use for `sudo` (`ssh_password`), when it differs from the login.
+  sudoSecretId String?      @map("sudo_secret_id") @db.Uuid
+  /// Lower first: the order in which the entries are tried.
+  priority     Int          @default(0)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  server     Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  secret     Secret  @relation("ServerAccessSecret", fields: [secretId], references: [id], onDelete: Restrict)
+  sudoSecret Secret? @relation("ServerAccessSudoSecret", fields: [sudoSecretId], references: [id], onDelete: Restrict)
+
+  @@index([serverId, priority])
+  @@index([secretId])
+  @@index([sudoSecretId])
+  @@map("server_access")
+}
+
+/// What was found on a server, as JSON, and when and how. Empty until the SSH layer collects facts.
+model ServerFact {
+  serverId    String   @id @map("server_id") @db.Uuid
+  facts       Json
+  collectedAt DateTime @map("collected_at") @db.Timestamptz(3)
+  /// What produced it, for example `ssh`.
+  source      String   @db.VarChar(16)
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("server_facts")
 }
