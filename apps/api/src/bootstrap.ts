@@ -100,6 +100,8 @@ export async function createApp(
 ): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(
     AppModule.register(config, options),
+    // Nest declares its options as classes and documents a plain object as the way to pass them.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment
     {
       logger: config.silent ? false : ['log', 'warn', 'error'],
       // The JSON parser is registered below with a limit a plugin's request through the gateway fits in.
