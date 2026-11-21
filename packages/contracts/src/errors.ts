@@ -12,6 +12,18 @@ export const ERROR_CODES = [
   'conflict',
   'rate_limited',
   'not_ready',
+  // Servers over SSH (ADR 0037). `host_key_mismatch` and `host_key_replace_required` carry `details`.
+  'host_key_not_pinned',
+  'host_key_mismatch',
+  'host_key_replace_required',
+  'address_not_allowed',
+  'no_access_entry',
+  'ssh_connect_failed',
+  'ssh_auth_failed',
+  'ssh_key_invalid',
+  'ssh_timeout',
+  'ssh_failed',
+  'facts_unreadable',
   'internal_error',
 ] as const;
 

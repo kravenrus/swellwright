@@ -135,6 +135,20 @@ const EnvSchema = z.object({
   SW_PLUGIN_CALL_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(300).default(10),
   /** How long a plugin's process may sit idle before it is stopped, in minutes. */
   SW_PLUGIN_IDLE_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
+  /**
+   * Which addresses Swellwright may open an SSH connection to (ADR 0037, docs/en/design/05-security.md section 7).
+   * Loopback is the host Swellwright itself runs on and is refused by default; private ranges and host names are
+   * allowed, because fleets live there. Link-local and cloud metadata addresses are never allowed.
+   */
+  SW_SSH_ALLOW_LOOPBACK: z.preprocess(unsetIfEmpty, z.stringbool().default(false)),
+  SW_SSH_ALLOW_PRIVATE: z.preprocess(unsetIfEmpty, z.stringbool().default(true)),
+  SW_SSH_ALLOW_HOSTNAMES: z.preprocess(unsetIfEmpty, z.stringbool().default(true)),
+  /** TCP connect, key exchange and login together, in seconds. */
+  SW_SSH_CONNECT_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(120).default(15),
+  /** One command on a server (the facts script is the longest), in seconds. The quick probes use at most 20. */
+  SW_SSH_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(600).default(60),
+  /** How many scans, checks and refreshes one user may start per minute. */
+  SW_SSH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(20),
 });
 
 export interface AppConfig {
@@ -193,6 +207,18 @@ export interface AppConfig {
     readonly memoryMiB: number;
     readonly callTimeoutMs: number;
     readonly idleMs: number;
+  };
+  /** Servers over SSH (ADR 0037). */
+  readonly ssh: {
+    /** The outbound address policy; the connection itself does not apply it, the API does before it connects. */
+    readonly policy: {
+      readonly allowLoopback: boolean;
+      readonly allowPrivate: boolean;
+      readonly allowHostnames: boolean;
+    };
+    readonly connectTimeoutMs: number;
+    readonly commandTimeoutMs: number;
+    readonly rateLimitPerMinute: number;
   };
 }
 
@@ -347,6 +373,16 @@ export function loadConfig(
       memoryMiB: e.SW_PLUGIN_MEMORY_MIB,
       callTimeoutMs: e.SW_PLUGIN_CALL_TIMEOUT_SECONDS * 1000,
       idleMs: e.SW_PLUGIN_IDLE_MINUTES * 60_000,
+    },
+    ssh: {
+      policy: {
+        allowLoopback: e.SW_SSH_ALLOW_LOOPBACK,
+        allowPrivate: e.SW_SSH_ALLOW_PRIVATE,
+        allowHostnames: e.SW_SSH_ALLOW_HOSTNAMES,
+      },
+      connectTimeoutMs: e.SW_SSH_CONNECT_TIMEOUT_SECONDS * 1000,
+      commandTimeoutMs: e.SW_SSH_COMMAND_TIMEOUT_SECONDS * 1000,
+      rateLimitPerMinute: e.SW_SSH_RATE_LIMIT_PER_MINUTE,
     },
   };
 }

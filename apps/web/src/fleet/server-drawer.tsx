@@ -504,7 +504,7 @@ function ServerBody({
               onChanged={refreshAll}
               server={server}
             />
-            <FactsCard server={server} />
+            <FactsCard canWrite={canWrite} onChanged={refreshAll} server={server} />
           </>
         ) : null}
       </Stack>

@@ -796,6 +796,18 @@ describe('a connection that dies', () => {
   });
 });
 
+describe('closing a connection to a peer that does not answer', () => {
+  it('destroys the socket after a second instead of waiting for the peer for ever', async () => {
+    const server = await TestSshServer.start({ users: USERS, exec: scripted });
+    const connection = await SshConnection.connect(targetFor(server));
+    // The peer is gone before the goodbye: `end()` of ssh2 leaves the socket not writable, and its `destroy()` does
+    // nothing then, so the socket has to be destroyed directly or it stays (and keeps the process alive).
+    await server.close();
+    connection.close();
+    await until(() => connection.closed, 4000, 'the socket to be destroyed');
+  });
+});
+
 describe('secrets stay out of everything printable', () => {
   it('shows no credentials when the connection is printed, inspected or serialised', async () => {
     const server = await TestSshServer.start({ users: USERS, exec: scripted });

@@ -393,18 +393,21 @@ model ServerHostKey {
 /// One way to log in to a server. Holds references to vault secrets, never a value; the secrets cannot be deleted
 /// while an entry names them.
 model ServerAccess {
-  id           String       @id @default(uuid(7)) @db.Uuid
-  serverId     String       @map("server_id") @db.Uuid
-  method       AccessMethod
-  username     String       @db.VarChar(64)
+  id             String       @id @default(uuid(7)) @db.Uuid
+  serverId       String       @map("server_id") @db.Uuid
+  method         AccessMethod
+  username       String       @db.VarChar(64)
   /// The password (`ssh_password`) or the private key (`ssh_key`), by method.
-  secretId     String       @map("secret_id") @db.Uuid
+  secretId       String       @map("secret_id") @db.Uuid
   /// The password to use for `sudo` (`ssh_password`), when it differs from the login.
-  sudoSecretId String?      @map("sudo_secret_id") @db.Uuid
+  sudoSecretId   String?      @map("sudo_secret_id") @db.Uuid
   /// Lower first: the order in which the entries are tried.
-  priority     Int          @default(0)
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  priority       Int          @default(0)
+  /// When the entry was last tried (the verify operation) and whether it logged in and ran its checks.
+  lastVerifiedAt DateTime?    @map("last_verified_at") @db.Timestamptz(3)
+  lastVerifyOk   Boolean?     @map("last_verify_ok")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   server     Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
   secret     Secret  @relation("ServerAccessSecret", fields: [secretId], references: [id], onDelete: Restrict)
@@ -418,11 +421,13 @@ model ServerAccess {
 
 /// What was found on a server, as JSON, and when and how. Empty until the SSH layer collects facts.
 model ServerFact {
-  serverId    String   @id @map("server_id") @db.Uuid
-  facts       Json
-  collectedAt DateTime @map("collected_at") @db.Timestamptz(3)
+  serverId     String   @id @map("server_id") @db.Uuid
+  facts        Json
+  collectedAt  DateTime @map("collected_at") @db.Timestamptz(3)
   /// What produced it, for example `ssh`.
-  source      String   @db.VarChar(16)
+  source       String   @db.VarChar(16)
+  /// The SHA-256 (hex) of the script that collected them; null for facts that were not collected by a script.
+  scriptSha256 String?  @map("script_sha256") @db.VarChar(64)
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 

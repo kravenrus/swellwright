@@ -26,6 +26,8 @@ import {
   start,
   stop,
 } from '../test-support.js';
+import { parseFacts } from './facts/parse-facts.js';
+import { DEBIAN_12_NODE } from './facts/samples.js';
 import { byName } from './servers.service.js';
 
 const PASSPHRASE = 'a long passphrase for the vault, used in tests';
@@ -273,8 +275,20 @@ describe('the server inventory', { skip: !databaseUrl }, () => {
       await instance.isolated.database.client.serverFact.create({
         data: {
           serverId: a.id,
-          facts: { os: 'Debian GNU/Linux 12', kernel: '6.1.0-test', disks: [{ size: 10 }] },
+          facts: parseFacts(DEBIAN_12_NODE, { receivedAtMs: 0, viaSudo: false, truncated: false })
+            .facts,
           collectedAt: new Date('2026-11-20T10:00:00Z'),
+          source: 'ssh',
+          scriptSha256: 'a'.repeat(64),
+        },
+      });
+      // Facts of a shape this version does not know (an older or a newer one): shown as unreadable, never a 500.
+      const odd = await create(owner, { name: 'list-odd', address: '198.51.100.9' });
+      await instance.isolated.database.client.serverFact.create({
+        data: {
+          serverId: odd.id,
+          facts: { os: 'Debian GNU/Linux 12', kernel: '6.1.0-test' },
+          collectedAt: new Date('2026-11-20T11:00:00Z'),
           source: 'ssh',
         },
       });
@@ -297,9 +311,18 @@ describe('the server inventory', { skip: !databaseUrl }, () => {
         'list-a',
       );
       assert.deepEqual(a.facts, {
-        os: 'Debian GNU/Linux 12',
-        kernel: '6.1.0-test',
+        os: 'Debian GNU/Linux 12 (bookworm)',
+        kernel: '6.1.0-28-amd64',
         collectedAt: '2026-11-20T10:00:00.000Z',
+      });
+      const odd = found(
+        list.find((s) => s.name === 'list-odd'),
+        'list-odd',
+      );
+      assert.deepEqual(odd.facts, {
+        os: null,
+        kernel: null,
+        collectedAt: '2026-11-20T11:00:00.000Z',
       });
       assert.equal(a.pinned, false);
       assert.equal(a.hostKeyCount, 0);
@@ -322,8 +345,8 @@ describe('the server inventory', { skip: !databaseUrl }, () => {
       assert.deepEqual(await names('?state=retired'), ['list-c']);
       assert.deepEqual(await names('?tag=list-tag&state=active'), ['list-a']);
       assert.deepEqual(await names('?q=ALPHA'), ['list-a'], 'case is ignored, the address counts');
-      assert.deepEqual(await names('?q=list-'), ['list-a', 'list-b', 'list-c']);
-      assert.deepEqual(await names('?q=198.51.100'), ['list-b', 'list-c']);
+      assert.deepEqual(await names('?q=list-'), ['list-a', 'list-b', 'list-c', 'list-odd']);
+      assert.deepEqual(await names('?q=198.51.100'), ['list-b', 'list-c', 'list-odd']);
       assert.deepEqual(await names('?q=nothing-matches-this'), []);
       assert.equal((await owner.get('/servers?state=gone')).status, 400);
     });
@@ -332,7 +355,17 @@ describe('the server inventory', { skip: !databaseUrl }, () => {
       const list = ServerListSchema.parse((await owner.get('/servers?q=list-a')).body).servers;
       const one = server(await owner.get(`/servers/${found(list[0], 'list-a').id}`));
       assert.equal(one.facts?.source, 'ssh');
-      assert.deepEqual(found(one.facts, 'the facts').facts['disks'], [{ size: 10 }]);
+      assert.equal(one.facts.scriptSha256, 'a'.repeat(64));
+      const facts = found(one.facts, 'the facts').facts;
+      assert.equal(facts.os?.id, 'debian');
+      assert.equal(facts.containers?.[0]?.imageTag, '3.4.6');
+      assert.equal(facts.disks?.[0]?.mount, '/');
+
+      const oddList = ServerListSchema.parse((await owner.get('/servers?q=list-odd')).body).servers;
+      const oddOne = server(await owner.get(`/servers/${found(oddList[0], 'list-odd').id}`));
+      assert.equal(oddOne.facts?.facts.os, null);
+      assert.equal(oddOne.facts.facts.warnings.length, 1, 'it says it could not read them');
+      assert.equal(oddOne.facts.scriptSha256, null);
     });
   });
 

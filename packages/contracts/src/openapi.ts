@@ -57,12 +57,17 @@ import {
   UserRoleSchema,
 } from './roles.js';
 import {
+  AcceptHostKeyRequestSchema,
   AccessMethodSchema,
+  AccessVerificationSchema,
   AddAccessRequestSchema,
   CreateServerRequestSchema,
+  HostKeyAcceptedSchema,
+  HostKeyScanSchema,
   PinHostKeyRequestSchema,
   SecretRefSchema,
   ServerAccessSchema,
+  ServerFactsRecordSchema,
   ServerFactsSchema,
   ServerFactsSummarySchema,
   ServerHostKeySchema,
@@ -116,7 +121,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.19.0';
+export const OPENAPI_INFO_VERSION = '0.20.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -207,6 +212,7 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   AccessMethodSchema,
   ServerFactsSummarySchema,
   ServerFactsSchema,
+  ServerFactsRecordSchema,
   ServerSummarySchema,
   ServerListSchema,
   ServerHostKeySchema,
@@ -218,6 +224,10 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   PinHostKeyRequestSchema,
   AddAccessRequestSchema,
   UpdateAccessRequestSchema,
+  HostKeyScanSchema,
+  AcceptHostKeyRequestSchema,
+  HostKeyAcceptedSchema,
+  AccessVerificationSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -367,7 +377,7 @@ export function buildOpenApi(): Json {
       {
         name: 'servers',
         description:
-          'The inventory of servers: addresses, pinned SSH host keys, access entries that name vault secrets, and facts.',
+          'The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, and facts collected over SSH.',
       },
     ],
     paths,

@@ -1,5 +1,8 @@
 import {
+  type AcceptHostKeyRequest,
   type AcceptInvitationRequest,
+  type AccessVerification,
+  AccessVerificationSchema,
   type AuditCheckpoint,
   AuditCheckpointSchema,
   type AuditCheckpointVerification,
@@ -33,11 +36,17 @@ import {
   PluginViewSchema,
   type AddAccessRequest,
   type CreateServerRequest,
+  type HostKeyAccepted,
+  HostKeyAcceptedSchema,
+  type HostKeyScan,
+  HostKeyScanSchema,
   type PinHostKeyRequest,
   type ReadyResponse,
   ReadyResponseSchema,
   type ServerAccess,
   ServerAccessSchema,
+  type ServerFactsRecord,
+  ServerFactsRecordSchema,
   type ServerHostKey,
   ServerHostKeySchema,
   type ServerList,
@@ -129,6 +138,8 @@ export class ApiRequestError extends Error {
     readonly code: ErrorCode | 'unknown',
     message: string,
     readonly retryAfterSeconds: number | undefined,
+    /** Structured details some errors carry (the two fingerprints of a host key that changed). */
+    readonly details?: unknown,
   ) {
     super(message);
   }
@@ -203,6 +214,7 @@ async function send<T>(
       parsed.data.error.code,
       parsed.data.error.message,
       Number.isFinite(retry) && retry > 0 ? retry : undefined,
+      parsed.data.error.details,
     );
   }
   if (!schema) {
@@ -476,6 +488,25 @@ export const pinHostKey = (id: string, request: PinHostKeyRequest): Promise<Serv
 
 export const revokeHostKey = (id: string, keyId: string): Promise<void> =>
   send('DELETE', `/servers/${id}/host-keys/${keyId}`, undefined, undefined);
+
+/** Reads the host key the server shows, without a credential (`servers:write`). Nothing is stored. */
+export const scanHostKey = (id: string): Promise<HostKeyScan> =>
+  send('POST', `/servers/${id}/host-keys/scan`, undefined, HostKeyScanSchema);
+
+/** Pins the key the person confirmed; the server is asked again and must show exactly that key. */
+export const acceptHostKey = (
+  id: string,
+  request: AcceptHostKeyRequest,
+): Promise<HostKeyAccepted> =>
+  send('POST', `/servers/${id}/host-keys/accept`, request, HostKeyAcceptedSchema);
+
+/** Logs in with one access entry and runs read-only probes. A login that does not work is a result. */
+export const verifyServerAccess = (id: string, accessId: string): Promise<AccessVerification> =>
+  send('POST', `/servers/${id}/access/${accessId}/verify`, undefined, AccessVerificationSchema);
+
+/** Collects the facts of a server over SSH. */
+export const refreshServerFacts = (id: string): Promise<ServerFactsRecord> =>
+  send('POST', `/servers/${id}/facts/refresh`, undefined, ServerFactsRecordSchema);
 
 export const addServerAccess = (id: string, request: AddAccessRequest): Promise<ServerAccess> =>
   send('POST', `/servers/${id}/access`, request, ServerAccessSchema);

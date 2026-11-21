@@ -481,6 +481,35 @@ export class VaultService implements OnApplicationShutdown {
     });
   }
 
+  /**
+   * The value of a secret for a connection to a server (ADR 0037). Not a reveal: no person asked, so there is no
+   * `secret.revealed`; the operation that connects records its own use (`server.access.verified`, `server.facts.
+   * refreshed`). The type must be the one the access method needs, so an entry cannot be pointed at a secret of
+   * another kind. The caller keeps the value in memory for the length of the call and nowhere else.
+   */
+  readForServer(id: string, type: 'ssh_password' | 'ssh_key'): Promise<string> {
+    return this.serial.run(async () => {
+      const kek = this.openKey();
+      const row = await this.db.secret.findUnique({ where: { id } });
+      if (!row) {
+        throw new NotFoundException('The secret that this access entry names no longer exists.');
+      }
+      if (row.type !== type) {
+        throw new ConflictException(
+          `The secret "${row.name}" is not of the kind "${type}" that this access entry needs.`,
+        );
+      }
+      try {
+        return decryptSecret(kek, { id, version: row.version, type: row.type }, row);
+      } catch {
+        this.logger.error(
+          `secret ${id} did not decrypt: the stored blobs do not match their context`,
+        );
+        throw new InternalServerErrorException('The secret could not be decrypted.');
+      }
+    });
+  }
+
   /** The only way a value leaves. Recorded first: no record, no value. */
   reveal(actor: Actor, id: string, meta: RequestMeta): Promise<RevealedSecret> {
     return this.serial.run(() => this.revealNow(actor, id, meta));

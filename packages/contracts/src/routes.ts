@@ -39,12 +39,17 @@ import {
 } from './plugins.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
 import {
+  AcceptHostKeyRequestSchema,
   AccessParamsSchema,
+  AccessVerificationSchema,
   AddAccessRequestSchema,
   CreateServerRequestSchema,
+  HostKeyAcceptedSchema,
   HostKeyParamsSchema,
+  HostKeyScanSchema,
   PinHostKeyRequestSchema,
   ServerAccessSchema,
+  ServerFactsRecordSchema,
   ServerHostKeySchema,
   ServerIdParamsSchema,
   ServerListQuerySchema,
@@ -1121,6 +1126,79 @@ export const removeAccessRoute = defineRoute({
   responses: { 204: { description: 'The entry is gone.', schema: z.undefined(), empty: true } },
 });
 
+const SSH_ERRORS =
+  'Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`.';
+
+export const scanHostKeyRoute = defineRoute({
+  operationId: 'scanHostKey',
+  method: 'post',
+  path: '/servers/{id}/host-keys/scan',
+  tags: ['servers'],
+  summary: 'Read the host key the server shows',
+  description: `Connects to the server and reads its SSH host key without sending any credential, then compares it with the pinned ones. Nothing is stored (only an audit note): the person checks the fingerprint against another source and then calls \`accept\`. \`differs\` means keys are pinned and this one is not among them: expected after the operating system was reinstalled, a sign of somebody in the middle otherwise. It sends no credential, but it makes the API open a connection to the server, so it needs the same role (\`servers:write\`) as the other SSH operations; a role that may only read never causes a connection. Errors: 404, 409 \`address_not_allowed\`, 429 \`rate_limited\`, 502 \`ssh_connect_failed\`, 504 \`ssh_timeout\`.`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema },
+  responses: { 200: { description: 'The key the server shows.', schema: HostKeyScanSchema } },
+});
+
+export const acceptHostKeyRoute = defineRoute({
+  operationId: 'acceptHostKey',
+  method: 'post',
+  path: '/servers/{id}/host-keys/accept',
+  tags: ['servers'],
+  summary: 'Pin the host key the person confirmed',
+  description:
+    'Reads the key again and pins it only when it is exactly the fingerprint the person confirmed (otherwise 409 `host_key_mismatch`, nothing stored), with the source `scan`. Pinning a key that is pinned already changes nothing and answers 200. When other keys are pinned, a different key needs `replace: true`, which revokes them in the same step (the operating system was reinstalled); without it: 409 `host_key_replace_required`. Both the pin and the revocations are audit records. Other errors: 404, 409 `address_not_allowed`, 429, 502 `ssh_connect_failed`, 504 `ssh_timeout`.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema, body: AcceptHostKeyRequestSchema },
+  responses: {
+    200: { description: 'That key was pinned already.', schema: HostKeyAcceptedSchema },
+    201: { description: 'The key is pinned.', schema: HostKeyAcceptedSchema },
+  },
+});
+
+export const verifyAccessRoute = defineRoute({
+  operationId: 'verifyServerAccess',
+  method: 'post',
+  path: '/servers/{id}/access/{accessId}/verify',
+  tags: ['servers'],
+  summary: 'Try an access entry',
+  description: `Logs in with that entry (the host key must be pinned and is checked before any credential is sent) and runs read-only probes: \`id -un\`, \`id -u\` and a sudo check (with the stored sudo secret on standard input when there is one, otherwise \`sudo -n\`). A login that does not work is a result: 200 with \`ok: false\` and the code and message. The time and the outcome are kept on the entry. ${SSH_ERRORS}`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: AccessParamsSchema },
+  responses: { 200: { description: 'The result of the check.', schema: AccessVerificationSchema } },
+});
+
+export const refreshFactsRoute = defineRoute({
+  operationId: 'refreshServerFacts',
+  method: 'post',
+  path: '/servers/{id}/facts/refresh',
+  tags: ['servers'],
+  summary: 'Collect the facts of a server',
+  description: `Runs a fixed, read-only script over SSH (as root, or through sudo when the login is not root and sudo works, or as the login), parses its output strictly and stores the result; a malformed part becomes a warning and the rest is kept. Access entries are tried by priority until one logs in. One refresh per server runs at a time: a second request joins it. ${SSH_ERRORS} Also 409 \`no_access_entry\`, 502 \`ssh_connect_failed\`, \`ssh_auth_failed\`, \`ssh_key_invalid\`, \`ssh_failed\`, \`facts_unreadable\`, 504 \`ssh_timeout\`.`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema },
+  responses: { 200: { description: 'The new facts.', schema: ServerFactsRecordSchema } },
+});
+
+export const getFactsRoute = defineRoute({
+  operationId: 'getServerFacts',
+  method: 'get',
+  path: '/servers/{id}/facts',
+  tags: ['servers'],
+  summary: 'The facts collected last',
+  description:
+    'What the last refresh found, with when, what collected it and the hash of the script. 404 until facts were collected. Reading never connects to the server.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ServerIdParamsSchema },
+  responses: { 200: { description: 'The facts.', schema: ServerFactsRecordSchema } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -1207,6 +1285,11 @@ export const routes = [
   addAccessRoute,
   updateAccessRoute,
   removeAccessRoute,
+  scanHostKeyRoute,
+  acceptHostKeyRoute,
+  verifyAccessRoute,
+  refreshFactsRoute,
+  getFactsRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

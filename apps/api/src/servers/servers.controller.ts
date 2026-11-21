@@ -1,19 +1,28 @@
 import { Body, Controller, Inject, Req, Res } from '@nestjs/common';
 import {
+  type AcceptHostKeyRequest,
+  acceptHostKeyRoute,
   AccessParamsSchema,
+  type AccessVerification,
   addAccessRoute,
   type AddAccessRequest,
   type CreateServerRequest,
   createServerRoute,
   deleteServerRoute,
+  getFactsRoute,
   getServerRoute,
+  type HostKeyAccepted,
   HostKeyParamsSchema,
+  type HostKeyScan,
   listServersRoute,
   pinHostKeyRoute,
   type PinHostKeyRequest,
+  refreshFactsRoute,
   removeAccessRoute,
   revokeHostKeyRoute,
+  scanHostKeyRoute,
   type ServerAccess,
+  type ServerFactsRecord,
   type ServerHostKey,
   ServerIdParamsSchema,
   type ServerList,
@@ -22,11 +31,13 @@ import {
   type UpdateAccessRequest,
   updateServerRoute,
   type UpdateServerRequest,
+  verifyAccessRoute,
 } from '@swellwright/contracts';
 import type { Request, Response } from 'express';
 
 import { type AuthedRequest, requestMeta, requireAuth } from '../auth/context.js';
 import { ContractRoute } from '../contract-route.js';
+import { ServerSshService } from './server-ssh.service.js';
 import { ServersService } from './servers.service.js';
 
 const actorOf = (req: AuthedRequest): { id: string; name: string } => {
@@ -36,7 +47,10 @@ const actorOf = (req: AuthedRequest): { id: string; name: string } => {
 
 @Controller()
 export class ServersController {
-  constructor(@Inject(ServersService) private readonly servers: ServersService) {}
+  constructor(
+    @Inject(ServersService) private readonly servers: ServersService,
+    @Inject(ServerSshService) private readonly ssh: ServerSshService,
+  ) {}
 
   @ContractRoute(listServersRoute)
   list(@Req() req: Request): Promise<ServerList> {
@@ -109,5 +123,45 @@ export class ServersController {
   async removeAccess(@Req() req: AuthedRequest): Promise<void> {
     const { id, accessId } = AccessParamsSchema.parse(req.params);
     await this.servers.removeAccess(actorOf(req), id, accessId, requestMeta(req));
+  }
+
+  @ContractRoute(scanHostKeyRoute)
+  scanHostKey(@Req() req: AuthedRequest): Promise<HostKeyScan> {
+    const { id } = ServerIdParamsSchema.parse(req.params);
+    return this.ssh.scan(actorOf(req), id, requestMeta(req));
+  }
+
+  @ContractRoute(acceptHostKeyRoute)
+  async acceptHostKey(
+    @Body() body: AcceptHostKeyRequest,
+    @Req() req: AuthedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<HostKeyAccepted> {
+    const { id } = ServerIdParamsSchema.parse(req.params);
+    const { key, replaced, created } = await this.ssh.accept(
+      actorOf(req),
+      id,
+      body,
+      requestMeta(req),
+    );
+    res.status(created ? 201 : 200);
+    return { key, replaced };
+  }
+
+  @ContractRoute(verifyAccessRoute)
+  verifyAccess(@Req() req: AuthedRequest): Promise<AccessVerification> {
+    const { id, accessId } = AccessParamsSchema.parse(req.params);
+    return this.ssh.verify(actorOf(req), id, accessId, requestMeta(req));
+  }
+
+  @ContractRoute(refreshFactsRoute)
+  refreshFacts(@Req() req: AuthedRequest): Promise<ServerFactsRecord> {
+    const { id } = ServerIdParamsSchema.parse(req.params);
+    return this.ssh.refreshFacts(actorOf(req), id, requestMeta(req));
+  }
+
+  @ContractRoute(getFactsRoute)
+  getFacts(@Req() req: Request): Promise<ServerFactsRecord> {
+    return this.ssh.getFacts(ServerIdParamsSchema.parse(req.params).id);
   }
 }
