@@ -61,7 +61,6 @@ import {
   Callout,
   CopyableCodeBlock,
   DataTableCard,
-  ErrorMessageBlock,
   HeaderAction,
   HeaderActionGroup,
   HeaderActions,
@@ -1044,9 +1043,18 @@ export function UsersPage({
     state: {
       ...tableState.state,
       isLoading: list.isPending,
-      showAlertBanner: false,
+      showAlertBanner: list.isError,
       showProgressBars: list.isFetching,
     },
+    // The panel's failure state of a table: a red banner above the (empty) table.
+    ...(list.isError
+      ? {
+          mantineToolbarAlertBannerProps: {
+            color: 'red',
+            children: describeError(t, list.error, t('signInAgain'), t('table.loadFailed')),
+          },
+        }
+      : {}),
     getRowId: (user) => user.id,
     mantineTableBodyRowProps: ({ row }) =>
       canWrite
@@ -1143,17 +1151,7 @@ export function UsersPage({
           title={t('header.title')}
         />
         <DataTableCard.Content>
-          {list.isError ? (
-            <Box p="md">
-              <ErrorMessageBlock
-                copiedLabel={t('common:copied')}
-                copyLabel={t('common:copy')}
-                message={describeError(t, list.error, t('signInAgain'), t('table.loadFailed'))}
-              />
-            </Box>
-          ) : (
-            <MantineReactTable table={table} />
-          )}
+          <MantineReactTable table={table} />
         </DataTableCard.Content>
       </DataTableCard.Container>
 

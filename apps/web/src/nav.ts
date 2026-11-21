@@ -1,6 +1,5 @@
 import {
   IconApi,
-  IconApiApp,
   IconBell,
   IconBook,
   IconCalendarTime,
@@ -24,7 +23,7 @@ import type { TFunction } from 'i18next';
 import type { ElementType } from 'react';
 import { HiServer } from 'react-icons/hi';
 import { PiUsers } from 'react-icons/pi';
-import { TbStar } from 'react-icons/tb';
+import { TbCookie, TbStar } from 'react-icons/tb';
 
 import type { Permission } from '@swellwright/contracts';
 import type { Namespace } from '@swellwright/i18n';
@@ -231,7 +230,7 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
         id: 'tokens',
         name: t('nav:tokens'),
         href: ROUTES.DASHBOARD.SECURITY.TOKENS,
-        icon: IconApiApp,
+        icon: TbCookie,
       },
       {
         id: 'audit',

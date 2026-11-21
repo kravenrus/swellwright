@@ -447,9 +447,18 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
     state: {
       ...tableState.state,
       isLoading: list.isPending,
-      showAlertBanner: false,
+      showAlertBanner: list.isError,
       showProgressBars: list.isFetching,
     },
+    // The panel's failure state of a table: a red banner above the (empty) table.
+    ...(list.isError
+      ? {
+          mantineToolbarAlertBannerProps: {
+            color: 'red',
+            children: describeError(t, list.error, t('signInAgain'), t('all.loadFailed')),
+          },
+        }
+      : {}),
     getRowId: (session) => session.id,
     enableRowActions: canRevoke,
     positionActionsColumn: 'last',
@@ -549,17 +558,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         title={t('all.title')}
       />
       <DataTableCard.Content>
-        {list.isError ? (
-          <Box p="md">
-            <QueryErrorCard
-              message={describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
-              onRetry={() => void list.refetch()}
-              title={t('all.title')}
-            />
-          </Box>
-        ) : (
-          <MantineReactTable table={table} />
-        )}
+        <MantineReactTable table={table} />
       </DataTableCard.Content>
     </DataTableCard.Container>
   );
