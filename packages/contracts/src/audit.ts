@@ -57,9 +57,12 @@ export const AUDIT_ACTIONS = [
   'server.deleted',
   'server.host_key.pinned',
   'server.host_key.revoked',
+  'server.host_key.scanned',
   'server.access.added',
   'server.access.updated',
   'server.access.removed',
+  'server.access.verified',
+  'server.facts.refreshed',
 ] as const;
 export const AuditActionSchema = z.enum(AUDIT_ACTIONS).meta({ id: 'AuditAction' });
 export type AuditAction = z.infer<typeof AuditActionSchema>;

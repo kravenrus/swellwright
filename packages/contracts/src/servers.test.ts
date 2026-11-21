@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  AcceptHostKeyRequestSchema,
+  AccessVerificationSchema,
   AddAccessRequestSchema,
   CreateServerRequestSchema,
   FingerprintSchema,
+  HostKeyMismatchDetailsSchema,
   isValidServerAddress,
   PinHostKeyRequestSchema,
   type RouteDef,
@@ -208,7 +211,7 @@ describe('the server routes', () => {
   const mine = (routes as readonly RouteDef[]).filter((route) => route.tags.includes('servers'));
 
   it('declares a permission on every one, and none needs a step-up', () => {
-    assert.equal(mine.length, 10);
+    assert.equal(mine.length, 15);
     for (const route of mine) {
       assert.ok(
         route.permission === 'servers:read' || route.permission === 'servers:write',
@@ -226,5 +229,60 @@ describe('the server routes', () => {
         route.operationId,
       );
     }
+  });
+});
+
+describe('what the SSH operations say and take', () => {
+  it('takes the confirmed fingerprint, and a replace flag that is a boolean', () => {
+    assert.ok(AcceptHostKeyRequestSchema.safeParse({ fingerprintSha256: FINGERPRINT }).success);
+    assert.ok(
+      AcceptHostKeyRequestSchema.safeParse({ fingerprintSha256: FINGERPRINT, replace: true })
+        .success,
+    );
+    for (const bad of [
+      {},
+      { fingerprintSha256: 'SHA256:nope' },
+      { fingerprintSha256: FINGERPRINT, replace: 'yes' },
+    ]) {
+      assert.ok(!AcceptHostKeyRequestSchema.safeParse(bad).success, JSON.stringify(bad));
+    }
+  });
+
+  it('describes a check as a result with a sudo state, and a failure with one of its codes', () => {
+    const ok = {
+      ok: true,
+      verifiedAt: '2026-11-21T10:00:00.000Z',
+      latencyMs: 120,
+      remoteUser: 'deploy',
+      isRoot: false,
+      sudo: 'ok',
+    };
+    assert.ok(AccessVerificationSchema.safeParse(ok).success);
+    const failed = {
+      ok: false,
+      verifiedAt: '2026-11-21T10:00:00.000Z',
+      latencyMs: 15,
+      remoteUser: null,
+      isRoot: null,
+      sudo: 'unavailable',
+      error: { code: 'ssh_auth_failed', message: 'The server rejected the credentials.' },
+    };
+    assert.ok(AccessVerificationSchema.safeParse(failed).success);
+    assert.ok(!AccessVerificationSchema.safeParse({ ...ok, sudo: 'maybe' }).success);
+    // A host key that changed is an error of its own, never a result.
+    assert.ok(
+      !AccessVerificationSchema.safeParse({
+        ...failed,
+        error: { code: 'host_key_mismatch', message: 'x' },
+      }).success,
+    );
+  });
+
+  it('carries both fingerprints of a host key that was not the expected one', () => {
+    assert.ok(
+      HostKeyMismatchDetailsSchema.safeParse({ expected: [FINGERPRINT], actual: FINGERPRINT })
+        .success,
+    );
+    assert.ok(!HostKeyMismatchDetailsSchema.safeParse({ expected: FINGERPRINT }).success);
   });
 });

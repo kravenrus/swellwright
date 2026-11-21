@@ -164,6 +164,7 @@ export class SshConnection extends EventEmitter<SshConnectionEvents> {
   readonly username: string;
 
   readonly #client: Client;
+  readonly #socket: Socket;
   readonly #keepaliveMs: number;
   readonly #failers = new Set<(error: SshError) => void>();
   readonly #sftps = new Set<SftpClient>();
@@ -171,9 +172,15 @@ export class SshConnection extends EventEmitter<SshConnectionEvents> {
   #explicitClose = false;
   #deathCause: SshError | undefined;
 
-  private constructor(client: Client, prepared: PreparedTarget, hostKey: ServerHostKey) {
+  private constructor(
+    client: Client,
+    socket: Socket,
+    prepared: PreparedTarget,
+    hostKey: ServerHostKey,
+  ) {
     super();
     this.#client = client;
+    this.#socket = socket;
     this.#keepaliveMs = prepared.keepaliveIntervalMs * (prepared.keepaliveCountMax + 1);
     this.hostKey = hostKey;
     this.host = prepared.host;
@@ -254,7 +261,7 @@ export class SshConnection extends EventEmitter<SshConnectionEvents> {
         client.off('close', onClientClose);
         socket.off('error', onSocketError);
         if ('key' in outcome) {
-          resolve(new SshConnection(client, prepared, outcome.key));
+          resolve(new SshConnection(client, socket, prepared, outcome.key));
           return;
         }
         client.removeAllListeners();
@@ -342,9 +349,11 @@ export class SshConnection extends EventEmitter<SshConnectionEvents> {
     } catch {
       // Already gone.
     }
-    // `end()` asks politely; a peer that never answers must not keep the socket (and the process) alive.
+    // `end()` asks politely; a peer that never answers must not keep the socket (and the process) alive. The socket
+    // is destroyed itself: `Client.destroy()` of ssh2 does nothing once the socket is no longer writable, which is
+    // exactly the state `end()` leaves it in.
     setTimeout(() => {
-      this.#client.destroy();
+      this.#socket.destroy();
     }, 1000).unref();
   }
 

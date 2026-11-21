@@ -103,6 +103,7 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
 COPY --from=build /app/packages/plugin-api/dist ./packages/plugin-api/dist
+COPY --from=build /app/packages/ssh/dist ./packages/ssh/dist
 COPY --from=build /app/apps/web/dist ./web
 USER node
 EXPOSE 3000

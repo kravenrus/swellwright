@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"dist/**/*.test.js\"",
     "start": "node dist/main.js",
@@ -24,6 +24,7 @@
     "@swellwright/contracts": "workspace:*",
     "@swellwright/db": "workspace:*",
     "@swellwright/plugin-api": "workspace:*",
+    "@swellwright/ssh": "workspace:*",
     "iovalkey": "0.4.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",

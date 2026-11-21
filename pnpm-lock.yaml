@@ -56,6 +56,9 @@ importers:
       '@swellwright/plugin-api':
         specifier: workspace:*
         version: link:../../packages/plugin-api
+      '@swellwright/ssh':
+        specifier: workspace:*
+        version: link:../../packages/ssh
       iovalkey:
         specifier: 0.4.0
         version: 0.4.0

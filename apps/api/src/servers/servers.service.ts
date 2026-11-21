@@ -16,7 +16,8 @@ import {
   type SecretType,
   SECRET_TYPE_FOR_METHOD,
   type ServerAccess,
-  type ServerFacts,
+  ServerFactsSchema,
+  type ServerFactsRecord,
   type ServerFactsSummary,
   type ServerHostKey,
   type ServerList,
@@ -31,10 +32,13 @@ import { type Database, Prisma } from '@swellwright/db';
 
 import { AuditService } from '../audit/audit.service.js';
 import { type RequestMeta, requireDatabase } from '../auth/context.js';
+import { CodedHttpException } from '../http.js';
 import { DATABASE } from '../tokens.js';
+import { unreadableFacts } from './facts/parse-facts.js';
+import { SshService } from './ssh.service.js';
 
 /** An arbitrary constant: one transaction at a time changes the inventory, so the limits below hold. */
-const SERVERS_LOCK_KEY = 7_761_239;
+export const SERVERS_LOCK_KEY = 7_761_239;
 
 /** A server shows at most this many pinned host keys; there are only a handful of key types. */
 export const MAX_HOST_KEYS_PER_SERVER = 16;
@@ -45,7 +49,9 @@ export interface Actor {
   readonly name: string;
 }
 
-const WITH_FACT = { fact: { select: { facts: true, collectedAt: true, source: true } } } as const;
+const WITH_FACT = {
+  fact: { select: { facts: true, collectedAt: true, source: true, scriptSha256: true } },
+} as const;
 
 const FULL = {
   hostKeys: { orderBy: [{ acceptedAt: 'asc' }, { id: 'asc' }] },
@@ -67,6 +73,7 @@ interface FactRow {
   facts: Prisma.JsonValue;
   collectedAt: Date;
   source: string;
+  scriptSha256: string | null;
 }
 type AccessRow = ServerRow['access'][number];
 type HostKeyRow = ServerRow['hostKeys'][number];
@@ -80,31 +87,40 @@ const isForeignKeyViolation = (error: unknown): boolean =>
 const asText = (value: unknown): string | null =>
   typeof value === 'string' && value.trim() !== '' ? value.slice(0, 200) : null;
 
-/** The two facts the list shows. The rest of the facts belongs to the SSH layer. */
+/** The facts as stored, read through the schema; a record that does not fit it (another version) is shown as unreadable. */
+function readFacts(fact: FactRow) {
+  const parsed = ServerFactsSchema.safeParse(fact.facts);
+  return parsed.success ? parsed.data : null;
+}
+
+/** The two facts the list shows: the operating system and the kernel, as text. */
 function factsSummary(fact: FactRow | null): ServerFactsSummary | null {
   if (!fact) {
     return null;
   }
-  const facts =
-    typeof fact.facts === 'object' && fact.facts !== null && !Array.isArray(fact.facts)
-      ? fact.facts
-      : {};
+  const facts = readFacts(fact);
+  const os = facts?.os;
+  const osText =
+    asText(os?.prettyName) ?? asText([os?.id, os?.versionId].filter(Boolean).join(' '));
   return {
-    os: asText(facts['os']),
-    kernel: asText(facts['kernel']),
+    os: osText,
+    kernel: asText(facts?.kernel?.release),
     collectedAt: fact.collectedAt.toISOString(),
   };
 }
 
-function factsView(fact: FactRow | null): ServerFacts | null {
+export function factsView(fact: FactRow | null): ServerFactsRecord | null {
   if (!fact) {
     return null;
   }
-  const facts =
-    typeof fact.facts === 'object' && fact.facts !== null && !Array.isArray(fact.facts)
-      ? (fact.facts as Record<string, unknown>)
-      : {};
-  return { facts, collectedAt: fact.collectedAt.toISOString(), source: fact.source };
+  return {
+    facts:
+      readFacts(fact) ??
+      unreadableFacts('The stored facts are not of a version this server can read. Refresh them.'),
+    collectedAt: fact.collectedAt.toISOString(),
+    source: fact.source,
+    scriptSha256: fact.scriptSha256,
+  };
 }
 
 function serverFields(row: {
@@ -159,6 +175,8 @@ export function toServerAccess(row: AccessRow): ServerAccess {
     secret: secretRef(row.secret),
     sudoSecret: row.sudoSecret ? secretRef(row.sudoSecret) : null,
     priority: row.priority,
+    lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
+    lastVerifyOk: row.lastVerifyOk,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -196,6 +214,7 @@ export class ServersService {
   constructor(
     @Inject(DATABASE) private readonly database: Database | undefined,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(SshService) private readonly ssh: SshService,
   ) {}
 
   private get db(): Database['client'] {
@@ -487,6 +506,160 @@ export class ServersService {
         tx,
       );
     });
+    // A connection that was opened under the old trust must not be used again.
+    this.ssh.closeConnections();
+  }
+
+  /**
+   * Pins the key that a scan showed and a person confirmed (ADR 0037): the same record as a key pinned by hand, with the
+   * source `scan`. A key that is pinned already changes nothing. When other keys are pinned, a different key needs
+   * `replace`, which revokes them in the same transaction (the operating system was reinstalled); each revocation is
+   * recorded as such.
+   */
+  async acceptScannedKey(
+    actor: Actor,
+    id: string,
+    scanned: { algorithm: string; fingerprintSha256: string },
+    replace: boolean,
+    meta: RequestMeta,
+  ): Promise<{ key: ServerHostKey; created: boolean; replaced: number }> {
+    const result = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SERVERS_LOCK_KEY})`;
+      const server = await tx.server.findUnique({ where: { id }, select: { id: true } });
+      if (!server) {
+        throw new NotFoundException('There is no such server.');
+      }
+      const pinned = await tx.serverHostKey.findMany({
+        where: { serverId: id },
+        orderBy: [{ acceptedAt: 'asc' }, { id: 'asc' }],
+      });
+      const existing = pinned.find((key) => key.fingerprintSha256 === scanned.fingerprintSha256);
+      if (existing) {
+        return { row: existing, created: false, replaced: 0 };
+      }
+      if (pinned.length > 0 && !replace) {
+        throw new CodedHttpException(
+          409,
+          'host_key_replace_required',
+          'Other host keys are pinned for this server. If its operating system was reinstalled, confirm that the old keys are to be replaced; otherwise somebody may be answering in its place.',
+          { pinned: pinned.map((key) => key.fingerprintSha256) },
+        );
+      }
+      if (pinned.length > 0) {
+        await tx.serverHostKey.deleteMany({ where: { serverId: id } });
+        for (const old of pinned) {
+          await this.audit.record(
+            {
+              action: 'server.host_key.revoked',
+              outcome: 'success',
+              actor,
+              object: { type: 'server', id },
+              details: {
+                algorithm: old.algorithm,
+                fingerprint: old.fingerprintSha256,
+                source: old.source,
+                reason: 'replaced',
+              },
+              meta,
+            },
+            tx,
+          );
+        }
+      }
+      const row = await tx.serverHostKey.create({
+        data: {
+          serverId: id,
+          algorithm: scanned.algorithm,
+          fingerprintSha256: scanned.fingerprintSha256,
+          source: 'scan',
+          acceptedById: actor.id,
+        },
+      });
+      await this.audit.record(
+        {
+          action: 'server.host_key.pinned',
+          outcome: 'success',
+          actor,
+          object: { type: 'server', id },
+          details: {
+            algorithm: row.algorithm,
+            fingerprint: row.fingerprintSha256,
+            source: row.source,
+            replaced: pinned.length,
+          },
+          meta,
+        },
+        tx,
+      );
+      return { row, created: true, replaced: pinned.length };
+    });
+    if (result.replaced > 0) {
+      this.ssh.closeConnections();
+    }
+    return {
+      key: toHostKey(result.row, new Map([[actor.id, actor.name]])),
+      created: result.created,
+      replaced: result.replaced,
+    };
+  }
+
+  /** What a connection to the server needs: where it is, the pinned fingerprints and the entries by priority. */
+  async connectionInfo(id: string): Promise<{
+    id: string;
+    name: string;
+    address: string;
+    port: number;
+    fingerprints: string[];
+    access: {
+      id: string;
+      method: AccessMethod;
+      username: string;
+      secretId: string;
+      sudoSecretId: string | null;
+      priority: number;
+    }[];
+  }> {
+    const row = await this.db.server.findUnique({
+      where: { id },
+      include: {
+        hostKeys: { orderBy: [{ acceptedAt: 'asc' }, { id: 'asc' }] },
+        access: { orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] },
+      },
+    });
+    if (!row) {
+      throw new NotFoundException('There is no such server.');
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      address: row.address,
+      port: row.sshPort,
+      fingerprints: row.hostKeys.map((key) => key.fingerprintSha256),
+      access: row.access.map((entry) => ({
+        id: entry.id,
+        method: entry.method,
+        username: entry.username,
+        secretId: entry.secretId,
+        sudoSecretId: entry.sudoSecretId,
+        priority: entry.priority,
+      })),
+    };
+  }
+
+  /** The facts collected last; 404 when there is no such server or nothing was ever collected. */
+  async getFacts(id: string): Promise<ServerFactsRecord> {
+    const row = await this.db.serverFact.findUnique({ where: { serverId: id } });
+    if (!row) {
+      if (!(await this.db.server.findUnique({ where: { id }, select: { id: true } }))) {
+        throw new NotFoundException('There is no such server.');
+      }
+      throw new NotFoundException('No facts were collected for this server yet.');
+    }
+    const view = factsView(row);
+    if (!view) {
+      throw new NotFoundException('No facts were collected for this server yet.');
+    }
+    return view;
   }
 
   /**

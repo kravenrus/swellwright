@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.19.0",
+    "version": "0.20.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -53,7 +53,7 @@
     },
     {
       "name": "servers",
-      "description": "The inventory of servers: addresses, pinned SSH host keys, access entries that name vault secrets, and facts."
+      "description": "The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, and facts collected over SSH."
     }
   ],
   "paths": {
@@ -3521,6 +3521,307 @@
         ],
         "x-sw-permission": "servers:write"
       }
+    },
+    "/servers/{id}/host-keys/scan": {
+      "post": {
+        "operationId": "scanHostKey",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Read the host key the server shows",
+        "responses": {
+          "200": {
+            "description": "The key the server shows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostKeyScan"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Connects to the server and reads its SSH host key without sending any credential, then compares it with the pinned ones. Nothing is stored (only an audit note): the person checks the fingerprint against another source and then calls `accept`. `differs` means keys are pinned and this one is not among them: expected after the operating system was reinstalled, a sign of somebody in the middle otherwise. It sends no credential, but it makes the API open a connection to the server, so it needs the same role (`servers:write`) as the other SSH operations; a role that may only read never causes a connection. Errors: 404, 409 `address_not_allowed`, 429 `rate_limited`, 502 `ssh_connect_failed`, 504 `ssh_timeout`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/host-keys/accept": {
+      "post": {
+        "operationId": "acceptHostKey",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Pin the host key the person confirmed",
+        "responses": {
+          "200": {
+            "description": "That key was pinned already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostKeyAccepted"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The key is pinned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostKeyAccepted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reads the key again and pins it only when it is exactly the fingerprint the person confirmed (otherwise 409 `host_key_mismatch`, nothing stored), with the source `scan`. Pinning a key that is pinned already changes nothing and answers 200. When other keys are pinned, a different key needs `replace: true`, which revokes them in the same step (the operating system was reinstalled); without it: 409 `host_key_replace_required`. Both the pin and the revocations are audit records. Other errors: 404, 409 `address_not_allowed`, 429, 502 `ssh_connect_failed`, 504 `ssh_timeout`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptHostKeyRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/access/{accessId}/verify": {
+      "post": {
+        "operationId": "verifyServerAccess",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Try an access entry",
+        "responses": {
+          "200": {
+            "description": "The result of the check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessVerification"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Logs in with that entry (the host key must be pinned and is checked before any credential is sent) and runs read-only probes: `id -un`, `id -u` and a sudo check (with the stored sudo secret on standard input when there is one, otherwise `sudo -n`). A login that does not work is a result: 200 with `ok: false` and the code and message. The time and the outcome are kept on the entry. Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "accessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/facts/refresh": {
+      "post": {
+        "operationId": "refreshServerFacts",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Collect the facts of a server",
+        "responses": {
+          "200": {
+            "description": "The new facts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerFactsRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Runs a fixed, read-only script over SSH (as root, or through sudo when the login is not root and sudo works, or as the login), parses its output strictly and stores the result; a malformed part becomes a warning and the rest is kept. Access entries are tried by priority until one logs in. One refresh per server runs at a time: a second request joins it. Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`. Also 409 `no_access_entry`, 502 `ssh_connect_failed`, `ssh_auth_failed`, `ssh_key_invalid`, `ssh_failed`, `facts_unreadable`, 504 `ssh_timeout`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/facts": {
+      "get": {
+        "operationId": "getServerFacts",
+        "tags": [
+          "servers"
+        ],
+        "summary": "The facts collected last",
+        "responses": {
+          "200": {
+            "description": "The facts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerFactsRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "What the last refresh found, with when, what collected it and the hash of the script. 404 until facts were collected. Reading never connects to the server.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
     }
   },
   "components": {
@@ -3538,6 +3839,17 @@
           "conflict",
           "rate_limited",
           "not_ready",
+          "host_key_not_pinned",
+          "host_key_mismatch",
+          "host_key_replace_required",
+          "address_not_allowed",
+          "no_access_entry",
+          "ssh_connect_failed",
+          "ssh_auth_failed",
+          "ssh_key_invalid",
+          "ssh_timeout",
+          "ssh_failed",
+          "facts_unreadable",
           "internal_error"
         ]
       },
@@ -4190,9 +4502,12 @@
           "server.deleted",
           "server.host_key.pinned",
           "server.host_key.revoked",
+          "server.host_key.scanned",
           "server.access.added",
           "server.access.updated",
-          "server.access.removed"
+          "server.access.removed",
+          "server.access.verified",
+          "server.facts.refreshed"
         ]
       },
       "AuditOutcome": {
@@ -6539,7 +6854,7 @@
         "type": "object",
         "properties": {
           "os": {
-            "description": "For example \"Ubuntu 24.04\"; null when the facts do not say.",
+            "description": "For example \"Ubuntu 24.04.1 LTS\"; null when the facts do not say.",
             "type": [
               "string",
               "null"
@@ -6567,13 +6882,791 @@
       "ServerFacts": {
         "type": "object",
         "properties": {
-          "facts": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "collectedAs": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "root",
+                  "sudo",
+                  "user"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With which rights the script ran: as root, as the login through sudo, or as the plain login. Some facts (listening processes, `sshd` settings, the firewall, containers) need root."
+          },
+          "os": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`ID` of /etc/os-release, for example `ubuntu`."
+                  },
+                  "versionId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`VERSION_ID`, for example `24.04`."
+                  },
+                  "prettyName": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`PRETTY_NAME`."
+                  }
+                },
+                "required": [
+                  "id",
+                  "versionId",
+                  "prettyName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kernel": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`uname -s`: `Linux`."
+                  },
+                  "release": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`uname -r`."
+                  },
+                  "arch": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`uname -m`."
+                  }
+                },
+                "required": [
+                  "name",
+                  "release",
+                  "arch"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hostname": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uptimeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bootedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The server clock minus the uptime."
+          },
+          "cpuCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loadAverage": {
+            "anyOf": [
+              {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The 1, 5 and 15 minute load averages."
+          },
+          "memory": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "totalBytes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "availableBytes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "swapTotalBytes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "swapFreeBytes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "totalBytes",
+                  "availableBytes",
+                  "swapTotalBytes",
+                  "swapFreeBytes"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disks": {
+            "anyOf": [
+              {
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "mount": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "device": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "totalBytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "usedBytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "availableBytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "mount",
+                    "device",
+                    "totalBytes",
+                    "usedBytes",
+                    "availableBytes"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`/` and the mounts of real block devices; not tmpfs, snaps or overlays."
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "utc": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The server clock when it was read."
+                  },
+                  "skewSeconds": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Server clock minus this server, in seconds (positive: the server is ahead)."
+                  },
+                  "timezone": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ntpSynchronized": {
+                    "description": "`timedatectl`: is the clock synchronised.",
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "utc",
+                  "skewSeconds",
+                  "timezone",
+                  "ntpSynchronized"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "systemd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`systemctl is-system-running`: `running`, `degraded`, `starting`, ..."
+                  },
+                  "failedUnits": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 128
+                    }
+                  }
+                },
+                "required": [
+                  "state",
+                  "failedUnits"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rebootRequired": {
+            "description": "`/var/run/reboot-required` exists.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "listeningPorts": {
+            "anyOf": [
+              {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "maxLength": 64
+                    },
+                    "port": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 65535
+                    },
+                    "process": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Visible to root only."
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "port",
+                    "process"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TCP sockets in the LISTEN state."
+          },
+          "services": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "enum": [
+                        "ssh",
+                        "docker",
+                        "haproxy",
+                        "nginx",
+                        "fail2ban",
+                        "ufw"
+                      ]
+                    },
+                    "state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "inactive",
+                            "failed",
+                            "activating",
+                            "deactivating",
+                            "not_installed"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state systemd reports; `not_installed` when there is no such unit."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "state"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versions": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "docker": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "haproxy": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nginx": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fail2ban": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "docker",
+                  "haproxy",
+                  "nginx",
+                  "fail2ban"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for a program that is not installed."
+          },
+          "containers": {
+            "anyOf": [
+              {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    "image": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "imageName": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "imageTag": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The tag of the image, which names the version of a node."
+                    },
+                    "state": {
+                      "type": "string",
+                      "maxLength": 32
+                    },
+                    "status": {
+                      "type": "string",
+                      "maxLength": 128
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "image",
+                    "imageName",
+                    "imageTag",
+                    "state",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Docker containers, running or not; null without docker or without the right to ask it."
+          },
+          "firewall": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ufw": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "inactive"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "ufw"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sshd": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "passwordAuthentication": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "permitRootLogin": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "port",
+                  "passwordAuthentication",
+                  "permitRootLogin"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The effective `sshd -T` settings; needs root."
+          },
+          "updates": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "manager": {
+                    "type": "string",
+                    "const": "apt"
+                  },
+                  "upgradable": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Packages an upgrade would change, by the package lists the server already has: nothing is fetched."
+                  }
+                },
+                "required": [
+                  "manager",
+                  "upgradable"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
             },
-            "additionalProperties": {},
-            "description": "What was found on the server. Its shape belongs to the SSH layer."
+            "description": "What was malformed or cut off; the rest is intact."
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "collectedAs",
+          "os",
+          "kernel",
+          "hostname",
+          "uptimeSeconds",
+          "bootedAt",
+          "cpuCount",
+          "loadAverage",
+          "memory",
+          "disks",
+          "time",
+          "systemd",
+          "rebootRequired",
+          "listeningPorts",
+          "services",
+          "versions",
+          "containers",
+          "firewall",
+          "sshd",
+          "updates",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "ServerFactsRecord": {
+        "type": "object",
+        "properties": {
+          "facts": {
+            "$ref": "#/components/schemas/ServerFacts"
           },
           "collectedAt": {
             "type": "string",
@@ -6582,13 +7675,21 @@
           },
           "source": {
             "type": "string",
-            "description": "What collected it, for example `ssh`."
+            "description": "What collected it: `ssh`."
+          },
+          "scriptSha256": {
+            "description": "The SHA-256 of the script that ran on the server; null for facts of an earlier version.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "facts",
           "collectedAt",
-          "source"
+          "source",
+          "scriptSha256"
         ],
         "additionalProperties": false
       },
@@ -6725,7 +7826,7 @@
           },
           "source": {
             "type": "string",
-            "description": "`manual` (typed in) or, later, `scan`."
+            "description": "`manual` (typed in) or `scan` (read from the server and confirmed)."
           },
           "acceptedBy": {
             "description": "The login name of the user who pinned it; null when that user no longer exists.",
@@ -6808,6 +7909,26 @@
             "maximum": 9007199254740991,
             "description": "Lower first: the order in which the entries are tried."
           },
+          "lastVerifiedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the entry was last tried; null if never."
+          },
+          "lastVerifyOk": {
+            "description": "Whether that try logged in and ran its checks; null if never tried.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -6826,6 +7947,8 @@
           "secret",
           "sudoSecret",
           "priority",
+          "lastVerifiedAt",
+          "lastVerifyOk",
           "createdAt",
           "updatedAt"
         ],
@@ -6904,7 +8027,7 @@
           "facts": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ServerFacts"
+                "$ref": "#/components/schemas/ServerFactsRecord"
               },
               {
                 "type": "null"
@@ -7134,6 +8257,165 @@
         },
         "additionalProperties": false,
         "description": "Fields that are absent stay as they are; `null` removes the sudo secret. The result must still be consistent: the secret kind has to fit the method."
+      },
+      "HostKeyScan": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "The address that was asked, as the inventory has it."
+          },
+          "port": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "algorithm": {
+            "type": "string"
+          },
+          "fingerprintSha256": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "pinned",
+              "differs"
+            ],
+            "description": "`new`: nothing is pinned yet. `pinned`: this key is one of the pinned ones. `differs`: keys are pinned and this is none of them, which after a reinstall of the operating system is expected, and otherwise may be somebody in the middle."
+          },
+          "pinned": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerHostKey"
+            },
+            "description": "The keys that are pinned now."
+          }
+        },
+        "required": [
+          "address",
+          "port",
+          "algorithm",
+          "fingerprintSha256",
+          "status",
+          "pinned"
+        ],
+        "additionalProperties": false
+      },
+      "AcceptHostKeyRequest": {
+        "type": "object",
+        "properties": {
+          "fingerprintSha256": {
+            "type": "string",
+            "pattern": "^SHA256:[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]$",
+            "description": "The fingerprint the person was shown and confirmed. The server is asked again and must show exactly this key."
+          },
+          "replace": {
+            "description": "Required when other keys are pinned: they are revoked in the same step (the operating system was reinstalled).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fingerprintSha256"
+        ],
+        "additionalProperties": false
+      },
+      "HostKeyAccepted": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/ServerHostKey"
+          },
+          "replaced": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How many pinned keys were revoked."
+          }
+        },
+        "required": [
+          "key",
+          "replaced"
+        ],
+        "additionalProperties": false
+      },
+      "AccessVerification": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "The login worked and the check commands ran."
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How long the whole check took."
+          },
+          "remoteUser": {
+            "description": "`id -un` on the server.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isRoot": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "sudo": {
+            "type": "string",
+            "enum": [
+              "not_needed",
+              "ok",
+              "password_required",
+              "failed",
+              "unavailable"
+            ],
+            "description": "`not_needed`: the login is root. `ok`: sudo works (without a password, or with the stored one). `password_required`: sudo asks for a password and none is stored. `failed`: sudo refused. `unavailable`: sudo is not installed, or the check did not get that far."
+          },
+          "error": {
+            "description": "Why the check failed, when it did.",
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "ssh_connect_failed",
+                  "ssh_auth_failed",
+                  "ssh_key_invalid",
+                  "ssh_timeout",
+                  "ssh_failed"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "ok",
+          "verifiedAt",
+          "latencyMs",
+          "remoteUser",
+          "isRoot",
+          "sudo"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {

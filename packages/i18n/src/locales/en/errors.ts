@@ -12,4 +12,21 @@ export const errors = {
   validation: 'Some of the values are not valid.',
   server: 'Something went wrong on the server. Try again.',
   generic: 'Something went wrong. Try again.',
+  ssh: {
+    hostKeyNotPinned:
+      'No host key is pinned for this server. Scan its host key and confirm the fingerprint first.',
+    hostKeyMismatch: 'The server shows another host key than the pinned one. No login was sent.',
+    hostKeyReplaceRequired:
+      'Other host keys are pinned for this server. Confirm that they are to be replaced, or find out why the key changed.',
+    addressNotAllowed:
+      'The address of this server is not allowed by the policy of this installation.',
+    noAccessEntry: 'This server has no way to log in. Add an access entry first.',
+    connectFailed: 'The server could not be reached over SSH.',
+    authFailed: 'The server did not accept the login.',
+    keyInvalid: 'The private key in the vault cannot be used.',
+    timeout: 'The server did not answer in time.',
+    failed: 'The SSH connection failed.',
+    factsUnreadable: 'The server did not answer with the output of the facts script.',
+    rateLimited: 'Too many SSH operations. Try again in a minute.',
+  },
 } as const;

@@ -40,8 +40,10 @@ import { PluginsController } from './plugins/plugins.controller.js';
 import { PluginsService } from './plugins/plugins.service.js';
 import { PluginRuntime } from './plugins/runtime.js';
 import { RolesController } from './roles.controller.js';
+import { ServerSshService } from './servers/server-ssh.service.js';
 import { ServersController } from './servers/servers.controller.js';
 import { ServersService } from './servers/servers.service.js';
+import { SshService } from './servers/ssh.service.js';
 import { SystemController } from './system.controller.js';
 import { UpdatesService } from './system/updates.service.js';
 import { InvitationService } from './users/invitation.service.js';
@@ -128,6 +130,8 @@ export class AppModule implements OnApplicationShutdown {
         InvitationService,
         UsersService,
         ServersService,
+        SshService,
+        ServerSshService,
         PluginRuntime,
         PluginBroker,
         PluginsService,

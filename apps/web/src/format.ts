@@ -69,3 +69,23 @@ export function useNumber(): (value: number) => string {
     return (value) => format.format(value);
   }, [language]);
 }
+
+const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'] as const;
+
+/** Formats a size in bytes in binary units with the separators of the console's language (`1.92 GiB`, two decimals as the panel prints sizes). */
+export function useBytes(): (bytes: number) => string {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
+  return useMemo(() => {
+    const format = new Intl.NumberFormat(language, { maximumFractionDigits: 2 });
+    return (bytes) => {
+      let value = Math.max(0, bytes);
+      let unit = 0;
+      while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+        value /= 1024;
+        unit += 1;
+      }
+      return `${format.format(value)} ${BYTE_UNITS[unit] ?? 'B'}`;
+    };
+  }, [language]);
+}

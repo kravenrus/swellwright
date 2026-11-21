@@ -16,7 +16,7 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { IconEdit, IconKey, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconKey, IconPlugConnected, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ import { Link } from 'react-router';
 
 import {
   ACCESS_METHODS,
+  type AccessVerification,
   AccessUsernameSchema,
   type AccessMethod,
   MAX_ACCESS_PER_SERVER,
@@ -33,14 +34,28 @@ import {
   type ServerView,
   SUDO_SECRET_TYPE,
 } from '@swellwright/contracts';
-import { ModalFooter, OverlayHeader, SectionCard } from '@swellwright/ui';
+import {
+  ErrorMessageBlock,
+  ModalFooter,
+  OverlayHeader,
+  SectionCard,
+  StatusBadge,
+} from '@swellwright/ui';
 
-import { addServerAccess, listSecrets, removeServerAccess, updateServerAccess } from '../api.js';
+import {
+  addServerAccess,
+  listSecrets,
+  removeServerAccess,
+  updateServerAccess,
+  verifyServerAccess,
+} from '../api.js';
+import { useTimeFirst } from '../security/time-first.js';
 import { notifyFailure } from '../security/notify-failure.js';
 import { useLastDefined } from '../security/use-last-defined.js';
 import { ROUTES } from '../routes.js';
-import { confirmAction, notifySuccess } from '../shell/feedback.js';
+import { confirmAction, notifyError, notifySuccess } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
+import { hostKeyMismatchOf, notifySshFailure, sshErrorText } from './ssh-errors.js';
 
 const asMethod = (value: string | null): AccessMethod | null =>
   ACCESS_METHODS.find((known) => known === value) ?? null;
@@ -291,6 +306,98 @@ function AccessDialog({
   );
 }
 
+/** What came of trying an entry: the answer of the server, or the error that stopped the attempt. */
+type Outcome = { kind: 'result'; result: AccessVerification } | { kind: 'error'; message: string };
+
+function VerificationResult({
+  outcome,
+  username,
+}: {
+  outcome: Outcome | undefined;
+  username: string;
+}) {
+  const { t } = useTranslation(['servers', 'common']);
+  const formatTime = useTimeFirst();
+  if (outcome === undefined) {
+    return null;
+  }
+  if (outcome.kind === 'error') {
+    return (
+      <Stack gap="xs">
+        <StatusBadge kind="err">{t('access.result.failed')}</StatusBadge>
+        <ErrorMessageBlock
+          copiedLabel={t('common:copied')}
+          copyLabel={t('common:copy')}
+          message={outcome.message}
+        />
+      </Stack>
+    );
+  }
+  const { result } = outcome;
+  return (
+    <Stack gap="xs">
+      <Group gap="xs" justify="space-between" wrap="nowrap">
+        <StatusBadge kind={result.ok ? 'ok' : 'err'}>
+          {result.ok ? t('access.result.ok') : t('access.result.failed')}
+        </StatusBadge>
+        <Text c="dimmed" size="xs">
+          {formatTime(result.verifiedAt)}
+        </Text>
+      </Group>
+      {result.ok ? (
+        <DataList orientation="vertical" size="xs" withDivider>
+          <DataList.Item>
+            <DataList.ItemLabel>{t('access.result.user')}</DataList.ItemLabel>
+            <DataList.ItemValue>
+              <Text ff="monospace" size="sm">
+                {result.remoteUser ?? username}
+              </Text>
+            </DataList.ItemValue>
+          </DataList.Item>
+          <DataList.Item>
+            <DataList.ItemLabel>{t('access.result.root')}</DataList.ItemLabel>
+            <DataList.ItemValue>
+              {result.isRoot ? t('access.result.yes') : t('access.result.no')}
+            </DataList.ItemValue>
+          </DataList.Item>
+          <DataList.Item>
+            <DataList.ItemLabel>{t('access.result.sudo')}</DataList.ItemLabel>
+            <DataList.ItemValue>
+              <Badge
+                color={
+                  result.sudo === 'ok' || result.sudo === 'not_needed'
+                    ? 'teal'
+                    : result.sudo === 'unavailable'
+                      ? 'gray'
+                      : 'orange'
+                }
+                size="lg"
+                variant="soft"
+              >
+                {t(`access.result.sudoStates.${result.sudo}`)}
+              </Badge>
+            </DataList.ItemValue>
+          </DataList.Item>
+          <DataList.Item>
+            <DataList.ItemLabel>{t('access.result.duration')}</DataList.ItemLabel>
+            <DataList.ItemValue>
+              <Text ff="monospace" size="sm">
+                {t('access.result.latency', { ms: result.latencyMs })}
+              </Text>
+            </DataList.ItemValue>
+          </DataList.Item>
+        </DataList>
+      ) : result.error ? (
+        <ErrorMessageBlock
+          copiedLabel={t('common:copied')}
+          copyLabel={t('common:copy')}
+          message={`${result.error.code}: ${result.error.message}`}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
 export function AccessCard({
   server,
   canWrite,
@@ -305,6 +412,42 @@ export function AccessCard({
   const { t } = useTranslation(['servers', 'common', 'vault']);
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<Target>(undefined);
+  const formatTime = useTimeFirst();
+  const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
+
+  const verify = useMutation({
+    mutationFn: (entry: ServerAccess) => verifyServerAccess(server.id, entry.id),
+    onSuccess: (result, entry) => {
+      setOutcomes((previous) => ({ ...previous, [entry.id]: { kind: 'result', result } }));
+      if (result.ok) {
+        notifySuccess(
+          t('toast.success'),
+          t('access.verifiedOk', { username: entry.username, name: server.name }),
+        );
+      } else {
+        notifyError(
+          t('access.verifyFailed'),
+          t('access.verifiedFailed', { username: entry.username, name: server.name }),
+        );
+      }
+      done();
+    },
+    onError: (error, entry) => {
+      const text = sshErrorText(t, error, t('signInAgain'), t('access.forbidden'));
+      const mismatch = hostKeyMismatchOf(error);
+      setOutcomes((previous) => ({
+        ...previous,
+        [entry.id]: {
+          kind: 'error',
+          message: mismatch
+            ? `${text}\n${t('hostKeys.scan.expected')}: ${mismatch.expected.join(', ')}\n${t('hostKeys.scan.actual')}: ${mismatch.actual}`
+            : text,
+        },
+      }));
+      notifySshFailure(t, t('access.verifyFailed'), error, t('signInAgain'), t('access.forbidden'));
+      done();
+    },
+  });
 
   const done = () => {
     void queryClient.invalidateQueries({ queryKey: ['servers'] });
@@ -395,6 +538,23 @@ export function AccessCard({
                 </Group>
                 {canWrite ? (
                   <Group gap={4} wrap="nowrap">
+                    <Tooltip
+                      label={t('access.verifyNamed', { username: entry.username })}
+                      withArrow
+                    >
+                      <Button
+                        color="teal"
+                        leftSection={<IconPlugConnected size={16} />}
+                        loading={verify.isPending && verify.variables.id === entry.id}
+                        onClick={() => {
+                          verify.mutate(entry);
+                        }}
+                        size="sm"
+                        variant="soft"
+                      >
+                        {t('access.verify')}
+                      </Button>
+                    </Tooltip>
                     <Tooltip label={t('access.edit')} withArrow>
                       <ActionIcon
                         aria-label={t('access.editNamed', { username: entry.username })}
@@ -440,7 +600,29 @@ export function AccessCard({
                   <DataList.ItemLabel>{t('access.priority')}</DataList.ItemLabel>
                   <DataList.ItemValue>{entry.priority}</DataList.ItemValue>
                 </DataList.Item>
+                <DataList.Item>
+                  <DataList.ItemLabel>{t('access.lastVerified')}</DataList.ItemLabel>
+                  <DataList.ItemValue>
+                    {entry.lastVerifiedAt === null ? (
+                      t('access.neverVerified')
+                    ) : (
+                      <Group gap="xs" wrap="wrap">
+                        <Text size="sm">{formatTime(entry.lastVerifiedAt)}</Text>
+                        <Badge
+                          color={entry.lastVerifyOk === true ? 'teal' : 'red'}
+                          size="lg"
+                          variant="soft"
+                        >
+                          {entry.lastVerifyOk === true
+                            ? t('access.lastOk')
+                            : t('access.lastFailed')}
+                        </Badge>
+                      </Group>
+                    )}
+                  </DataList.ItemValue>
+                </DataList.Item>
               </DataList>
+              <VerificationResult outcome={outcomes[entry.id]} username={entry.username} />
             </Stack>
           </SectionCard.Section>
         ))}
@@ -458,7 +640,11 @@ export function AccessCard({
         onClose={() => {
           setTarget(undefined);
         }}
-        onDone={done}
+        onDone={() => {
+          // A result belongs to the entry as it was tried: a changed entry starts without one.
+          setOutcomes({});
+          done();
+        }}
         server={server}
         target={target}
       />

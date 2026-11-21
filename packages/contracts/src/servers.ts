@@ -88,29 +88,198 @@ export const FingerprintSchema = z.string().trim().regex(FINGERPRINT_PATTERN, {
   message: 'Use a SHA-256 fingerprint as ssh-keygen prints it: SHA256: and 43 base64 characters.',
 });
 
-/** What the SSH layer will put into the facts. The summary reads only these two, as text. */
+/** The two facts the list shows, as text. */
 export const ServerFactsSummarySchema = z
   .object({
     os: z
       .string()
       .nullable()
-      .describe('For example "Ubuntu 24.04"; null when the facts do not say.'),
+      .describe('For example "Ubuntu 24.04.1 LTS"; null when the facts do not say.'),
     kernel: z.string().nullable(),
     collectedAt: z.iso.datetime(),
   })
   .meta({ id: 'ServerFactsSummary' });
 export type ServerFactsSummary = z.infer<typeof ServerFactsSummarySchema>;
 
+/** Facts schema version. A reader that meets another number must not guess: it shows the facts as unreadable. */
+export const SERVER_FACTS_SCHEMA_VERSION = 1;
+
+const Text = (max: number) => z.string().max(max);
+const Count = z.number().int().nonnegative();
+
+/**
+ * What a read-only script found on a server (ADR 0037). Every value can be null: a minimal server lacks tools, and
+ * a tool the login may not use shows nothing. An empty list means "looked, found none"; null means "could not look".
+ * What was malformed is named in `warnings`; the rest of the facts is still there.
+ */
 export const ServerFactsSchema = z
   .object({
-    facts: z
-      .record(z.string(), z.unknown())
-      .describe('What was found on the server. Its shape belongs to the SSH layer.'),
-    collectedAt: z.iso.datetime(),
-    source: z.string().describe('What collected it, for example `ssh`.'),
+    schemaVersion: z.literal(SERVER_FACTS_SCHEMA_VERSION),
+    collectedAs: z
+      .enum(['root', 'sudo', 'user'])
+      .nullable()
+      .describe(
+        'With which rights the script ran: as root, as the login through sudo, or as the plain login. Some facts (listening processes, `sshd` settings, the firewall, containers) need root.',
+      ),
+    os: z
+      .object({
+        id: Text(64).nullable().describe('`ID` of /etc/os-release, for example `ubuntu`.'),
+        versionId: Text(64).nullable().describe('`VERSION_ID`, for example `24.04`.'),
+        prettyName: Text(128).nullable().describe('`PRETTY_NAME`.'),
+      })
+      .nullable(),
+    kernel: z
+      .object({
+        name: Text(32).nullable().describe('`uname -s`: `Linux`.'),
+        release: Text(128).nullable().describe('`uname -r`.'),
+        arch: Text(32).nullable().describe('`uname -m`.'),
+      })
+      .nullable(),
+    hostname: Text(255).nullable(),
+    uptimeSeconds: Count.nullable(),
+    bootedAt: z.iso.datetime().nullable().describe('The server clock minus the uptime.'),
+    cpuCount: Count.nullable(),
+    loadAverage: z
+      .tuple([z.number(), z.number(), z.number()])
+      .nullable()
+      .describe('The 1, 5 and 15 minute load averages.'),
+    memory: z
+      .object({
+        totalBytes: Count.nullable(),
+        availableBytes: Count.nullable(),
+        swapTotalBytes: Count.nullable(),
+        swapFreeBytes: Count.nullable(),
+      })
+      .nullable(),
+    disks: z
+      .array(
+        z.object({
+          mount: Text(256),
+          device: Text(256),
+          totalBytes: Count,
+          usedBytes: Count,
+          availableBytes: Count,
+        }),
+      )
+      .max(32)
+      .nullable()
+      .describe('`/` and the mounts of real block devices; not tmpfs, snaps or overlays.'),
+    time: z
+      .object({
+        utc: z.iso.datetime().nullable().describe('The server clock when it was read.'),
+        skewSeconds: z
+          .number()
+          .int()
+          .nullable()
+          .describe('Server clock minus this server, in seconds (positive: the server is ahead).'),
+        timezone: Text(64).nullable(),
+        ntpSynchronized: z
+          .boolean()
+          .nullable()
+          .describe('`timedatectl`: is the clock synchronised.'),
+      })
+      .nullable(),
+    systemd: z
+      .object({
+        state: Text(32)
+          .nullable()
+          .describe('`systemctl is-system-running`: `running`, `degraded`, `starting`, ...'),
+        failedUnits: z.array(Text(128)).max(20),
+      })
+      .nullable(),
+    rebootRequired: z.boolean().nullable().describe('`/var/run/reboot-required` exists.'),
+    listeningPorts: z
+      .array(
+        z.object({
+          address: Text(64),
+          port: z.number().int().min(0).max(65535),
+          process: Text(64).nullable().describe('Visible to root only.'),
+        }),
+      )
+      .max(200)
+      .nullable()
+      .describe('TCP sockets in the LISTEN state.'),
+    services: z
+      .array(
+        z.object({
+          name: z.enum(['ssh', 'docker', 'haproxy', 'nginx', 'fail2ban', 'ufw']),
+          state: z
+            .enum(['active', 'inactive', 'failed', 'activating', 'deactivating', 'not_installed'])
+            .nullable()
+            .describe('The state systemd reports; `not_installed` when there is no such unit.'),
+        }),
+      )
+      .nullable(),
+    versions: z
+      .object({
+        docker: Text(64).nullable(),
+        haproxy: Text(64).nullable(),
+        nginx: Text(64).nullable(),
+        fail2ban: Text(64).nullable(),
+      })
+      .nullable()
+      .describe('Null for a program that is not installed.'),
+    containers: z
+      .array(
+        z.object({
+          name: Text(128),
+          image: Text(256),
+          imageName: Text(256),
+          imageTag: Text(128)
+            .nullable()
+            .describe('The tag of the image, which names the version of a node.'),
+          state: Text(32),
+          status: Text(128),
+        }),
+      )
+      .max(200)
+      .nullable()
+      .describe(
+        'Docker containers, running or not; null without docker or without the right to ask it.',
+      ),
+    firewall: z
+      .object({
+        ufw: z.enum(['active', 'inactive']).nullable(),
+      })
+      .nullable(),
+    sshd: z
+      .object({
+        port: z.number().int().min(1).max(65535).nullable(),
+        passwordAuthentication: z.boolean().nullable(),
+        permitRootLogin: Text(32).nullable(),
+      })
+      .nullable()
+      .describe('The effective `sshd -T` settings; needs root.'),
+    updates: z
+      .object({
+        manager: z.literal('apt'),
+        upgradable: Count.describe(
+          'Packages an upgrade would change, by the package lists the server already has: nothing is fetched.',
+        ),
+      })
+      .nullable(),
+    warnings: z
+      .array(Text(200))
+      .max(50)
+      .describe('What was malformed or cut off; the rest is intact.'),
   })
   .meta({ id: 'ServerFacts' });
 export type ServerFacts = z.infer<typeof ServerFactsSchema>;
+
+export const ServerFactsRecordSchema = z
+  .object({
+    facts: ServerFactsSchema,
+    collectedAt: z.iso.datetime(),
+    source: z.string().describe('What collected it: `ssh`.'),
+    scriptSha256: z
+      .string()
+      .nullable()
+      .describe(
+        'The SHA-256 of the script that ran on the server; null for facts of an earlier version.',
+      ),
+  })
+  .meta({ id: 'ServerFactsRecord' });
+export type ServerFactsRecord = z.infer<typeof ServerFactsRecordSchema>;
 
 const ServerFieldsShape = {
   id: z.uuid(),
@@ -161,7 +330,9 @@ export const ServerHostKeySchema = z
     id: z.uuid(),
     algorithm: z.string(),
     fingerprintSha256: z.string(),
-    source: z.string().describe('`manual` (typed in) or, later, `scan`.'),
+    source: z
+      .string()
+      .describe('`manual` (typed in) or `scan` (read from the server and confirmed).'),
     acceptedBy: z
       .string()
       .nullable()
@@ -189,6 +360,14 @@ export const ServerAccessSchema = z
       'The password used for `sudo`, when there is one.',
     ),
     priority: z.number().int().describe('Lower first: the order in which the entries are tried.'),
+    lastVerifiedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe('When the entry was last tried; null if never.'),
+    lastVerifyOk: z
+      .boolean()
+      .nullable()
+      .describe('Whether that try logged in and ran its checks; null if never tried.'),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -200,7 +379,7 @@ export const ServerViewSchema = z
     ...ServerFieldsShape,
     hostKeys: z.array(ServerHostKeySchema).describe('Oldest first.'),
     access: z.array(ServerAccessSchema).describe('By priority, then by age.'),
-    facts: ServerFactsSchema.nullable().describe('Null until facts are collected.'),
+    facts: ServerFactsRecordSchema.nullable().describe('Null until facts are collected.'),
   })
   .meta({ id: 'ServerView' });
 export type ServerView = z.infer<typeof ServerViewSchema>;
@@ -284,3 +463,97 @@ export const UpdateAccessRequestSchema = z
       'Fields that are absent stay as they are; `null` removes the sudo secret. The result must still be consistent: the secret kind has to fit the method.',
   });
 export type UpdateAccessRequest = z.infer<typeof UpdateAccessRequestSchema>;
+
+/** The details of a `host_key_mismatch` error: the server showed a key that is not pinned. */
+export const HostKeyMismatchDetailsSchema = z.object({
+  expected: z
+    .array(z.string())
+    .describe('The pinned fingerprints, or the one the person confirmed.'),
+  actual: z.string().describe('The fingerprint the server showed now.'),
+});
+export type HostKeyMismatchDetails = z.infer<typeof HostKeyMismatchDetailsSchema>;
+
+/** The details of a `host_key_replace_required` error. */
+export const HostKeyReplaceDetailsSchema = z.object({
+  pinned: z.array(z.string()).describe('The fingerprints that are pinned now.'),
+});
+export type HostKeyReplaceDetails = z.infer<typeof HostKeyReplaceDetailsSchema>;
+
+/** How a scanned key relates to what is pinned. */
+export const HOST_KEY_SCAN_STATUSES = ['new', 'pinned', 'differs'] as const;
+
+export const HostKeyScanSchema = z
+  .object({
+    address: z.string().describe('The address that was asked, as the inventory has it.'),
+    port: z.number().int(),
+    algorithm: z.string(),
+    fingerprintSha256: z.string(),
+    status: z
+      .enum(HOST_KEY_SCAN_STATUSES)
+      .describe(
+        '`new`: nothing is pinned yet. `pinned`: this key is one of the pinned ones. `differs`: keys are pinned and this is none of them, which after a reinstall of the operating system is expected, and otherwise may be somebody in the middle.',
+      ),
+    pinned: z.array(ServerHostKeySchema).describe('The keys that are pinned now.'),
+  })
+  .meta({ id: 'HostKeyScan' });
+export type HostKeyScan = z.infer<typeof HostKeyScanSchema>;
+
+export const AcceptHostKeyRequestSchema = z
+  .object({
+    fingerprintSha256: FingerprintSchema.describe(
+      'The fingerprint the person was shown and confirmed. The server is asked again and must show exactly this key.',
+    ),
+    replace: z
+      .boolean()
+      .optional()
+      .describe(
+        'Required when other keys are pinned: they are revoked in the same step (the operating system was reinstalled).',
+      ),
+  })
+  .meta({ id: 'AcceptHostKeyRequest' });
+export type AcceptHostKeyRequest = z.infer<typeof AcceptHostKeyRequestSchema>;
+
+export const HostKeyAcceptedSchema = z
+  .object({
+    key: ServerHostKeySchema,
+    replaced: z.number().int().nonnegative().describe('How many pinned keys were revoked.'),
+  })
+  .meta({ id: 'HostKeyAccepted' });
+export type HostKeyAccepted = z.infer<typeof HostKeyAcceptedSchema>;
+
+/** The codes a failed check reports as a result (the call itself answers 200). */
+export const SSH_FAILURE_CODES = [
+  'ssh_connect_failed',
+  'ssh_auth_failed',
+  'ssh_key_invalid',
+  'ssh_timeout',
+  'ssh_failed',
+] as const;
+
+export const SUDO_STATES = [
+  'not_needed',
+  'ok',
+  'password_required',
+  'failed',
+  'unavailable',
+] as const;
+
+export const AccessVerificationSchema = z
+  .object({
+    ok: z.boolean().describe('The login worked and the check commands ran.'),
+    verifiedAt: z.iso.datetime(),
+    latencyMs: z.number().int().nonnegative().describe('How long the whole check took.'),
+    remoteUser: z.string().nullable().describe('`id -un` on the server.'),
+    isRoot: z.boolean().nullable(),
+    sudo: z
+      .enum(SUDO_STATES)
+      .describe(
+        '`not_needed`: the login is root. `ok`: sudo works (without a password, or with the stored one). `password_required`: sudo asks for a password and none is stored. `failed`: sudo refused. `unavailable`: sudo is not installed, or the check did not get that far.',
+      ),
+    error: z
+      .object({ code: z.enum(SSH_FAILURE_CODES), message: z.string() })
+      .optional()
+      .describe('Why the check failed, when it did.'),
+  })
+  .meta({ id: 'AccessVerification' });
+export type AccessVerification = z.infer<typeof AccessVerificationSchema>;

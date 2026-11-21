@@ -64,6 +64,21 @@ export class VaultSealedException extends HttpException {
   }
 }
 
+/**
+ * An error with a code of its own and structured details, for the cases a client has to tell apart and act on: a
+ * host key that changed, an address the policy refuses, a login that was not accepted (ADR 0037).
+ */
+export class CodedHttpException extends HttpException {
+  constructor(
+    status: number,
+    readonly apiCode: ErrorCode,
+    message: string,
+    readonly apiDetails?: unknown,
+  ) {
+    super(message, status);
+  }
+}
+
 /** 429 with a `Retry-After` header. */
 export class RateLimitedException extends HttpException {
   constructor(
@@ -101,6 +116,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
       }
       if (exception instanceof StepUpRequiredException) {
         code = 'step_up_required';
+      }
+      if (exception instanceof CodedHttpException) {
+        code = exception.apiCode;
+        // A 5xx still says what went wrong: these are failures of a server out there, not of Swellwright.
+        message = exception.message;
+        details = exception.apiDetails;
       }
     } else {
       this.logger.error(
