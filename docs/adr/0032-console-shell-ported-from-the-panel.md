@@ -23,3 +23,12 @@ What deliberately differs from the panel:
 - A new panel minor version means diffing the ported files and the specification notes (the shell and the components) and updating both; the version is written in the headers.
 - The console depends on `react-router`, `react-icons` (the Phosphor and Heroicons glyphs the panel uses), `@mantine/notifications`, `@mantine/modals` and `@mantine/nprogress`, all pinned exactly; fonts (Unbounded) and the flag-emoji font are self-hosted.
 - The server grew two reads (`GET /api/v1/version` with build information, `GET /api/v1/updates`) and the deep-link fallback.
+
+## Audit of 2026-11-21 (shell, sign-in and Overview)
+A second pass measured the console against the live panel with the browser's computed styles (header, tabs, the Menubar menus, the language menu, the version dialog, the drawer at 390 px, the two-row and the single-row header, the main padding, the toast container, the Home sections, the 404 page). Everything listed measured identical except what was changed in the audit:
+- The sign-in screens are the panel's login page and its registration form: no heading on the sign-in and authenticator screens, a centered level 2 title and a dimmed line on the screens that create something (first run, invitation, authenticator setup, recovery codes), labelled fields with placeholders, a 408 px column, a full-width default button with a leading icon, errors as red toasts, and the panel's "generate and copy" password button. The boot state is the top progress bar alone.
+- The Overview is laid out as the panel's Home page: titled sections of metric cards (`MetricSection`) with the panel's breakpoints and entrance animations, no page header card.
+- The 404 page is the panel's full-screen page (outside the header), the 500 page is the route's error page with the technical details in the console's copyable block (the panel uses `@mantine/code-highlight`; a dependency for one stack trace was not worth it), and the connection-lost pill with the panel's three-failures watchdog is ported.
+- A confirmation text is drawn at the body size, as the panel's `children` string is.
+- Deliberate difference: at exactly 1024 px the panel renders its mobile header but Mantine counts the navbar as desktop, so its drawer cannot open. The console switches one hair below (63.99em) and shows the desktop header at 1024 px.
+

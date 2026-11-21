@@ -6,6 +6,8 @@ import type { ReactNode } from 'react';
 
 import { LogoMark } from '@swellwright/ui';
 
+import { Page } from '../shell/page.js';
+
 /**
  * The frame of every screen before sign-in, as the panel's login page (src/pages/auth/login and src/app/layouts/auth):
  * no header and no card, the brand above a column of form that is 500 px wide from `sm` up. The column is the
@@ -16,11 +18,14 @@ import { LogoMark } from '@swellwright/ui';
  * screens have none, as the panel's login has none.
  */
 export function AuthLayout({
+  pageTitle,
   title,
   description,
   status,
   children,
 }: {
+  /** The name of the screen in the title of the browser tab, as the panel's `Page title="Login"`. */
+  pageTitle: string;
   title?: string;
   description?: string;
   /** A badge under the brand, as the panel's "Server is not responding" badge on its login page. */
@@ -28,42 +33,44 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <Center component="main" mih="100vh" p="md">
-      <Stack align="center" gap="xs" w="100%">
-        <Group align="center" gap={4} justify="center" wrap="nowrap">
-          <LogoMark className="sw-brand-mark" size={48} />
-          <Title ff="Unbounded" order={1} pos="relative">
-            <Text c="cyan" component="span" fw="inherit" fz="inherit" inherit pos="relative">
-              Swell
-            </Text>
-            <Text c="white" component="span" fw="inherit" fz="inherit" inherit pos="relative">
-              wright
-            </Text>
-          </Title>
-        </Group>
-        {status ? (
-          <Badge color="cyan" mt={10} size="lg" variant="filled">
-            {status}
-          </Badge>
-        ) : null}
-        <Box maw={800} w={{ base: '100%', sm: 500 }}>
-          <Container size="100%">
-            <Paper p={30}>
-              {title ? (
-                <Title mb="xs" order={2} ta="center">
-                  {title}
-                </Title>
-              ) : null}
-              {description ? (
-                <Text c="dimmed" mb="md" size="sm" ta="center">
-                  {description}
-                </Text>
-              ) : null}
-              {children}
-            </Paper>
-          </Container>
-        </Box>
-      </Stack>
-    </Center>
+    <Page title={pageTitle}>
+      <Center component="main" mih="100vh" p="md">
+        <Stack align="center" gap="xs" w="100%">
+          <Group align="center" gap={4} justify="center" wrap="nowrap">
+            <LogoMark className="sw-brand-mark" size={48} />
+            <Title ff="Unbounded" order={1} pos="relative">
+              <Text c="cyan" component="span" fw="inherit" fz="inherit" inherit pos="relative">
+                Swell
+              </Text>
+              <Text c="white" component="span" fw="inherit" fz="inherit" inherit pos="relative">
+                wright
+              </Text>
+            </Title>
+          </Group>
+          {status ? (
+            <Badge color="cyan" mt={10} size="lg" variant="filled">
+              {status}
+            </Badge>
+          ) : null}
+          <Box maw={800} w={{ base: '100%', sm: 500 }}>
+            <Container size="100%">
+              <Paper p={30}>
+                {title ? (
+                  <Title mb="xs" order={2} ta="center">
+                    {title}
+                  </Title>
+                ) : null}
+                {description ? (
+                  <Text c="dimmed" mb="md" size="sm" ta="center">
+                    {description}
+                  </Text>
+                ) : null}
+                {children}
+              </Paper>
+            </Container>
+          </Box>
+        </Stack>
+      </Center>
+    </Page>
   );
 }

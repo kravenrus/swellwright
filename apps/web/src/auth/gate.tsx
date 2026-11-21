@@ -64,7 +64,11 @@ export function AuthGate({
 
   if (recoveryCodes) {
     return (
-      <AuthLayout description={t('recoveryCodes.description')} title={t('recoveryCodes.title')}>
+      <AuthLayout
+        description={t('recoveryCodes.description')}
+        pageTitle={t('recoveryCodes.title')}
+        title={t('recoveryCodes.title')}
+      >
         <RecoveryCodes
           codes={recoveryCodes}
           onDone={() => {
@@ -80,7 +84,10 @@ export function AuthGate({
   if (me.isError) {
     const unreachable = me.error instanceof ApiUnreachableError;
     return (
-      <AuthLayout status={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}>
+      <AuthLayout
+        pageTitle={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}
+        status={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}
+      >
         <Stack gap="md">
           <Text c="dimmed" size="sm" ta="center">
             {unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
@@ -110,7 +117,10 @@ export function AuthGate({
   if (setup.isError) {
     const noDatabase = setup.error instanceof ApiRequestError && setup.error.code === 'not_ready';
     return (
-      <AuthLayout status={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}>
+      <AuthLayout
+        pageTitle={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}
+        status={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}
+      >
         <Text c="dimmed" size="sm" ta="center">
           {noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}
         </Text>
@@ -122,7 +132,11 @@ export function AuthGate({
   switch (current) {
     case 'invite':
       return (
-        <AuthLayout description={t('invitation.description')} title={t('invitation.title')}>
+        <AuthLayout
+          description={t('invitation.description')}
+          pageTitle={t('invitation.title')}
+          title={t('invitation.title')}
+        >
           <AcceptInvitationForm
             initialToken={invitation}
             onAccepted={() => {
@@ -136,7 +150,11 @@ export function AuthGate({
       );
     case 'setup':
       return (
-        <AuthLayout description={t('setup.description')} title={t('setup.title')}>
+        <AuthLayout
+          description={t('setup.description')}
+          pageTitle={t('setup.title')}
+          title={t('setup.title')}
+        >
           <SetupForm
             onCreated={() => {
               setStep('enroll');
@@ -146,19 +164,23 @@ export function AuthGate({
       );
     case 'login':
       return (
-        <AuthLayout>
+        <AuthLayout pageTitle={t('login.title')}>
           <LoginForm onNext={next} />
         </AuthLayout>
       );
     case 'totp':
       return (
-        <AuthLayout>
+        <AuthLayout pageTitle={t('totp.title')}>
           <TotpForm onBack={backToPassword} onSignedIn={signedIn} />
         </AuthLayout>
       );
     case 'enroll':
       return (
-        <AuthLayout description={t('enrollment.description')} title={t('enrollment.title')}>
+        <AuthLayout
+          description={t('enrollment.description')}
+          pageTitle={t('enrollment.title')}
+          title={t('enrollment.title')}
+        >
           <EnrollmentStep
             onConfirmed={(result) => {
               setRecoveryCodes(result.recoveryCodes);
