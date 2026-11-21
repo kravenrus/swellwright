@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
@@ -149,6 +150,20 @@ const EnvSchema = z.object({
   SW_SSH_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(600).default(60),
   /** How many scans, checks and refreshes one user may start per minute. */
   SW_SSH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(20),
+  /**
+   * The catalogue of built-in artifacts (ADR 0039): a directory with one sub-directory per artifact. The default is
+   * the `artifacts` directory of the repository, which is where the container image puts it too.
+   */
+  SW_ARTIFACTS_DIR: optionalString,
+  /** The biggest file an artifact may be, in bytes; a bigger one is broken. A push holds the file in memory. */
+  SW_ARTIFACT_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .max(512 * 1024 * 1024)
+    .default(64 * 1024 * 1024),
+  /** How many pushes, checks and removals of artifacts one user may start per minute. */
+  SW_ARTIFACT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(10),
 });
 
 export interface AppConfig {
@@ -218,6 +233,12 @@ export interface AppConfig {
     };
     readonly connectTimeoutMs: number;
     readonly commandTimeoutMs: number;
+    readonly rateLimitPerMinute: number;
+  };
+  /** The artifact catalogue and how it is distributed (ADR 0039). */
+  readonly artifacts: {
+    readonly directory: string;
+    readonly maxBytes: number;
     readonly rateLimitPerMinute: number;
   };
 }
@@ -383,6 +404,14 @@ export function loadConfig(
       connectTimeoutMs: e.SW_SSH_CONNECT_TIMEOUT_SECONDS * 1000,
       commandTimeoutMs: e.SW_SSH_COMMAND_TIMEOUT_SECONDS * 1000,
       rateLimitPerMinute: e.SW_SSH_RATE_LIMIT_PER_MINUTE,
+    },
+    artifacts: {
+      // apps/api/{src,dist}/config.js: three levels up is the root of the repository, and of the image (/app).
+      directory: resolve(
+        e.SW_ARTIFACTS_DIR ?? fileURLToPath(new URL('../../../artifacts', import.meta.url)),
+      ),
+      maxBytes: e.SW_ARTIFACT_MAX_BYTES,
+      rateLimitPerMinute: e.SW_ARTIFACT_RATE_LIMIT_PER_MINUTE,
     },
   };
 }

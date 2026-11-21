@@ -1,3 +1,4 @@
+import { artifacts } from './artifacts.js';
 import { audit } from './audit.js';
 import { auth } from './auth.js';
 import { common } from './common.js';
@@ -28,4 +29,5 @@ export const ru = {
   tokens,
   plugins,
   servers,
+  artifacts,
 } as const;

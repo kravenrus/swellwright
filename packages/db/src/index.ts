@@ -13,6 +13,7 @@ export type {
   Secret,
   Server,
   ServerAccess,
+  ServerArtifact,
   ServerFact,
   ServerHostKey,
   Session,
@@ -21,6 +22,8 @@ export type {
 } from './generated/client.js';
 export {
   AccessMethod,
+  ArtifactCheckState,
+  ArtifactDestination,
   AuditOutcome,
   InvitationPurpose,
   SecretType,

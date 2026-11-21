@@ -10,6 +10,7 @@ export const nav = {
   certificates: 'Сертификаты',
 
   operations: 'Операции',
+  artifacts: 'Артефакты',
   runs: 'Запуски',
   scenarios: 'Сценарии',
   schedules: 'Расписания',

@@ -52,6 +52,8 @@ grep -qi '^cache-control: no-store' "$work/api.headers" || fail "an API answer m
 if grep -qi '^content-security-policy:' "$work/api.headers"; then fail "an API answer carries the page policy"; fi
 [ "$(status "$base/api/v1/nothing-here")" = 404 ] || fail "an unknown API path is not 404"
 [ "$(status "$base/nothing-here.js")" = 404 ] || fail "a missing file is not 404"
+# The artifact catalogue is part of the API and sits behind the sign-in (the image carries the artifacts themselves).
+[ "$(status "$base/api/v1/artifacts")" = 401 ] || fail "the artifact catalogue is not there, or is not behind the sign-in"
 pass "the API answers as before"
 
 # 4. First run: nobody yet, the wrong token is refused, the right one creates the owner, once.

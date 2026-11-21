@@ -86,6 +86,7 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 | Entity | Fields |
 |---|---|
 | `Artifact` | type (`installer`, `node-engine`, `baseline`, `script`, `template`), version, SHA256 hash, content, signature, note |
+| `ServerArtifact` | Built (ADR 0039): server (cascade), name and version of the catalogue artifact, SHA-256 and size that were pushed, destination (`user` or `system`), remote path, when and by whom it was pushed, the last check (`ok`, `differs`, `missing`, when, the hash seen). One row per server, name and version. The catalogue itself is the `artifacts/` directory of the image, verified against its manifests, not a table |
 | `Script` | script library (audit, diagnostics): body, parameters, permissions, danger level |
 | `ChangeAdvisory` | vulnerability and release records (CVE, USN, GitHub), affected versions, recommendation, "fact/hypothesis" label |
 

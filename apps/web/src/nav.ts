@@ -9,6 +9,7 @@ import {
   IconHexagon,
   IconKey,
   IconListCheck,
+  IconPackages,
   IconPlayerPlay,
   IconPuzzle,
   IconRadar2,
@@ -116,6 +117,13 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
     header: t('nav:operations'),
     icon: IconListCheck,
     items: [
+      {
+        id: 'artifacts',
+        name: t('nav:artifacts'),
+        href: ROUTES.DASHBOARD.OPERATIONS.ARTIFACTS,
+        icon: IconPackages,
+        permission: 'servers:read',
+      },
       {
         id: 'runs',
         name: t('nav:runs'),

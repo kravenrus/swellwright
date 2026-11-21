@@ -36,6 +36,9 @@ const AuditPage = lazy(() =>
 const ServersPage = lazy(() =>
   import('./fleet/servers-page.js').then((m) => ({ default: m.ServersPage })),
 );
+const ArtifactsPage = lazy(() =>
+  import('./operations/artifacts-page.js').then((m) => ({ default: m.ArtifactsPage })),
+);
 const PluginsPage = lazy(() =>
   import('./settings/plugins-page.js').then((m) => ({ default: m.PluginsPage })),
 );
@@ -165,6 +168,15 @@ function ServersRoute() {
   );
 }
 
+function ArtifactsRoute() {
+  const { t } = useTranslation('nav');
+  return (
+    <Guarded permission="servers:read" title={t('artifacts')}>
+      <ArtifactsPage />
+    </Guarded>
+  );
+}
+
 const D = ROUTES.DASHBOARD;
 
 /** The paths of a child are relative to the layout route `/dashboard`. */
@@ -185,6 +197,8 @@ export const routes: RouteObject[] = [
           { path: relative(D.HOME), element: <OverviewRoute /> },
           { path: relative(D.FLEET.ROOT), element: <AreaIndex area="fleet" /> },
           { path: relative(D.FLEET.SERVERS), element: <ServersRoute /> },
+          { path: relative(D.OPERATIONS.ROOT), element: <AreaIndex area="operations" /> },
+          { path: relative(D.OPERATIONS.ARTIFACTS), element: <ArtifactsRoute /> },
           { path: relative(D.SECURITY.ROOT), element: <AreaIndex area="security" /> },
           { path: relative(D.SECURITY.VAULT), element: <VaultRoute /> },
           { path: relative(D.SECURITY.USERS), element: <UsersRoute /> },

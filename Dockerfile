@@ -55,7 +55,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 RUN pnpm run build \
- && find apps packages -path '*/dist/*' -name '*.test.*' -delete
+ && find apps packages -path '*/dist/*' -name '*.test.*' -delete \
+ && find artifacts -type d -name test -prune -exec rm -rf '{}' +
 
 # The packages the server needs at run time (the console is already built, its framework is not needed).
 FROM tooling AS server-deps
@@ -104,6 +105,9 @@ COPY --from=build /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
 COPY --from=build /app/packages/plugin-api/dist ./packages/plugin-api/dist
 COPY --from=build /app/packages/ssh/dist ./packages/ssh/dist
+# The built-in artifacts (ADR 0039): a script and its manifest each. The server checks every file against its manifest
+# when it starts; `node apps/api/dist/admin.js artifacts` does the same from outside.
+COPY --from=build /app/artifacts ./artifacts
 COPY --from=build /app/apps/web/dist ./web
 USER node
 EXPOSE 3000
