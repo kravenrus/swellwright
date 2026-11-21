@@ -1,8 +1,12 @@
-import { Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
-import { IconLogin, IconShieldLock, IconUserPlus } from '@tabler/icons-react';
+// Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/features/auth/login-form/login-form.feature.tsx and
+// src/features/auth/register-form/register-form.feature.tsx. Changes: the forms keep their state in React instead of
+// `@mantine/form`; the authenticator code step is new (built from the login form's parts); the password generator
+// draws without modulo bias; errors are toasts through the console's feedback helper.
+import { Anchor, Button, PasswordInput, Stack, TextInput } from '@mantine/core';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiShuffleDuotone, PiSignInDuotone, PiSignpostDuotone } from 'react-icons/pi';
 
 import {
   PASSWORD_MIN_LENGTH,
@@ -13,10 +17,15 @@ import {
 } from '@swellwright/contracts';
 
 import { createOwner, login, verifyTotp } from '../api.js';
+import { notifyError, notifySuccess } from '../shell/feedback.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
-import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 
+/**
+ * The sign-in form of the panel (src/features/auth/login-form): a labelled login name and password with the label
+ * repeated as the placeholder, and a full-width default button with a leading icon, 32 px under the last field. A
+ * failed sign-in is a red toast, as in the panel.
+ */
 export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) => void }) {
   const { t } = useTranslation(['auth', 'common']);
   const [username, setUsername] = useState('');
@@ -27,6 +36,9 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
       setPassword('');
       onNext(result.next);
     },
+    onError: (error) => {
+      notifyError(t('login.title'), describeError(t, error, t('login.wrongCredentials')));
+    },
   });
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -34,49 +46,45 @@ export function LoginForm({ onNext }: { onNext: (next: PendingSession['next']) =
   };
   return (
     <form onSubmit={submit}>
-      <Stack gap="md">
-        <TextInput
-          autoComplete="username"
-          autoFocus
-          label={t('shared.loginName')}
-          onChange={(e) => {
-            setUsername(e.currentTarget.value);
-          }}
-          required
-          value={username}
-        />
-        <PasswordInput
-          autoComplete="current-password"
-          label={t('shared.password')}
-          onChange={(e) => {
-            setPassword(e.currentTarget.value);
-          }}
-          required
-          value={password}
-        />
-        <FormError
-          message={
-            mutation.error
-              ? describeError(t, mutation.error, t('login.wrongCredentials'))
-              : undefined
-          }
-        />
-        <Button
-          fullWidth
-          leftSection={<IconLogin size={16} />}
-          loading={mutation.isPending}
-          mt="xl"
-          type="submit"
-          variant="default"
-        >
-          {t('login.submit')}
-        </Button>
-      </Stack>
+      <TextInput
+        autoComplete="username"
+        autoFocus
+        label={t('shared.loginName')}
+        name="username"
+        onChange={(e) => {
+          setUsername(e.currentTarget.value);
+        }}
+        placeholder={t('shared.loginName')}
+        required
+        value={username}
+      />
+      <PasswordInput
+        autoComplete="current-password"
+        label={t('shared.password')}
+        mt="md"
+        name="password"
+        onChange={(e) => {
+          setPassword(e.currentTarget.value);
+        }}
+        placeholder={t('login.passwordPlaceholder')}
+        required
+        value={password}
+      />
+      <Button
+        fullWidth
+        leftSection={<PiSignInDuotone size="16px" />}
+        loading={mutation.isPending}
+        mt="xl"
+        type="submit"
+        variant="default"
+      >
+        {t('login.submit')}
+      </Button>
     </form>
   );
 }
 
-/** The second step: six digits from the authenticator, or one recovery code. */
+/** The second step: six digits from the authenticator, or one recovery code. Built from the sign-in form's parts. */
 export function TotpForm({
   onSignedIn,
   onBack,
@@ -90,8 +98,12 @@ export function TotpForm({
   const mutation = useMutation({
     mutationFn: (value: string) => verifyTotp(value),
     onSuccess: onSignedIn,
-    onError: () => {
+    onError: (error) => {
       setCode('');
+      notifyError(
+        t('totp.title'),
+        describeError(t, error, recovery ? t('totp.recoveryInvalid') : t('totp.codeWrong')),
+      );
     },
   });
   // Six digits send themselves.
@@ -109,70 +121,83 @@ export function TotpForm({
   };
   return (
     <form onSubmit={submit}>
-      <Stack gap="md">
-        {recovery ? (
-          <TextInput
-            autoComplete="off"
-            autoFocus
-            description={t('totp.recoveryHint')}
-            label={t('totp.recoveryLabel')}
-            onChange={(e) => {
-              setCode(e.currentTarget.value);
-            }}
-            placeholder="XXXX-XXXX-XXXX"
-            value={code}
-          />
-        ) : (
-          <Stack gap={6}>
-            <Text fw={500} fz="sm">
-              {t('totp.codeLabel')}
-            </Text>
-            <CodeInput busy={isPending} onChange={setCode} value={code} />
-          </Stack>
-        )}
-        <FormError
-          message={
-            mutation.error
-              ? describeError(
-                  t,
-                  mutation.error,
-                  recovery ? t('totp.recoveryInvalid') : t('totp.codeWrong'),
-                )
-              : undefined
-          }
+      {recovery ? (
+        <TextInput
+          autoComplete="off"
+          autoFocus
+          description={t('totp.recoveryHint')}
+          label={t('totp.recoveryLabel')}
+          onChange={(e) => {
+            setCode(e.currentTarget.value);
+          }}
+          placeholder="XXXX-XXXX-XXXX"
+          required
+          value={code}
         />
-        <Button
-          fullWidth
-          leftSection={<IconShieldLock size={16} />}
-          loading={mutation.isPending}
-          type="submit"
-          variant="soft"
+      ) : (
+        <CodeInput
+          busy={isPending}
+          label={t('totp.codeLabel')}
+          onChange={setCode}
+          required
+          value={code}
+        />
+      )}
+      <Button
+        fullWidth
+        leftSection={<PiSignInDuotone size="16px" />}
+        loading={mutation.isPending}
+        mt="xl"
+        type="submit"
+        variant="default"
+      >
+        {t('totp.submit')}
+      </Button>
+      <Stack align="center" gap={4} mt="md">
+        <Anchor
+          c="dimmed"
+          component="button"
+          fz="xs"
+          onClick={() => {
+            setRecovery(!recovery);
+            setCode('');
+            mutation.reset();
+          }}
+          type="button"
         >
-          {t('totp.submit')}
-        </Button>
-        <Stack align="center" gap={4}>
-          <Anchor
-            c="dimmed"
-            component="button"
-            fz="xs"
-            onClick={() => {
-              setRecovery(!recovery);
-              setCode('');
-              mutation.reset();
-            }}
-            type="button"
-          >
-            {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
-          </Anchor>
-          <Anchor c="dimmed" component="button" fz="xs" onClick={onBack} type="button">
-            {t('totp.backToPassword')}
-          </Anchor>
-        </Stack>
+          {recovery ? t('totp.useAuthenticator') : t('totp.useRecovery')}
+        </Anchor>
+        <Anchor c="dimmed" component="button" fz="xs" onClick={onBack} type="button">
+          {t('totp.backToPassword')}
+        </Anchor>
       </Stack>
     </form>
   );
 }
 
+const PASSWORD_CHARSET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+/**
+ * A random password of 32 letters and digits, as the panel's registration form generates one. Bytes that would
+ * favour the first characters of the alphabet are thrown away, so every character is equally likely.
+ */
+export function generatePassword(): string {
+  const limit = 256 - (256 % PASSWORD_CHARSET.length);
+  let result = '';
+  while (result.length < 32) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(32))) {
+      if (byte < limit && result.length < 32) {
+        result += PASSWORD_CHARSET.charAt(byte % PASSWORD_CHARSET.length);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * The first-run screen. It is the panel's registration form (src/features/auth/register-form): larger fields, a
+ * "Generate and copy" button between the passwords and the submit button, and a toast after the copy.
+ */
 export function SetupForm({ onCreated }: { onCreated: () => void }) {
   const { t } = useTranslation(['auth', 'common']);
   const [setupToken, setSetupToken] = useState('');
@@ -194,6 +219,12 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
       setRepeat('');
       onCreated();
     },
+    onError: (error) => {
+      notifyError(
+        t('setup.title'),
+        describeError(t, error, t('shared.signInAgain'), t('setup.tokenWrong')),
+      );
+    },
   });
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -202,31 +233,50 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
       mutation.mutate();
     }
   };
+  const generate = () => {
+    const generated = generatePassword();
+    setPassword(generated);
+    setRepeat(generated);
+    navigator.clipboard.writeText(generated).then(
+      () => {
+        notifySuccess(t('setup.passwordCopied'), t('setup.passwordCopiedMessage'));
+      },
+      () => {
+        notifyError(t('setup.title'), t('setup.passwordCopyFailed'));
+      },
+    );
+  };
   return (
     <form onSubmit={submit}>
-      <Stack gap="md">
-        <TextInput
-          autoComplete="off"
-          autoFocus
-          description={t('setup.tokenHint')}
-          label={t('setup.tokenLabel')}
-          onChange={(e) => {
-            setSetupToken(e.currentTarget.value.trim());
-          }}
-          required
-          value={setupToken}
-        />
-        <TextInput
-          autoComplete="username"
-          description={t('setup.usernameHint')}
-          error={touched && !usernameCheck.success ? t('setup.usernameInvalid') : undefined}
-          label={t('shared.loginName')}
-          onChange={(e) => {
-            setUsername(e.currentTarget.value);
-          }}
-          required
-          value={username}
-        />
+      <TextInput
+        autoComplete="off"
+        autoFocus
+        description={t('setup.tokenHint')}
+        label={t('setup.tokenLabel')}
+        onChange={(e) => {
+          setSetupToken(e.currentTarget.value.trim());
+        }}
+        placeholder={t('setup.tokenPlaceholder')}
+        required
+        size="md"
+        value={setupToken}
+      />
+      <TextInput
+        autoComplete="username"
+        description={t('setup.usernameHint')}
+        error={touched && !usernameCheck.success ? t('setup.usernameInvalid') : undefined}
+        label={t('shared.loginName')}
+        mt="md"
+        onChange={(e) => {
+          setUsername(e.currentTarget.value);
+        }}
+        placeholder="owner"
+        required
+        size="md"
+        value={username}
+      />
+
+      <Stack mt="md">
         <PasswordInput
           autoComplete="new-password"
           description={t('shared.passwordHint', { count: PASSWORD_MIN_LENGTH })}
@@ -235,7 +285,9 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
           onChange={(e) => {
             setPassword(e.currentTarget.value);
           }}
+          placeholder={t('setup.passwordPlaceholder')}
           required
+          size="md"
           value={password}
         />
         <PasswordInput
@@ -245,26 +297,32 @@ export function SetupForm({ onCreated }: { onCreated: () => void }) {
           onChange={(e) => {
             setRepeat(e.currentTarget.value);
           }}
+          placeholder={t('setup.passwordPlaceholder')}
           required
+          size="md"
           value={repeat}
-        />
-        <FormError
-          message={
-            mutation.error
-              ? describeError(t, mutation.error, t('shared.signInAgain'), t('setup.tokenWrong'))
-              : undefined
-          }
         />
         <Button
           fullWidth
-          leftSection={<IconUserPlus size={16} />}
-          loading={mutation.isPending}
-          type="submit"
-          variant="soft"
+          leftSection={<PiShuffleDuotone size="16px" />}
+          onClick={generate}
+          size="md"
         >
-          {t('setup.submit')}
+          {t('setup.generate')}
         </Button>
       </Stack>
+
+      <Button
+        fullWidth
+        leftSection={<PiSignpostDuotone size="16px" />}
+        loading={mutation.isPending}
+        mt="xl"
+        size="md"
+        type="submit"
+        variant="default"
+      >
+        {t('setup.submit')}
+      </Button>
     </form>
   );
 }

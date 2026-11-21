@@ -75,6 +75,7 @@ function CompactLayout({ navigation }: { navigation: ReactNode }) {
 }
 
 function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
+  const { t } = useTranslation('shell');
   const [opened, { toggle }] = useDisclosure();
   const ref = useClickOutside(() => {
     if (opened) {
@@ -94,7 +95,13 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
         <Container fluid px="lg" py="xs">
           <Group justify="space-between" style={{ flexWrap: 'nowrap' }}>
             <Group style={{ flex: 1, justifyContent: 'flex-start' }}>
-              <Burger onClick={toggle} opened={opened} size="md" />
+              <Burger
+                aria-expanded={opened}
+                aria-label={opened ? t('closeMenu') : t('openMenu')}
+                onClick={toggle}
+                opened={opened}
+                size="md"
+              />
             </Group>
             <Group style={{ flexShrink: 0 }}>
               <HeaderControls mobile />
@@ -113,7 +120,13 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
       >
         <AppShell.Section className="sw-drawer-logo">
           <Box style={{ position: 'absolute', left: '0' }}>
-            <Burger hiddenFrom="lg" onClick={toggle} opened={opened} size="sm" />
+            <Burger
+              aria-label={t('closeMenu')}
+              hiddenFrom="lg"
+              onClick={toggle}
+              opened={opened}
+              size="sm"
+            />
           </Box>
           <Group gap="xs" justify="center" wrap="nowrap">
             <BrandLink />

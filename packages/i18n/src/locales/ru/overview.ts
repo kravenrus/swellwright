@@ -1,7 +1,10 @@
 /** Страница «Обзор» (apps/web/src/overview.tsx). */
 export const overview = {
   title: 'Обзор',
-  description: 'Состояние парка, запуски и согласования с первого взгляда',
+
+  sections: {
+    status: 'Состояние',
+  },
 
   stats: {
     api: 'API',

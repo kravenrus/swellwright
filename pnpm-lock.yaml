@@ -133,6 +133,9 @@ importers:
       country-flag-emoji-polyfill:
         specifier: 0.1.10
         version: 0.1.10
+      dayjs:
+        specifier: 1.11.23
+        version: 1.11.23
       i18next:
         specifier: 26.7.2
         version: 26.7.2(typescript@6.0.3)

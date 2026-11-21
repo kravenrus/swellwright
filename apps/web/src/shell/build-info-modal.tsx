@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import type { UpdatesResponse, VersionResponse } from '@swellwright/contracts';
 import { LogoMark, OverlayHeader } from '@swellwright/ui';
 
-import { useDateTime } from '../format.js';
+import { useNumericDateTime } from '../format.js';
 
 /** A card with one fact of the build: an icon, a caption and a monospace value. */
 function Fact({
@@ -69,7 +69,7 @@ function BuildInfo({
   isNewVersion: boolean;
 }) {
   const { t } = useTranslation('shell');
-  const dateTime = useDateTime();
+  const dateTime = useNumericDateTime();
   const unknown = t('buildInfo.unknown');
   const branch = version.git.branch;
   const isDev = branch !== null && branch !== 'main';

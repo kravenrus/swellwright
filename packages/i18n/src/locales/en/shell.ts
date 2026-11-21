@@ -4,6 +4,7 @@ export const shell = {
   githubLabel: 'Swellwright on GitHub',
   docsLabel: 'Swellwright documentation',
   openMenu: 'Open the menu',
+  closeMenu: 'Close the menu',
   buildInfo: {
     title: 'Build information',
     updateTitle: 'Update available',
@@ -22,9 +23,18 @@ export const shell = {
     unavailable: 'The server did not answer.',
   },
   notFound: {
-    title: 'Page not found',
-    text: 'There is no page at this address. It may have moved, or it is not built yet.',
-    action: 'Go to the overview',
+    title: 'Nothing to see here',
+    text: 'The page you are trying to open does not exist. You may have mistyped the address, or the page is not built yet.',
+    action: 'Take me back to the home page',
+  },
+  connection: {
+    lost: 'Connection lost',
+    reconnecting: 'Reconnecting...',
+  },
+  serverError: {
+    title: 'Something bad just happened...',
+    refresh: 'Refresh the page',
+    details: 'Technical details of the error',
   },
   forbidden: {
     title: 'Not available for your role',

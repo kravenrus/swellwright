@@ -1,15 +1,16 @@
-import { Button, Center, Stack, Text, ThemeIcon, Title } from '@mantine/core';
-import { IconLock, IconMapOff } from '@tabler/icons-react';
+import { IconLock } from '@tabler/icons-react';
 import { lazy, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createBrowserRouter, Link, Navigate, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 
 import type { Permission } from '@swellwright/contracts';
+import { EmptyPageLayout } from '@swellwright/ui';
 
 import { navFor } from './nav.js';
 import { ROUTES } from './routes.js';
 import { useConsole } from './shell/console-context.js';
 import { ConsoleLayout } from './shell/console-layout.js';
+import { NotFoundPage, ServerErrorPage } from './shell/error-pages.js';
 import { Page } from './shell/page.js';
 
 // A page chunk is loaded when the page is first opened.
@@ -36,50 +37,6 @@ const PluginsPage = lazy(() =>
   import('./settings/plugins-page.js').then((m) => ({ default: m.PluginsPage })),
 );
 
-/** A message in place of a page: the address leads nowhere, or the role does not open it. */
-function Notice({
-  icon: Icon,
-  title,
-  text,
-  action,
-}: {
-  icon: typeof IconMapOff;
-  title: string;
-  text: string;
-  action?: ReactNode;
-}) {
-  return (
-    <Center mih="50vh">
-      <Stack align="center" gap="sm" maw={440} ta="center">
-        <ThemeIcon size={56} variant="soft">
-          <Icon size={28} />
-        </ThemeIcon>
-        <Title order={3}>{title}</Title>
-        <Text c="dimmed">{text}</Text>
-        {action}
-      </Stack>
-    </Center>
-  );
-}
-
-function NotFound() {
-  const { t } = useTranslation('shell');
-  return (
-    <Page title={t('notFound.title')}>
-      <Notice
-        action={
-          <Button component={Link} to={ROUTES.DASHBOARD.HOME}>
-            {t('notFound.action')}
-          </Button>
-        }
-        icon={IconMapOff}
-        text={t('notFound.text')}
-        title={t('notFound.title')}
-      />
-    </Page>
-  );
-}
-
 /** A page for people whose role allows it; everyone else sees why they cannot. */
 function Guarded({
   permission,
@@ -95,7 +52,12 @@ function Guarded({
   if (permission !== undefined && !session.permissions.includes(permission)) {
     return (
       <Page title={t('forbidden.title')}>
-        <Notice icon={IconLock} text={t('forbidden.text')} title={t('forbidden.title')} />
+        <EmptyPageLayout
+          description={t('forbidden.text')}
+          icon={<IconLock size="3rem" />}
+          mih="50vh"
+          title={t('forbidden.title')}
+        />
       </Page>
     );
   }
@@ -196,26 +158,32 @@ const D = ROUTES.DASHBOARD;
 const relative = (path: string): string => path.slice(`${D.ROOT}/`.length);
 
 export const routes: RouteObject[] = [
-  { path: ROUTES.ROOT, element: <Navigate replace to={D.HOME} /> },
   {
-    path: D.ROOT,
-    element: <ConsoleLayout />,
+    // Something that breaks while a page is drawn shows the panel's 500 page; an address that leads nowhere shows
+    // its 404 page. Both fill the window, outside the header.
+    ErrorBoundary: ServerErrorPage,
     children: [
-      { index: true, element: <Navigate replace to={D.HOME} /> },
-      { path: relative(D.HOME), element: <OverviewRoute /> },
-      { path: relative(D.SECURITY.ROOT), element: <AreaIndex area="security" /> },
-      { path: relative(D.SECURITY.VAULT), element: <VaultRoute /> },
-      { path: relative(D.SECURITY.USERS), element: <UsersRoute /> },
-      { path: relative(D.SECURITY.ROLES), element: <RolesRoute /> },
-      { path: relative(D.SECURITY.SESSIONS), element: <SessionsRoute /> },
-      { path: relative(D.SECURITY.TOKENS), element: <TokensRoute /> },
-      { path: relative(D.SECURITY.AUDIT), element: <AuditRoute /> },
-      { path: relative(D.SETTINGS.ROOT), element: <AreaIndex area="settings" /> },
-      { path: relative(D.SETTINGS.PLUGINS), element: <PluginsRoute /> },
-      { path: '*', element: <NotFound /> },
+      { path: ROUTES.ROOT, element: <Navigate replace to={D.HOME} /> },
+      {
+        path: D.ROOT,
+        element: <ConsoleLayout />,
+        children: [
+          { index: true, element: <Navigate replace to={D.HOME} /> },
+          { path: relative(D.HOME), element: <OverviewRoute /> },
+          { path: relative(D.SECURITY.ROOT), element: <AreaIndex area="security" /> },
+          { path: relative(D.SECURITY.VAULT), element: <VaultRoute /> },
+          { path: relative(D.SECURITY.USERS), element: <UsersRoute /> },
+          { path: relative(D.SECURITY.ROLES), element: <RolesRoute /> },
+          { path: relative(D.SECURITY.SESSIONS), element: <SessionsRoute /> },
+          { path: relative(D.SECURITY.TOKENS), element: <TokensRoute /> },
+          { path: relative(D.SECURITY.AUDIT), element: <AuditRoute /> },
+          { path: relative(D.SETTINGS.ROOT), element: <AreaIndex area="settings" /> },
+          { path: relative(D.SETTINGS.PLUGINS), element: <PluginsRoute /> },
+        ],
+      },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
-  { path: '*', element: <Navigate replace to={D.HOME} /> },
 ];
 
 /** The router is made once, when the console is first shown. */

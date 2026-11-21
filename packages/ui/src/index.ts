@@ -16,6 +16,7 @@ export * from './loader-modal.js';
 export * from './loading-screen.js';
 export * from './logo.js';
 export * from './metric-card.js';
+export * from './metric-section.js';
 export * from './modal-footer.js';
 export * from './overlay-header.js';
 export * from './page-header.js';

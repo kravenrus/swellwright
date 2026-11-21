@@ -100,11 +100,10 @@ import {
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useNumber } from '../format.js';
+import { useFullDate, useNumber } from '../format.js';
 import { confirmAction, notifyError, notifySuccess, notifyWarning } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
 import { useTableLocalization } from '../tables.js';
-import { useFullDate } from './full-date.js';
 import { LABEL_WEIGHT } from './form-styles.js';
 import { useTimeFirst } from './time-first.js';
 
