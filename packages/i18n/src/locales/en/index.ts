@@ -1,5 +1,6 @@
 import { audit } from './audit.js';
 import { auth } from './auth.js';
+import { commands } from './commands.js';
 import { common } from './common.js';
 import { errors } from './errors.js';
 import { nav } from './nav.js';
@@ -29,4 +30,5 @@ export const en = {
   tokens,
   plugins,
   servers,
+  commands,
 } as const;

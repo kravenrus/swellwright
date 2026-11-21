@@ -24,6 +24,8 @@ export const ERROR_CODES = [
   'ssh_timeout',
   'ssh_failed',
   'facts_unreadable',
+  // Commands and scripts (ADR 0038). `confirmation_required` carries `details: { level }`.
+  'confirmation_required',
   'internal_error',
 ] as const;
 

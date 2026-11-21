@@ -8,6 +8,7 @@ import {
   TotpConfirmedSchema,
   TotpEnrollmentSchema,
 } from '@swellwright/contracts';
+import { Database } from '@swellwright/db';
 import { createIsolatedDatabase, type IsolatedDatabase } from '@swellwright/db/testing';
 
 import { toAuditEvent } from './audit/audit.service.js';
@@ -124,6 +125,53 @@ export async function start(
   const { port } = app.getHttpServer().address() as { port: number };
   const base = `http://127.0.0.1:${String(port)}/api/v1`;
   return { app, base, isolated, client: () => new Client(base) };
+}
+
+/**
+ * Stops the application of an instance and starts another one on the same database: a restart of the server. Sessions,
+ * the vault and everything else that is in the database is still there; what lived in memory (the open vault, the pools)
+ * is gone, as after a real restart.
+ */
+export async function restart(
+  instance: Instance,
+  env: Record<string, string> = {},
+  extra: Partial<AppOptions> = {},
+): Promise<Instance> {
+  await instance.app.close();
+  const poolSize = Number(process.env['SW_TEST_DATABASE_POOL'] ?? '3');
+  const database = new Database({
+    url: databaseUrl ?? '',
+    schema: instance.isolated.schema,
+    poolSize,
+  });
+  const config = loadConfig(
+    {
+      SW_LOG_LEVEL: 'silent',
+      NODE_ENV: 'test',
+      SW_AUTH_KEY: AUTH_KEY,
+      SW_SETUP_TOKEN: SETUP_TOKEN,
+      SW_LOCKOUT_ATTEMPTS: '3',
+      ...env,
+    },
+    '0.0.0-test',
+  );
+  const app = await createApp(config, {
+    readinessChecks: [],
+    passwordParams: CHEAP,
+    vaultKdf: CHEAP_KDF,
+    database,
+    ...extra,
+  });
+  await app.listen(0, '127.0.0.1');
+  const { port } = app.getHttpServer().address() as { port: number };
+  const base = `http://127.0.0.1:${String(port)}/api/v1`;
+  return {
+    app,
+    base,
+    // The schema is dropped through the first handle; the new handle is closed with the application.
+    isolated: { ...instance.isolated, database },
+    client: () => new Client(base),
+  };
 }
 
 export async function stop(instance: Instance): Promise<void> {

@@ -35,6 +35,16 @@ import {
   type PluginView,
   PluginViewSchema,
   type AddAccessRequest,
+  type CommandOutputPage,
+  CommandOutputPageSchema,
+  type CommandOutputQuery,
+  type CommandRunList,
+  CommandRunListSchema,
+  type CommandRunListQuery,
+  type CommandRunView,
+  CommandRunViewSchema,
+  type CreateCommandRunRequest,
+  type CreateScriptRequest,
   type CreateServerRequest,
   type HostKeyAccepted,
   HostKeyAcceptedSchema,
@@ -43,6 +53,11 @@ import {
   type PinHostKeyRequest,
   type ReadyResponse,
   ReadyResponseSchema,
+  type ScriptList,
+  ScriptListSchema,
+  type ScriptView,
+  ScriptViewSchema,
+  type UpdateScriptRequest,
   type ServerAccess,
   ServerAccessSchema,
   type ServerFactsRecord,
@@ -520,6 +535,50 @@ export const updateServerAccess = (
 
 export const removeServerAccess = (id: string, accessId: string): Promise<void> =>
   send('DELETE', `/servers/${id}/access/${accessId}`, undefined, undefined);
+
+/** The script library (`servers:read`): the built-in diagnostics and the scripts of this instance, without their text. */
+export const listScripts = (): Promise<ScriptList> =>
+  send('GET', '/scripts', undefined, ScriptListSchema);
+
+export const getScript = (id: string): Promise<ScriptView> =>
+  send('GET', `/scripts/${id}`, undefined, ScriptViewSchema);
+
+/** Writing a script needs `servers:exec` and a fresh code (the caller wraps these in the step-up dialog). */
+export const createScript = (request: CreateScriptRequest): Promise<ScriptView> =>
+  send('POST', '/scripts', request, ScriptViewSchema);
+
+export const updateScript = (id: string, request: UpdateScriptRequest): Promise<ScriptView> =>
+  send('PATCH', `/scripts/${id}`, request, ScriptViewSchema);
+
+export const deleteScript = (id: string): Promise<void> =>
+  send('DELETE', `/scripts/${id}`, undefined, undefined);
+
+/** Queues a run of a script or a command on one to fifty servers (`servers:exec`, needs a fresh code). */
+export const createCommandRun = (request: CreateCommandRunRequest): Promise<CommandRunView> =>
+  send('POST', '/command-runs', request, CommandRunViewSchema);
+
+export const listCommandRuns = (query: CommandRunListQuery = {}): Promise<CommandRunList> =>
+  send('GET', `/command-runs${queryString(query)}`, undefined, CommandRunListSchema);
+
+/** A run with its servers and the end of the output of each. Poll it while the run is going. */
+export const getCommandRun = (id: string): Promise<CommandRunView> =>
+  send('GET', `/command-runs/${id}`, undefined, CommandRunViewSchema);
+
+/** A page of what was kept of one stream of one server, by byte offset. */
+export const getCommandOutput = (
+  id: string,
+  targetId: string,
+  query: CommandOutputQuery,
+): Promise<CommandOutputPage> =>
+  send(
+    'GET',
+    `/command-runs/${id}/targets/${targetId}/output${queryString(query)}`,
+    undefined,
+    CommandOutputPageSchema,
+  );
+
+export const cancelCommandRun = (id: string): Promise<CommandRunView> =>
+  send('POST', `/command-runs/${id}/cancel`, undefined, CommandRunViewSchema);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

@@ -149,6 +149,16 @@ const EnvSchema = z.object({
   SW_SSH_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().min(1).max(600).default(60),
   /** How many scans, checks and refreshes one user may start per minute. */
   SW_SSH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(20),
+  /** Scripts and commands on servers (ADR 0038): how many servers of one run are worked on at the same time. */
+  SW_COMMAND_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(5),
+  /** How much of each output stream of each server is kept, in KiB; the rest is cut and the target says so. */
+  SW_COMMAND_OUTPUT_LIMIT_KIB: z.coerce.number().int().min(16).max(10_240).default(1024),
+  /** How often a running script is looked at, in milliseconds (it slows down by itself while nothing new arrives). */
+  SW_COMMAND_POLL_MS: z.coerce.number().int().min(20).max(10_000).default(1000),
+  /** How long a running server may stay out of reach before its result is given up as lost, in minutes. */
+  SW_COMMAND_LOST_AFTER_MINUTES: z.coerce.number().min(0.02).max(1440).default(30),
+  /** How many runs one user may start per minute. */
+  SW_COMMAND_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(10),
 });
 
 export interface AppConfig {
@@ -218,6 +228,15 @@ export interface AppConfig {
     };
     readonly connectTimeoutMs: number;
     readonly commandTimeoutMs: number;
+    readonly rateLimitPerMinute: number;
+  };
+  /** Scripts and commands on servers (ADR 0038). */
+  readonly commands: {
+    readonly concurrency: number;
+    /** Per stream and per server, in bytes. */
+    readonly outputLimitBytes: number;
+    readonly pollMs: number;
+    readonly lostAfterMs: number;
     readonly rateLimitPerMinute: number;
   };
 }
@@ -383,6 +402,13 @@ export function loadConfig(
       connectTimeoutMs: e.SW_SSH_CONNECT_TIMEOUT_SECONDS * 1000,
       commandTimeoutMs: e.SW_SSH_COMMAND_TIMEOUT_SECONDS * 1000,
       rateLimitPerMinute: e.SW_SSH_RATE_LIMIT_PER_MINUTE,
+    },
+    commands: {
+      concurrency: e.SW_COMMAND_CONCURRENCY,
+      outputLimitBytes: e.SW_COMMAND_OUTPUT_LIMIT_KIB * 1024,
+      pollMs: e.SW_COMMAND_POLL_MS,
+      lostAfterMs: e.SW_COMMAND_LOST_AFTER_MINUTES * 60_000,
+      rateLimitPerMinute: e.SW_COMMAND_RATE_LIMIT_PER_MINUTE,
     },
   };
 }

@@ -2,11 +2,12 @@
 // {hosts-datatable.widget.tsx,use-hosts-table-widget.tsx} and src/widgets/dashboard/nodes/nodes-datatable/
 // {nodes-datatable.widget.tsx,use-nodes-table-widget.tsx}, the two page-level lists of the panel. Changes: the columns are
 // those of a server; the filters are the hosts table's (text, select, yes/no) with the status filter of both; the
-// empty state asks to add a server; a click on a row opens it; there is no row selection (nothing is done to several
-// servers at once yet); the texts come from the console's catalogue.
+// empty state asks to add a server; a click on a row opens it; rows can be selected (`selectedRecords`, a checkbox in
+// the head, as the hosts table does) when the person may run commands: the selection feeds the bar of
+// `servers-bulk-bar.tsx`; the texts come from the console's catalogue.
 import { ActionIcon, Badge, Box, Button, Group, MultiSelect, Stack, Text } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   PiEmpty,
@@ -80,6 +81,11 @@ const TEXT_KEYS: readonly TextFilterKey[] = ['name', 'address', 'port', 'os', 'k
 
 export interface ServersTableProps {
   servers: ServerSummary[];
+  /** The ids of the selected rows. Without `onSelectedChange` the table has no checkboxes. */
+  selectedIds?: readonly string[];
+  onSelectedChange?: ((ids: string[]) => void) | undefined;
+  /** Told which servers the table shows after its filters (what "select all" of the bar takes). */
+  onVisibleChange?: ((ids: string[]) => void) | undefined;
   onOpen: (id: string) => void;
   /** The empty state offers to add a server when this is given. */
   onCreate?: (() => void) | undefined;
@@ -87,6 +93,9 @@ export interface ServersTableProps {
 
 export const ServersTable = memo(function ServersTable({
   servers,
+  selectedIds = [],
+  onSelectedChange,
+  onVisibleChange,
   onOpen,
   onCreate,
 }: ServersTableProps) {
@@ -188,6 +197,15 @@ export const ServersTable = memo(function ServersTable({
     return sortRecords(filtered, sortStatus);
   }, [servers, debouncedText, selectFilters, states, pinned, sortStatus]);
 
+  useEffect(() => {
+    onVisibleChange?.(visible.map((server) => server.id));
+  }, [visible, onVisibleChange]);
+
+  const selectedRecords = useMemo(() => {
+    const chosen = new Set(selectedIds);
+    return servers.filter((server) => chosen.has(server.id));
+  }, [servers, selectedIds]);
+
   return (
     <>
       <DataTable
@@ -215,6 +233,14 @@ export const ServersTable = memo(function ServersTable({
         }}
         onSortStatusChange={setSortStatus}
         records={visible}
+        {...(onSelectedChange === undefined
+          ? {}
+          : {
+              selectedRecords,
+              onSelectedRecordsChange: (records: ServerSummary[]) => {
+                onSelectedChange(records.map((record) => record.id));
+              },
+            })}
         sortStatus={sortStatus}
         storeColumnsKey={SERVERS_CACHE_KEY}
       />

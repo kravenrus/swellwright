@@ -1,5 +1,6 @@
 export * from './audit.js';
 export * from './auth.js';
+export * from './commands.js';
 export * from './errors.js';
 export * from './openapi.js';
 export * from './plugins.js';

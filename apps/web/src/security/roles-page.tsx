@@ -21,6 +21,7 @@ type PermissionKey = keyof (typeof resources)['en']['roles']['permissionDescript
 const PERMISSION_KEY = {
   'servers:read': 'serversRead',
   'servers:write': 'serversWrite',
+  'servers:exec': 'serversExec',
   'panel:read': 'panelRead',
   'panel:write': 'panelWrite',
   'runs:read': 'runsRead',

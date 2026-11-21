@@ -5,6 +5,7 @@ import {
   IconCalendarTime,
   IconCertificate,
   IconCirclesRelation,
+  IconCode,
   IconDevices,
   IconHexagon,
   IconKey,
@@ -121,8 +122,15 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
         name: t('nav:runs'),
         href: ROUTES.DASHBOARD.OPERATIONS.RUNS,
         icon: IconPlayerPlay,
-        planned: true,
-        permission: 'runs:read',
+        // Runs of scripts and commands on servers (ADR 0038) are read with the servers; the engine's runs (phase 4) join this page.
+        permission: 'servers:read',
+      },
+      {
+        id: 'scripts',
+        name: t('nav:scripts'),
+        href: ROUTES.DASHBOARD.OPERATIONS.SCRIPTS,
+        icon: IconCode,
+        permission: 'servers:read',
       },
       {
         id: 'scenarios',

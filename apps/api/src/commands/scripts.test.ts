@@ -1,0 +1,212 @@
+import 'reflect-metadata';
+
+import assert from 'node:assert/strict';
+import { after, before, describe, it } from 'node:test';
+
+import { ScriptListSchema, ScriptViewSchema } from '@swellwright/contracts';
+
+import { databaseUrl, errorCode } from '../test-support.js';
+import { Harness, eventsOf } from './commands-test-support.js';
+
+describe('the script library', { skip: !databaseUrl }, () => {
+  const h = new Harness();
+  before(async () => {
+    await h.open();
+  });
+  after(async () => {
+    await h.close();
+  });
+
+  const goodScript = {
+    name: 'check unit',
+    description: 'Shows the state of a unit.',
+    dangerLevel: 'read',
+    sudo: false,
+    parameters: [
+      {
+        name: 'unit',
+        label: 'Unit',
+        type: 'string',
+        required: true,
+        pattern: '[a-z0-9@.-]+\\.service',
+        maxLength: 60,
+      },
+    ],
+    body: 'systemctl status "$SW_PARAM_UNIT"\n',
+  };
+
+  it('has the thirteen built-in scripts, read-only, built-in first', async () => {
+    const reply = await h.observer.get('/scripts');
+    assert.equal(reply.status, 200);
+    const { scripts } = ScriptListSchema.parse(reply.body);
+    const builtin = scripts.filter((script) => script.builtin);
+    assert.equal(builtin.length, 13);
+    for (const script of builtin) {
+      assert.equal(script.dangerLevel, 'read');
+      assert.match(script.bodySha256, /^[0-9a-f]{64}$/u);
+      assert.equal(script.version, 1);
+    }
+    const flags = scripts.map((script) => script.builtin);
+    assert.deepEqual(
+      flags,
+      [...flags].sort((a, b) => Number(b) - Number(a)),
+    );
+    const summary = builtin.find((script) => script.name === 'system-summary');
+    assert.ok(summary);
+    const full = ScriptViewSchema.parse((await h.observer.get(`/scripts/${summary.id}`)).body);
+    assert.ok(full.body.startsWith('#!/bin/sh\n# swellwright-script: system-summary v1'));
+  });
+
+  it('refuses to change or delete a built-in script, with 409', async () => {
+    const { scripts } = ScriptListSchema.parse((await h.owner.get('/scripts')).body);
+    const builtin = scripts.find((script) => script.builtin);
+    assert.ok(builtin);
+    assert.equal(
+      (await h.owner.call('PATCH', `/scripts/${builtin.id}`, { description: 'mine' })).status,
+      409,
+    );
+    assert.equal((await h.owner.call('DELETE', `/scripts/${builtin.id}`)).status, 409);
+  });
+
+  it('lets an operator with a fresh code write a script, and records it without its text', async () => {
+    const script = await h.script(h.operator, goodScript);
+    assert.equal(script.builtin, false);
+    assert.equal(script.version, 1);
+    assert.equal(script.body, goodScript.body);
+    assert.match(script.bodySha256, /^[0-9a-f]{64}$/u);
+    const created = (await eventsOf(h.instance, 'script.created')).at(-1);
+    assert.ok(created);
+    assert.equal(created.actor?.name, 'ops');
+    assert.equal(created.outcome, 'success');
+    assert.equal(created.details['name'], 'check unit');
+    assert.equal(created.details['body_sha256'], script.bodySha256);
+    assert.ok(
+      !JSON.stringify(created).includes('systemctl'),
+      'the text of a script is not in the audit log',
+    );
+  });
+
+  it('refuses a second script with the same name, and parameter definitions that do not hold together', async () => {
+    assert.equal((await h.operator.post('/scripts', goodScript)).status, 409);
+    const bool = (name: string) => ({ name, label: 'A', type: 'boolean', required: false });
+    for (const parameters of [
+      [bool('a'), bool('a')],
+      [{ name: 'n', label: 'N', type: 'integer', required: false, min: 9, max: 1 }],
+      [{ name: 's', label: 'S', type: 'string', required: false, maxLength: 5, pattern: '(' }],
+      [{ name: 'Bad Name', label: 'S', type: 'boolean', required: false }],
+    ]) {
+      const reply = await h.operator.post('/scripts', { ...goodScript, name: 'other', parameters });
+      assert.equal(reply.status, 400, JSON.stringify(parameters));
+      assert.equal(errorCode(reply), 'validation_failed');
+    }
+    assert.equal(
+      (await h.operator.post('/scripts', { ...goodScript, name: 'x', body: '' })).status,
+      400,
+    );
+    assert.equal(
+      (await h.operator.post('/scripts', { ...goodScript, name: 'x', body: 'a\0b' })).status,
+      400,
+    );
+  });
+
+  it('raises the version with a change of the text only, and records what changed', async () => {
+    const script = await h.script(h.operator, { ...goodScript, name: 'edit me' });
+    const described = await h.operator.call('PATCH', `/scripts/${script.id}`, {
+      description: 'New words.',
+    });
+    assert.equal(described.status, 200);
+    assert.equal(ScriptViewSchema.parse(described.body).version, 1);
+
+    const edited = await h.operator.call('PATCH', `/scripts/${script.id}`, {
+      body: 'echo "$SW_PARAM_UNIT"\r\n',
+    });
+    const view = ScriptViewSchema.parse(edited.body);
+    assert.equal(view.version, 2);
+    assert.equal(view.body, 'echo "$SW_PARAM_UNIT"\n', 'CRLF becomes LF');
+    assert.notEqual(view.bodySha256, script.bodySha256);
+
+    const before = (await eventsOf(h.instance, 'script.updated')).length;
+    const same = await h.operator.call('PATCH', `/scripts/${script.id}`, {
+      body: 'echo "$SW_PARAM_UNIT"\n',
+    });
+    assert.equal(ScriptViewSchema.parse(same.body).version, 2);
+    const updated = await eventsOf(h.instance, 'script.updated');
+    assert.equal(updated.length, before, 'a change that changes nothing is not recorded');
+    assert.deepEqual(
+      updated.slice(-2).map((event) => event.details['changed']),
+      ['description', 'body'],
+    );
+    assert.equal(updated.at(-1)?.details['version'], 2);
+    assert.equal(
+      (await h.operator.call('PATCH', `/scripts/${script.id}`, { name: 'check unit' })).status,
+      409,
+      'a taken name',
+    );
+    assert.equal(
+      (await h.operator.call('PATCH', `/scripts/${script.id}`, {})).status,
+      400,
+      'an empty change',
+    );
+  });
+
+  it('deletes a script of the instance and records it', async () => {
+    const script = await h.script(h.owner, { ...goodScript, name: 'delete me' });
+    assert.equal((await h.owner.call('DELETE', `/scripts/${script.id}`)).status, 204);
+    assert.equal((await h.owner.get(`/scripts/${script.id}`)).status, 404);
+    const deleted = (await eventsOf(h.instance, 'script.deleted')).at(-1);
+    assert.equal(deleted?.details['name'], 'delete me');
+  });
+
+  it('needs servers:exec and a fresh code to write, and servers:read only to read', async () => {
+    for (const client of [h.observer, h.auditor]) {
+      assert.equal((await client.post('/scripts', { ...goodScript, name: 'nope' })).status, 403);
+    }
+    const anonymous = h.instance.client();
+    assert.equal((await anonymous.get('/scripts')).status, 401);
+    assert.equal((await anonymous.post('/scripts', goodScript)).status, 401);
+
+    await h.lapse();
+    const late = await h.operator.post('/scripts', { ...goodScript, name: 'late' });
+    assert.equal(late.status, 403);
+    assert.equal(errorCode(late), 'step_up_required');
+    const script = await h.owner.get('/scripts');
+    assert.equal(script.status, 200, 'reading needs no code');
+    const list = ScriptListSchema.parse(script.body).scripts.find((s) => s.name === 'edit me');
+    assert.ok(list);
+    const patch = await h.operator.call('PATCH', `/scripts/${list.id}`, {
+      description: 'too late',
+    });
+    assert.equal(errorCode(patch), 'step_up_required');
+    assert.equal(
+      errorCode(await h.operator.call('DELETE', `/scripts/${list.id}`)),
+      'step_up_required',
+    );
+    await h.stepUp(h.operator, 'ops');
+    await h.stepUp(h.owner, 'owner');
+  });
+
+  it('puts the built-in scripts back as this build has them when the server starts again', async () => {
+    const db = h.instance.isolated.database.client;
+    const original = await db.script.findUniqueOrThrow({ where: { name: 'top-processes' } });
+    await db.script.update({
+      where: { id: original.id },
+      data: { body: '#!/bin/sh\necho tampered\n', bodySha256: '0'.repeat(64), version: 7 },
+    });
+    await h.restart();
+    const after = await h.instance.isolated.database.client.script.findUniqueOrThrow({
+      where: { name: 'top-processes' },
+    });
+    assert.equal(after.id, original.id, 'updated, not made again');
+    assert.equal(after.bodySha256, original.bodySha256);
+    assert.equal(after.version, original.version);
+    assert.equal(
+      await h.instance.isolated.database.client.script.count({ where: { builtin: true } }),
+      13,
+    );
+    // A script of the instance with a built-in name is never overwritten.
+    const own = await h.instance.isolated.database.client.script.findUniqueOrThrow({
+      where: { name: 'check unit' },
+    });
+    assert.equal(own.builtin, false);
+  });
+});

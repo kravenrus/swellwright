@@ -16,6 +16,10 @@ import { TokensController } from './auth/tokens.controller.js';
 import { SessionsController } from './auth/sessions.controller.js';
 import { SetupController } from './auth/setup.controller.js';
 import { SetupService } from './auth/setup.service.js';
+import { CommandRunner } from './commands/command-runner.service.js';
+import { CommandRunsService } from './commands/command-runs.service.js';
+import { CommandsController } from './commands/commands.controller.js';
+import { ScriptsService } from './commands/scripts.service.js';
 import { type AppConfig } from './config.js';
 import {
   CONFIG,
@@ -105,6 +109,7 @@ export class AppModule implements OnApplicationShutdown {
         VaultController,
         PluginsController,
         ServersController,
+        CommandsController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -132,6 +137,9 @@ export class AppModule implements OnApplicationShutdown {
         ServersService,
         SshService,
         ServerSshService,
+        ScriptsService,
+        CommandRunner,
+        CommandRunsService,
         PluginRuntime,
         PluginBroker,
         PluginsService,

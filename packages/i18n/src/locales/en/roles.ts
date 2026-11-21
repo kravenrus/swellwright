@@ -40,7 +40,7 @@ export const roles = {
   roleDescriptions: {
     owner: 'Everything, including users, the vault and the audit log. Every new permission.',
     operator:
-      'Runs and changes servers and the panel. Cannot reveal a secret, open the terminal or manage users.',
+      'Runs scripts and changes servers and the panel. Cannot reveal a secret, open the terminal or manage users.',
     observer: 'Read-only view of servers, the panel, runs and the vault status.',
     terminal: 'Read-only view plus the web terminal.',
     auditor: 'Reads everything, including users, roles and the audit log, and verifies the chain.',
@@ -48,7 +48,10 @@ export const roles = {
 
   permissionDescriptions: {
     serversRead: 'See servers, their facts and state.',
-    serversWrite: 'Add, change and retire servers; run maintenance on them.',
+    serversWrite:
+      'Add, change and retire servers; read host keys, try the access entries and collect facts over SSH.',
+    serversExec:
+      'Run scripts and commands on servers, stop a run, and write the scripts of the library.',
     panelRead: 'See the connected Remnawave panel: nodes, hosts, profiles, squads.',
     panelWrite: 'Change panel objects through Swellwright.',
     runsRead: 'See runs, their steps and logs.',

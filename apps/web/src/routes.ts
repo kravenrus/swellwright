@@ -20,6 +20,7 @@ export const ROUTES = {
     OPERATIONS: {
       ROOT: '/dashboard/operations',
       RUNS: '/dashboard/operations/runs',
+      SCRIPTS: '/dashboard/operations/scripts',
       SCENARIOS: '/dashboard/operations/scenarios',
       SCHEDULES: '/dashboard/operations/schedules',
     },

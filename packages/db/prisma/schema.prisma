@@ -361,9 +361,10 @@ model Server {
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  hostKeys ServerHostKey[]
-  access   ServerAccess[]
-  fact     ServerFact?
+  hostKeys       ServerHostKey[]
+  access         ServerAccess[]
+  fact           ServerFact?
+  commandTargets CommandRunTarget[]
 
   @@index([state])
   @@index([tags], type: Gin)
@@ -432,4 +433,184 @@ model ServerFact {
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@map("server_facts")
+}
+
+/// How much a script can change on a server (ADR 0038).
+enum DangerLevel {
+  read
+  change
+  destructive
+
+  @@map("danger_level")
+}
+
+/// A run executes a stored script or a command typed in.
+enum CommandRunMode {
+  script
+  inline
+
+  @@map("command_run_mode")
+}
+
+enum CommandRunState {
+  pending
+  running
+  succeeded
+  failed
+  cancelled
+  partial
+
+  @@map("command_run_state")
+}
+
+enum CommandTargetState {
+  pending
+  running
+  succeeded
+  failed
+  lost
+  cancelled
+  skipped
+
+  @@map("command_target_state")
+}
+
+/// A script of the library: the built-in diagnostics (seeded by name at start, never edited) and the instance's own.
+model Script {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  name        String      @unique @db.VarChar(64)
+  description String      @db.VarChar(500)
+  /// POSIX sh, LF line endings.
+  body        String
+  dangerLevel DangerLevel @map("danger_level")
+  /// Runs as root through sudo (with the stored sudo secret when the login is not root).
+  sudo        Boolean     @default(false)
+  /// The typed parameter definitions, as JSON (`ScriptParameter[]` of packages/contracts).
+  parameters  Json        @default("[]")
+  builtin     Boolean     @default(false)
+  /// Raised with every change of the text.
+  version     Int         @default(1)
+  /// SHA-256 of `body`, in hex.
+  bodySha256  String      @map("body_sha256") @db.VarChar(64)
+  /// The user who wrote it. No foreign key, like the audit chain.
+  createdById String?     @map("created_by_id") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  runs CommandRun[]
+
+  @@map("scripts")
+}
+
+/// One run of a script or a command on several servers. It keeps the exact text that ran, so the history stays true
+/// when the script is edited or deleted later (ADR 0038).
+model CommandRun {
+  id                String          @id @default(uuid(7)) @db.Uuid
+  mode              CommandRunMode
+  state             CommandRunState @default(pending)
+  /// The script it ran; null for an inline command, and after the script was deleted.
+  scriptId          String?         @map("script_id") @db.Uuid
+  /// The script's name and version when the run was made.
+  scriptName        String?         @map("script_name") @db.VarChar(64)
+  scriptVersion     Int?            @map("script_version")
+  /// What the lists call it: the script's name, or the first line of the command.
+  label             String          @db.VarChar(80)
+  /// The exact text that ran (the script as it was, or the command).
+  body              String
+  bodySha256        String          @map("body_sha256") @db.VarChar(64)
+  sudo              Boolean
+  /// The level of the run: the script's, or what the person said of an inline command.
+  dangerLevel       DangerLevel     @map("danger_level")
+  /// The level the person confirmed; null for a `read` run.
+  confirmedLevel    DangerLevel?    @map("confirmed_level")
+  /// The parameter values given, as JSON.
+  parameters        Json            @default("{}")
+  timeoutSeconds    Int             @map("timeout_seconds")
+  /// The user who started it, and the name at the time. No foreign key, like the audit chain.
+  createdById       String?         @map("created_by_id") @db.Uuid
+  createdByName     String          @map("created_by_name") @db.VarChar(64)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  startedAt         DateTime?       @map("started_at") @db.Timestamptz(3)
+  finishedAt        DateTime?       @map("finished_at") @db.Timestamptz(3)
+  /// Set once when a person asks to stop the run; the targets that run are stopped by the runner.
+  cancelRequestedAt DateTime?       @map("cancel_requested_at") @db.Timestamptz(3)
+
+  script  Script?            @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  targets CommandRunTarget[]
+
+  @@index([createdAt])
+  @@index([state])
+  @@index([scriptId])
+  @@map("command_runs")
+}
+
+/// One server of a run: its own state, exit status, errors and output. The output itself is in `CommandOutputChunk`
+/// (appended as it is read, up to a limit); the target keeps how far that has got and the last bytes of each stream, so
+/// that a poll of the run does not read the chunks, and a runner that restarts continues where it stopped.
+model CommandRunTarget {
+  id              String             @id @default(uuid(7)) @db.Uuid
+  runId           String             @map("run_id") @db.Uuid
+  /// The position in the order the servers were chosen.
+  ordinal         Int
+  /// Null after the server was deleted; the name below is what it was called.
+  serverId        String?            @map("server_id") @db.Uuid
+  serverName      String             @map("server_name") @db.VarChar(64)
+  state           CommandTargetState @default(pending)
+  /// The access entry that logged in (no foreign key: entries come and go).
+  accessId        String?            @map("access_id") @db.Uuid
+  /// The directory name of the detached step on the server, derived from this row's id.
+  stepId          String             @map("step_id") @db.VarChar(64)
+  /// The step exists on the server (it was started, or found there again).
+  launched        Boolean            @default(false)
+  exitCode        Int?               @map("exit_code")
+  errorCode       String?            @map("error_code") @db.VarChar(40)
+  errorMessage    String?            @map("error_message") @db.VarChar(500)
+  /// A passing problem (the vault is sealed, the server cannot be reached for now) while the script runs on.
+  waiting         String?            @db.VarChar(40)
+  startedAt       DateTime?          @map("started_at") @db.Timestamptz(3)
+  finishedAt      DateTime?          @map("finished_at") @db.Timestamptz(3)
+  /// The last time the server answered about this step.
+  lastContactAt   DateTime?          @map("last_contact_at") @db.Timestamptz(3)
+  /// The last bytes of the kept output (at most 16 KiB), for the run view.
+  stdoutTail      Bytes              @map("stdout_tail")
+  /// How many bytes are kept: also where the next read of the server's stdout file starts.
+  stdoutStored    Int                @default(0) @map("stdout_stored")
+  /// How many bytes the server's stdout file holds, as last seen.
+  stdoutSize      Int                @default(0) @map("stdout_size")
+  stdoutTruncated Boolean            @default(false) @map("stdout_truncated")
+  stderrTail      Bytes              @map("stderr_tail")
+  stderrStored    Int                @default(0) @map("stderr_stored")
+  stderrSize      Int                @default(0) @map("stderr_size")
+  stderrTruncated Boolean            @default(false) @map("stderr_truncated")
+
+  run    CommandRun            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  server Server?               @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  chunks CommandOutputChunk[]
+
+  @@index([runId, ordinal])
+  @@index([serverId])
+  @@index([state])
+  @@map("command_run_targets")
+}
+
+enum OutputStream {
+  stdout
+  stderr
+
+  @@map("output_stream")
+}
+
+/// A piece of the output of one stream, as it was read from the server: raw bytes (a piece may end inside a UTF-8
+/// character, and a script may print a NUL). `startOffset` is where it starts in the kept stream, so that reading the
+/// same piece twice (a restart) is refused by the key and a page is a range of offsets.
+model CommandOutputChunk {
+  targetId    String           @map("target_id") @db.Uuid
+  stream      OutputStream
+  startOffset Int              @map("start_offset")
+  data        Bytes
+
+  target CommandRunTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([targetId, stream, startOffset])
+  @@map("command_output_chunks")
 }

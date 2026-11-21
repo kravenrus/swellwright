@@ -11,6 +11,7 @@ export const nav = {
 
   operations: 'Operations',
   runs: 'Runs',
+  scripts: 'Scripts',
   scenarios: 'Scenarios',
   schedules: 'Schedules',
 
