@@ -1,0 +1,6 @@
+# Key logins only, no root. Everything else is the distribution default (AcceptEnv LANG LC_*, SFTP subsystem).
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+PermitRootLogin no
+AllowUsers swtest

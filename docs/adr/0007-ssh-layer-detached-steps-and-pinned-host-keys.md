@@ -10,3 +10,5 @@ Swellwright is agentless over SSH, using the `ssh2` library with connection pool
 
 ## Consequences
 Nothing is installed permanently on a node except what a workflow installs. Nodes need `python3` (the preflight installs `python3-minimal` when it is missing). Steps are idempotent and can be re-attached after a worker restart.
+
+Refined by ADR 0035 (the SSH layer as built): the layout of a step on the server, the host key policy, the sudo wrapper and the limits.
