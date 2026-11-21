@@ -133,12 +133,22 @@ code=; fin=; st=; sha=; so=0; se=0
 [ -f "$D/started" ] && st=$(cat "$D/started")
 [ -f "$D/out" ] && so=$(wc -c < "$D/out" | tr -d ' ')
 [ -f "$D/err" ] && se=$(wc -c < "$D/err" | tr -d ' ')
+read_exit() { { IFS= read -r code; IFS= read -r fin; } < "$D/exit"; }
 if [ -f "$D/exit" ]; then
-  { IFS= read -r code; IFS= read -r fin; } < "$D/exit"
+  read_exit
   state=exited
 elif [ -f "$D/pid" ]; then
   pid=$(cat "$D/pid")
-  if alive "$pid" "$2"; then state=running; else state=lost; fi
+  if alive "$pid" "$2"; then
+    state=running
+  elif [ -f "$D/exit" ]; then
+    # The step finished between the look at the exit marker above and the look at the process: the wrapper writes
+    # the marker before it exits, so a dead process with no marker is lost only if the marker is still missing now.
+    read_exit
+    state=exited
+  else
+    state=lost
+  fi
 else
   state=unknown
 fi

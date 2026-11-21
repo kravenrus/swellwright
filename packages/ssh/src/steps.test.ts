@@ -7,10 +7,12 @@ import { spawnSync } from 'node:child_process';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 import { SshConnection } from './connection.js';
 import { SshStepError } from './errors.js';
 import { defineStepScenarios } from './step-scenarios.js';
+import { STATUS_SCRIPT } from './step-scripts.js';
 import { getStepStatus, startDetachedStep } from './steps.js';
 import {
   installFakeSudo,
@@ -192,3 +194,53 @@ describe('the sudo wrapper', { skip: SUDO_SKIP }, () => {
     );
   });
 });
+
+// The race a loaded machine showed once: the step finishes between the status script's look at the exit marker and its
+// look at the process. The wrapper writes the marker before it exits, so the second look must find it.
+describe(
+  'the status of a step that finishes while it is being read',
+  { skip: TOOLS_MISSING },
+  () => {
+    it('reports exited, not lost, when the marker appears after the first look and the process is already gone', () => {
+      const base = tempDir();
+      try {
+        const dir = join(base.path, 'raced');
+        mkdirSync(dir, { recursive: true });
+        // A pid that is certainly not a live process of this step, and no marker yet.
+        writeFileSync(join(dir, 'pid'), '2147483646\n');
+        // The first `alive` call publishes the marker, as the wrapper would a moment before the process disappeared,
+        // then answers that the process is gone.
+        const script = STATUS_SCRIPT.replace(
+          'alive() {',
+          `alive() { printf '4\\n2026-01-01T00:00:00Z\\n' > "$D/exit"; return 1; }\nalive_unused() {`,
+        );
+        const out = spawnSync('/bin/sh', ['-c', script, 'swellwright-status', base.path, 'raced'], {
+          encoding: 'utf8',
+        });
+        assert.match(out.stdout, /^state=exited$/mu);
+        assert.match(out.stdout, /^code=4$/mu);
+      } finally {
+        base.cleanup();
+      }
+    });
+
+    it('still reports lost when the process is gone and no marker was ever written', () => {
+      const base = tempDir();
+      try {
+        const dir = join(base.path, 'gone');
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, 'pid'), '2147483646\n');
+        const out = spawnSync(
+          '/bin/sh',
+          ['-c', STATUS_SCRIPT, 'swellwright-status', base.path, 'gone'],
+          {
+            encoding: 'utf8',
+          },
+        );
+        assert.match(out.stdout, /^state=lost$/mu);
+      } finally {
+        base.cleanup();
+      }
+    });
+  },
+);
