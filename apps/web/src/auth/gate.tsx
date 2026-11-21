@@ -1,13 +1,13 @@
-import { Button, Stack } from '@mantine/core';
-import { IconRefresh } from '@tabler/icons-react';
+import { Button, Stack, Text } from '@mantine/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiArrowClockwiseDuotone } from 'react-icons/pi';
 
 import type { PendingSession, SessionInfo } from '@swellwright/contracts';
-import { ErrorMessageBlock, LoadingScreen } from '@swellwright/ui';
 
 import { ApiRequestError, ApiUnreachableError, getMe, getSetupStatus, logout } from '../api.js';
+import { LoadingProgress } from '../shell/loading-progress.js';
 import { EnrollmentStep, RecoveryCodes } from './enrollment.js';
 import { LoginForm, SetupForm, TotpForm } from './forms.js';
 import { AcceptInvitationForm, takeInvitationFromAddress } from './invitation.js';
@@ -75,23 +75,23 @@ export function AuthGate({
     );
   }
   if (me.isPending) {
-    return <LoadingScreen />;
+    return <LoadingProgress />;
   }
   if (me.isError) {
     const unreachable = me.error instanceof ApiUnreachableError;
     return (
-      <AuthLayout title={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}>
+      <AuthLayout status={unreachable ? t('gate.apiDownTitle') : t('gate.somethingWrongTitle')}>
         <Stack gap="md">
-          <ErrorMessageBlock
-            message={unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
-          />
+          <Text c="dimmed" size="sm" ta="center">
+            {unreachable ? t('gate.apiDownHint') : t('gate.versionMismatchHint')}
+          </Text>
           <Button
             fullWidth
-            leftSection={<IconRefresh size={16} />}
+            leftSection={<PiArrowClockwiseDuotone size="16px" />}
             onClick={() => {
               void me.refetch();
             }}
-            variant="soft"
+            variant="default"
           >
             {t('common:retry')}
           </Button>
@@ -105,15 +105,15 @@ export function AuthGate({
 
   // Nobody is signed in. A server without a database cannot say whether it has an owner.
   if (setup.isPending) {
-    return <LoadingScreen />;
+    return <LoadingProgress />;
   }
   if (setup.isError) {
     const noDatabase = setup.error instanceof ApiRequestError && setup.error.code === 'not_ready';
     return (
-      <AuthLayout title={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}>
-        <ErrorMessageBlock
-          message={noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}
-        />
+      <AuthLayout status={noDatabase ? t('gate.noDatabaseTitle') : t('gate.apiDownTitle')}>
+        <Text c="dimmed" size="sm" ta="center">
+          {noDatabase ? t('gate.noDatabaseHint') : t('gate.serverDownHint')}
+        </Text>
       </AuthLayout>
     );
   }
@@ -146,13 +146,13 @@ export function AuthGate({
       );
     case 'login':
       return (
-        <AuthLayout description={t('login.description')} title={t('login.title')}>
+        <AuthLayout>
           <LoginForm onNext={next} />
         </AuthLayout>
       );
     case 'totp':
       return (
-        <AuthLayout description={t('totp.description')} title={t('totp.title')}>
+        <AuthLayout>
           <TotpForm onBack={backToPassword} onSignedIn={signedIn} />
         </AuthLayout>
       );

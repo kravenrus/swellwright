@@ -90,6 +90,9 @@ import {
   type VersionResponse,
   VersionResponseSchema,
 } from '@swellwright/contracts';
+
+import { reportApiReachable, reportApiUnreachable } from './shell/connection-status.js';
+
 const BASE = '/api/v1';
 
 export class ApiUnreachableError extends Error {
@@ -123,6 +126,7 @@ async function getJson<T>(path: string, schema: { parse: (data: unknown) => T })
   try {
     response = await fetch(`${BASE}${path}`, { headers: { accept: 'application/json' } });
   } catch {
+    reportApiUnreachable();
     throw new ApiUnreachableError();
   }
   // A body that is not JSON (a proxy error page, an empty 502) means the API is not behind this address.
@@ -130,8 +134,10 @@ async function getJson<T>(path: string, schema: { parse: (data: unknown) => T })
   try {
     body = await response.json();
   } catch {
+    reportApiUnreachable();
     throw new ApiUnreachableError();
   }
+  reportApiReachable();
   // /ready answers 503 with the same body shape; any other mismatch fails the schema below.
   return schema.parse(body);
 }
@@ -157,17 +163,21 @@ async function send<T>(
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   } catch {
+    reportApiUnreachable();
     throw new ApiUnreachableError();
   }
   if (response.status === 204) {
+    reportApiReachable();
     return undefined as T;
   }
   let json: unknown;
   try {
     json = await response.json();
   } catch {
+    reportApiUnreachable();
     throw new ApiUnreachableError();
   }
+  reportApiReachable();
   if (!response.ok) {
     const parsed = ApiErrorSchema.safeParse(json);
     if (!parsed.success) {

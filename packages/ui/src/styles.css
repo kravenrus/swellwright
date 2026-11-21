@@ -630,6 +630,151 @@ body {
   justify-content: center;
 }
 
+/* The sections of the Home page (home.module.css of the panel): the block rises in, its heading slides in, and its
+   cards fade in one after another. */
+@keyframes sw-section-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sw-title-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sw-card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.sw-home-section {
+  --section-delay: 0ms;
+  animation: sw-section-fade-in 0.4s ease-out both;
+  animation-delay: var(--section-delay);
+}
+
+.sw-home-section:nth-child(2) {
+  --section-delay: 150ms;
+}
+
+.sw-home-section:nth-child(3) {
+  --section-delay: 300ms;
+}
+
+.sw-home-section:nth-child(4) {
+  --section-delay: 450ms;
+}
+
+.sw-home-section:nth-child(5) {
+  --section-delay: 600ms;
+}
+
+.sw-home-section:nth-child(6) {
+  --section-delay: 750ms;
+}
+
+.sw-home-section:nth-child(7) {
+  --section-delay: 900ms;
+}
+
+.sw-home-title {
+  animation: sw-title-slide-in 0.3s ease-out both;
+}
+
+.sw-home-card {
+  animation: sw-card-fade-in 0.25s ease-out both;
+  animation-delay: calc(var(--section-delay, 0ms) + var(--card-index, 0) * 100ms + 200ms);
+}
+
+/* The cards of one row are as tall as the tallest, so a card with a line under its value does not make its
+   neighbours look cut short (the panel's cards in a row all carry the same lines). */
+.sw-home-card > .mantine-Card-root {
+  height: 100%;
+}
+
+/* The error pages (NotFound.module.css and ServerError.module.css of the panel): a large drawing or number behind a
+   bold title, centered on the screen. */
+.sw-error-page {
+  padding-top: 80px;
+  padding-bottom: 80px;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sw-error-inner {
+  position: relative;
+}
+
+.sw-error-image {
+  position: absolute;
+  inset: 0;
+  opacity: 0.75;
+  color: var(--mantine-color-dark-6);
+}
+
+.sw-error-content {
+  padding-top: 220px;
+  position: relative;
+  z-index: 1;
+}
+
+.sw-error-label {
+  text-align: center;
+  font-weight: 900;
+  font-size: 220px;
+  line-height: 1;
+  margin-bottom: calc(var(--mantine-spacing-xl) * 1.5);
+  color: var(--mantine-color-blue-3);
+}
+
+.sw-error-title {
+  text-align: center;
+  font-weight: 900;
+  font-size: 38px;
+  color: var(--mantine-color-white);
+}
+
+.sw-error-description {
+  max-width: 540px;
+  margin: auto;
+  margin-top: var(--mantine-spacing-xl);
+  margin-bottom: calc(var(--mantine-spacing-xl) * 1.5);
+}
+
+@media (max-width: 40em) {
+  .sw-error-content {
+    padding-top: 120px;
+  }
+
+  .sw-error-label {
+    font-size: 120px;
+  }
+
+  .sw-error-title {
+    font-size: 32px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sw-shell,
   .sw-brand-mark,
@@ -637,6 +782,14 @@ body {
   .sw-hc--version[data-new],
   .sw-hc-skeleton::after {
     animation: none;
+  }
+
+  .sw-home-section,
+  .sw-home-title,
+  .sw-home-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

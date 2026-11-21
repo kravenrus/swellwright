@@ -1,7 +1,10 @@
 /** The Overview page (apps/web/src/overview.tsx). */
 export const overview = {
   title: 'Overview',
-  description: 'Fleet health, runs and approvals at a glance',
+
+  sections: {
+    status: 'Status',
+  },
 
   stats: {
     api: 'API',

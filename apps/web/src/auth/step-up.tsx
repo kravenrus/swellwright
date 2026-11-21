@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { ModalFooter, OverlayHeader } from '@swellwright/ui';
 
 import { ApiRequestError, StepUpCancelledError, stepUp } from '../api.js';
+import { notifyError } from '../shell/feedback.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
-import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 
 interface StepUp {
@@ -99,8 +99,12 @@ function StepUpDialog({
       setRecovery(false);
       onDone();
     },
-    onError: () => {
+    onError: (error) => {
       setCode('');
+      notifyError(
+        t('stepUp.title'),
+        describeError(t, error, recovery ? t('totp.recoveryInvalid') : t('stepUp.codeWrong')),
+      );
     },
   });
   // Six digits send themselves.
@@ -130,7 +134,7 @@ function StepUpDialog({
       onClose={cancel}
       opened={opened}
       title={<OverlayHeader icon={IconShieldLock} iconColor="blue" title={t('stepUp.title')} />}
-      zIndex={400}
+      zIndex={300}
     >
       <form onSubmit={submit}>
         <Stack gap="md">
@@ -150,24 +154,14 @@ function StepUpDialog({
               value={code}
             />
           ) : (
-            <Stack gap={6}>
-              <Text fw={500} fz="sm">
-                {t('totp.codeLabel')}
-              </Text>
-              <CodeInput busy={isPending} onChange={setCode} value={code} />
-            </Stack>
+            <CodeInput
+              busy={isPending}
+              label={t('totp.codeLabel')}
+              onChange={setCode}
+              required
+              value={code}
+            />
           )}
-          <FormError
-            message={
-              mutation.error
-                ? describeError(
-                    t,
-                    mutation.error,
-                    recovery ? t('totp.recoveryInvalid') : t('stepUp.codeWrong'),
-                  )
-                : undefined
-            }
-          />
           <Anchor
             c="dimmed"
             component="button"

@@ -1,13 +1,13 @@
 import { Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core';
-import { IconUserPlus } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiSignpostDuotone } from 'react-icons/pi';
 
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 
 import { acceptInvitation } from '../api.js';
-import { FormError } from './form-error.js';
+import { notifyError } from '../shell/feedback.js';
 import { describeError } from './messages.js';
 
 const HASH_PREFIX = '#invite=';
@@ -67,6 +67,9 @@ export function AcceptInvitationForm({
       setRepeat('');
       onAccepted();
     },
+    onError: (error) => {
+      notifyError(t('invitation.title'), describeError(t, error, t('invitation.invalid')));
+    },
   });
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -78,17 +81,19 @@ export function AcceptInvitationForm({
 
   return (
     <form onSubmit={submit}>
-      <Stack gap="md">
-        <TextInput
-          autoComplete="off"
-          description={t('invitation.tokenHint')}
-          label={t('invitation.tokenLabel')}
-          onChange={(e) => {
-            setToken(e.currentTarget.value.trim());
-          }}
-          required
-          value={token}
-        />
+      <TextInput
+        autoComplete="off"
+        description={t('invitation.tokenHint')}
+        label={t('invitation.tokenLabel')}
+        onChange={(e) => {
+          setToken(e.currentTarget.value.trim());
+        }}
+        placeholder={t('invitation.tokenLabel')}
+        required
+        size="md"
+        value={token}
+      />
+      <Stack mt="md">
         <PasswordInput
           autoComplete="new-password"
           autoFocus={token.length > 0}
@@ -98,7 +103,9 @@ export function AcceptInvitationForm({
           onChange={(e) => {
             setPassword(e.currentTarget.value);
           }}
+          placeholder={t('setup.passwordPlaceholder')}
           required
+          size="md"
           value={password}
         />
         <PasswordInput
@@ -108,26 +115,27 @@ export function AcceptInvitationForm({
           onChange={(e) => {
             setRepeat(e.currentTarget.value);
           }}
+          placeholder={t('setup.passwordPlaceholder')}
           required
+          size="md"
           value={repeat}
         />
-        <FormError
-          message={
-            mutation.error ? describeError(t, mutation.error, t('invitation.invalid')) : undefined
-          }
-        />
-        <Button
-          fullWidth
-          leftSection={<IconUserPlus size={16} />}
-          loading={mutation.isPending}
-          type="submit"
-          variant="soft"
-        >
-          {t('invitation.submit')}
-        </Button>
-        <Text c="dimmed" fz="xs" ta="center">
-          {t('invitation.next')}
-        </Text>
+      </Stack>
+      <Button
+        fullWidth
+        leftSection={<PiSignpostDuotone size="16px" />}
+        loading={mutation.isPending}
+        mt="xl"
+        size="md"
+        type="submit"
+        variant="default"
+      >
+        {t('invitation.submit')}
+      </Button>
+      <Text c="dimmed" fz="xs" mt="md" ta="center">
+        {t('invitation.next')}
+      </Text>
+      <Stack align="center" mt="xs">
         <Anchor c="dimmed" component="button" fz="xs" onClick={onBack} type="button">
           {t('invitation.backToSignIn')}
         </Anchor>

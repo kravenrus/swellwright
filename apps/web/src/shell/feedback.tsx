@@ -1,4 +1,3 @@
-import { Text } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import type { ReactNode } from 'react';
@@ -44,7 +43,8 @@ export function confirmAction({
 }): void {
   modals.openConfirmModal({
     title,
-    children: typeof message === 'string' ? <Text size="sm">{message}</Text> : message,
+    // The panel hands the text over as it is, so it is drawn at the body size; wrapping it would shrink it.
+    children: message,
     labels: { confirm: confirmLabel, cancel: cancelLabel },
     centered: true,
     cancelProps: { variant: 'subtle' },

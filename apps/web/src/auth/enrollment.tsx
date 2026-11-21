@@ -1,21 +1,21 @@
-import { Button, Checkbox, CopyButton, Group, Paper, SimpleGrid, Stack, Text } from '@mantine/core';
-import {
-  IconArrowRight,
-  IconCheck,
-  IconCopy,
-  IconDownload,
-  IconShieldCheck,
-} from '@tabler/icons-react';
+import { Button, Card, Checkbox, CopyButton, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  PiArrowRightDuotone,
+  PiCheckDuotone,
+  PiCopyDuotone,
+  PiDownloadSimpleDuotone,
+  PiShieldCheckDuotone,
+} from 'react-icons/pi';
 
 import type { TotpConfirmed } from '@swellwright/contracts';
-import { CopyableCodeBlock, LoadingScreen } from '@swellwright/ui';
+import { CopyableCodeBlock, ErrorMessageBlock, LoadingScreen } from '@swellwright/ui';
 
 import { confirmTotpEnrollment, startTotpEnrollment } from '../api.js';
+import { notifyError } from '../shell/feedback.js';
 import { CODE_LENGTH, CodeInput } from './code-input.js';
-import { FormError } from './form-error.js';
 import { describeError } from './messages.js';
 import { QrCode } from './qr.js';
 
@@ -34,8 +34,9 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
   const confirm = useMutation({
     mutationFn: (value: string) => confirmTotpEnrollment(value),
     onSuccess: onConfirmed,
-    onError: () => {
+    onError: (error) => {
       setCode('');
+      notifyError(t('enrollment.title'), describeError(t, error, t('totp.codeWrong')));
     },
   });
   // Six digits send themselves.
@@ -50,7 +51,13 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
     return <LoadingScreen height="40vh" />;
   }
   if (enrollment.isError) {
-    return <FormError message={describeError(t, enrollment.error, t('shared.signInAgain'))} />;
+    return (
+      <ErrorMessageBlock
+        copiedLabel={t('common:copied')}
+        copyLabel={t('common:copy')}
+        message={describeError(t, enrollment.error, t('shared.signInAgain'))}
+      />
+    );
   }
   const { secret, otpauthUri } = enrollment.data;
   return (
@@ -77,24 +84,22 @@ export function EnrollmentStep({ onConfirmed }: { onConfirmed: (result: TotpConf
           </Stack>
         </Group>
       </Stack>
-      <Stack gap="xs">
-        <Text fw={600} fz="sm">
-          {t('enrollment.enterTitle')}
-        </Text>
-        <CodeInput busy={isPending} onChange={setCode} value={code} />
-        <FormError
-          message={confirm.error ? describeError(t, confirm.error, t('totp.codeWrong')) : undefined}
-        />
-      </Stack>
+      <CodeInput
+        busy={isPending}
+        label={t('enrollment.enterTitle')}
+        onChange={setCode}
+        value={code}
+      />
       <Button
         disabled={code.length !== CODE_LENGTH}
         fullWidth
-        leftSection={<IconShieldCheck size={16} />}
+        leftSection={<PiShieldCheckDuotone size="16px" />}
         loading={confirm.isPending}
+        mt="sm"
         onClick={() => {
           confirm.mutate(code);
         }}
-        variant="soft"
+        variant="default"
       >
         {t('enrollment.submit')}
       </Button>
@@ -120,18 +125,9 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
       <Text c="dimmed" fz="sm">
         {t('recoveryCodes.intro')}
       </Text>
-      <SimpleGrid cols={{ base: 2, sm: 3 }} spacing={8}>
+      <SimpleGrid cols={2} spacing={8}>
         {codes.map((code, index) => (
-          <Paper
-            key={code}
-            px="sm"
-            py={6}
-            radius="md"
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
+          <Card key={code} px="sm" py={6}>
             <Group gap={6} wrap="nowrap">
               <Text c="dimmed" ff="monospace" fz="xs">
                 {index + 1}
@@ -140,22 +136,26 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
                 {code}
               </Text>
             </Group>
-          </Paper>
+          </Card>
         ))}
       </SimpleGrid>
       <Group gap="xs" grow>
         <CopyButton timeout={2000} value={text}>
           {({ copied, copy }) => (
             <Button
-              leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+              leftSection={copied ? <PiCheckDuotone size="16px" /> : <PiCopyDuotone size="16px" />}
               onClick={copy}
-              variant="subtle"
+              variant="default"
             >
               {copied ? t('common:copied') : t('recoveryCodes.copyAll')}
             </Button>
           )}
         </CopyButton>
-        <Button leftSection={<IconDownload size={16} />} onClick={download} variant="subtle">
+        <Button
+          leftSection={<PiDownloadSimpleDuotone size="16px" />}
+          onClick={download}
+          variant="default"
+        >
           {t('common:download')}
         </Button>
       </Group>
@@ -169,9 +169,10 @@ export function RecoveryCodes({ codes, onDone }: { codes: readonly string[]; onD
       <Button
         disabled={!saved}
         fullWidth
-        leftSection={<IconArrowRight size={16} />}
+        leftSection={<PiArrowRightDuotone size="16px" />}
+        mt="sm"
         onClick={onDone}
-        variant="soft"
+        variant="default"
       >
         {t('recoveryCodes.continue')}
       </Button>

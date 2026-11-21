@@ -3,6 +3,7 @@ import '@fontsource/montserrat/400.css';
 import '@fontsource/montserrat/500.css';
 import '@fontsource/montserrat/600.css';
 import '@fontsource/montserrat/700.css';
+import '@fontsource/montserrat/900.css';
 import '@fontsource/unbounded/700.css';
 import '@fontsource/fira-mono/400.css';
 import '@mantine/core/styles.css';
@@ -25,6 +26,7 @@ import { cssVariablesResolver, theme } from '@swellwright/ui';
 
 import { App } from './app.js';
 import './i18n.js';
+import { ConnectionStatusOverlay } from './shell/connection-status.js';
 
 // Windows draws no flag emoji. The font for them is self-hosted, like the others.
 polyfillCountryFlagEmojis('Twemoji Country Flags', flagFont);
@@ -51,6 +53,7 @@ createRoot(root).render(
         {/* The panel's entrances use `motion`; a person who asked their system for less motion gets none of them. */}
         <MotionConfig reducedMotion="user">
           <QueryClientProvider client={queryClient}>
+            <ConnectionStatusOverlay />
             <App />
           </QueryClientProvider>
         </MotionConfig>

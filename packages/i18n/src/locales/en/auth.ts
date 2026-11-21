@@ -15,7 +15,6 @@ export const auth = {
   /** The second step: six digits or a recovery code. Shared by sign-in and the confirmation dialog. */
   totp: {
     title: 'Two-step verification',
-    description: 'Enter the code from your authenticator app, or a recovery code.',
     codeInputLabel: 'Six-digit code',
     codeLabel: 'Code from your authenticator',
     codeWrong: 'That code is not right. Wait for the next one and try again.',
@@ -44,8 +43,8 @@ export const auth = {
 
   login: {
     title: 'Sign in',
-    description: 'Sign in to the Swellwright console.',
     submit: 'Sign in',
+    passwordPlaceholder: 'Your password',
     wrongCredentials: 'Wrong login name or password.',
   },
 
@@ -56,6 +55,12 @@ export const auth = {
     tokenLabel: 'Setup token',
     tokenHint: 'The server printed it to its log when it started.',
     tokenWrong: 'The setup token is not right.',
+    tokenPlaceholder: 'Paste the setup token',
+    passwordPlaceholder: 'A long passphrase',
+    generate: 'Generate and copy',
+    passwordCopied: 'Password copied',
+    passwordCopiedMessage: 'The password was copied to the clipboard',
+    passwordCopyFailed: 'The password could not be copied to the clipboard',
     usernameHint: 'Lower-case letters, digits, dot, dash or underscore. 2 to 32 characters.',
     usernameInvalid: 'This login name is not allowed.',
     submit: 'Create the owner',

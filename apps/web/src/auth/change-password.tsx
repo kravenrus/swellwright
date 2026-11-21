@@ -7,9 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { PASSWORD_MIN_LENGTH, PasswordSchema } from '@swellwright/contracts';
 import { ModalFooter, OverlayHeader } from '@swellwright/ui';
 
-import { changePassword } from '../api.js';
-import { notifySuccess } from '../shell/feedback.js';
-import { FormError } from './form-error.js';
+import { ApiRequestError, changePassword } from '../api.js';
+import { notifyError, notifySuccess } from '../shell/feedback.js';
 import { describeError } from './messages.js';
 import { useStepUp } from './step-up.js';
 
@@ -39,7 +38,15 @@ export function ChangePasswordDialog({
       notifySuccess(t('changePassword.title'), t('changePassword.success'));
       close();
     },
+    onError: (error) => {
+      // A wrong current password is said on its field; anything else is a toast, as in the panel.
+      if (!(error instanceof ApiRequestError && error.code === 'unauthorized')) {
+        notifyError(t('changePassword.title'), describeError(t, error, ''));
+      }
+    },
   });
+  const currentWrong =
+    mutation.error instanceof ApiRequestError && mutation.error.code === 'unauthorized';
   function close() {
     mutation.reset();
     setCurrent('');
@@ -68,6 +75,7 @@ export function ChangePasswordDialog({
           <PasswordInput
             autoComplete="current-password"
             data-autofocus
+            error={currentWrong ? t('changePassword.currentWrong') : undefined}
             label={t('changePassword.currentLabel')}
             onChange={(e) => {
               setCurrent(e.currentTarget.value);
@@ -95,13 +103,6 @@ export function ChangePasswordDialog({
             }}
             required
             value={repeat}
-          />
-          <FormError
-            message={
-              mutation.error
-                ? describeError(t, mutation.error, t('changePassword.currentWrong'))
-                : undefined
-            }
           />
           <Text c="dimmed" fz="xs">
             {t('changePassword.lockoutNote')}
