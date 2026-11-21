@@ -60,4 +60,5 @@ The console uses the libraries the Remnawave panel renders its tables, entrances
 - `@kastov/mantine-react-table-open` 9.0.12 (MIT, Copyright (c) 2023 Kevin Vandy, a Mantine fork of Material React Table), with `@tanstack/react-table`, `@tanstack/match-sorter-utils` and `@tanstack/react-virtual` (MIT, Tanner Linsley): the tables inside the cards.
 - `motion` 12.42.2 (MIT, Matt Perry): the entrance of page headers, table card titles and pages.
 - `color-hash` 2.0.2 (MIT, zenozeng): the colours of tags.
+- `@mantine/code-highlight` 9.5.2 (MIT, Mantine): the details of the 500 page.
 - `@mantine/dates` 9.5.2, `dayjs` 1.11.23 and `clsx` 2.1.1 (MIT): peers of the table package; `dayjs` (MIT, iamkun) also formats the dates of the console, as in the panel.

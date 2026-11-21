@@ -1,14 +1,12 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/pages/errors/4xx-error/{not-found.component.tsx,
 // NotFound.module.css} and src/pages/errors/5xx-error/{server-error.component.tsx,ServerError.module.css}. The drawing
 // of the digits 4, 0, 4 is the "nothing found" illustration of the Mantine UI examples (MIT) that the panel uses.
-// Changes: the CSS modules became `sw-error-*` rules; the texts come from i18n; the details of a 500 are in the
-// console's copyable block (the panel uses a code highlighter component that the console does not depend on);
-// the error comes from the router.
+// Changes: the CSS modules became `sw-error-*` rules; the texts come from i18n; the error comes from the router (it has
+// no component stack). The details of a 500 are in the panel's `CodeHighlight` (`@mantine/code-highlight`).
+import { CodeHighlight } from '@mantine/code-highlight';
 import { Box, Button, Container, Group, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useRouteError } from 'react-router';
-
-import { CopyableCodeBlock } from '@swellwright/ui';
 
 import { ROUTES } from '../routes.js';
 
@@ -87,14 +85,14 @@ export function ServerErrorPage() {
         </Group>
         {details ? (
           <Box mt="xl">
-            <CopyableCodeBlock
-              copiedLabel={t('common:copied')}
-              copyLabel={t('common:copy')}
-              maxHeight={240}
-              multiline
-              regionLabel={t('serverError.details')}
-              size="small"
-              value={details}
+            <CodeHighlight
+              background="rgba(255, 255, 255, 0.02)"
+              code={details}
+              collapseCodeLabel=""
+              defaultExpanded={false}
+              expandCodeLabel=""
+              radius="md"
+              withLineNumbers
             />
           </Box>
         ) : null}

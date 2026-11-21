@@ -86,7 +86,9 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
     <AppShell
       header={{ height: 64, collapsed: false, offset: false }}
       layout="alt"
-      navbar={{ width: 300, breakpoint: 'lg', collapsed: { mobile: !opened, desktop: true } }}
+      // 1025 px, not `lg` (1024): the mobile flag is `max-width: 64rem` as in the panel, which includes 1024 px, and
+      // the panel's own AppShell counts 1024 px as desktop, so its drawer cannot open there. Ours can.
+      navbar={{ width: 300, breakpoint: 1025, collapsed: { mobile: !opened, desktop: true } }}
       padding="md"
       transitionDuration={500}
       transitionTimingFunction="ease-in-out"
@@ -120,13 +122,7 @@ function MobileLayout({ sections }: { sections: ReturnType<typeof navFor> }) {
       >
         <AppShell.Section className="sw-drawer-logo">
           <Box style={{ position: 'absolute', left: '0' }}>
-            <Burger
-              aria-label={t('closeMenu')}
-              hiddenFrom="lg"
-              onClick={toggle}
-              opened={opened}
-              size="sm"
-            />
+            <Burger aria-label={t('closeMenu')} onClick={toggle} opened={opened} size="sm" />
           </Box>
           <Group gap="xs" justify="center" wrap="nowrap">
             <BrandLink />
