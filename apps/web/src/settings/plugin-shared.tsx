@@ -12,6 +12,9 @@ import { StepUpCancelledError } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { notifyError, notifyWarning } from '../shell/feedback.js';
 
+/** The width of the panel's data-dense dialogs (the token, executor and compose-like ones): 800 px, 90 % of a narrow screen. */
+export const MODAL_SIZE = 'min(800px, 90vw)';
+
 /** The translated texts of the copy controls of the shared blocks (tooltips and accessible names). */
 export function useCopyLabels(): { copyLabel: string; copiedLabel: string } {
   const { t } = useTranslation('common');

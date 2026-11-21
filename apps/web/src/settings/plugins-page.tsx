@@ -78,6 +78,7 @@ import {
   DetailList,
   DetailRow,
   FailureCard,
+  MODAL_SIZE,
   useCopyLabels,
   usePluginFailure,
 } from './plugin-shared.js';
@@ -1022,7 +1023,7 @@ function ReviewDialog({
       fullScreen={isMobile}
       onClose={onClose}
       opened={plugin !== undefined}
-      size="lg"
+      size={MODAL_SIZE}
       title={
         plugin ? (
           <OverlayHeader

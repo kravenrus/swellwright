@@ -69,6 +69,12 @@ type SecretChoices =
   | { readonly status: 'unavailable' }
   | { readonly status: 'ready'; readonly secrets: readonly SecretView[] };
 
+/**
+ * The panel's forms inside a dialog or a drawer (users, nodes) give every field a 500 label (`styles={{ label: {
+ * fontWeight: 500 } }}`); only the page-level settings cards keep Mantine's heavier default.
+ */
+const LABEL_STYLES = { label: { fontWeight: 500 } } as const;
+
 /** Under `['plugins']`, so the page's own refreshes reach it too; what the person typed is not in the cache. */
 const pluginConfigKey = (id: string) => ['plugins', id, 'config'] as const;
 
@@ -172,6 +178,7 @@ function SecretPicker({
     return (
       <Stack gap={4}>
         <TextInput
+          styles={LABEL_STYLES}
           description={description}
           disabled
           label={label}
@@ -203,6 +210,7 @@ function SecretPicker({
   return (
     <Stack gap={4}>
       <Select
+        styles={LABEL_STYLES}
         allowDeselect={!field.required}
         clearable={!field.required}
         data={options}
@@ -289,6 +297,7 @@ function SettingInput({
   if (field.type === 'integer' || field.type === 'number') {
     return (
       <NumberInput
+        styles={LABEL_STYLES}
         allowDecimal={field.type === 'number'}
         allowNegative={field.minimum === null || field.minimum < 0}
         description={description}
@@ -310,6 +319,7 @@ function SettingInput({
   if (field.choices !== null) {
     return (
       <Select
+        styles={LABEL_STYLES}
         allowDeselect={!field.required}
         clearable={!field.required}
         data={field.choices}
@@ -326,6 +336,7 @@ function SettingInput({
   }
   return (
     <TextInput
+      styles={LABEL_STYLES}
       autoComplete="off"
       description={description}
       disabled={disabled}
