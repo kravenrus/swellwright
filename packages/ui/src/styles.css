@@ -7,6 +7,11 @@
  * Import after "@mantine/core/styles.css".
  */
 
+/* The stylesheets of the tables (`@kastov/mantine-react-table-open` and the date pickers its filters use); the panel
+   imports both in src/app.tsx the same way. */
+@import '@mantine/dates/styles.css';
+@import '@kastov/mantine-react-table-open/styles.css';
+
 html,
 body {
   min-height: 100vh;
@@ -618,25 +623,6 @@ body {
 /* ------------------------------------------------------------------------------------------------ */
 /* Pages and screens before sign-in. */
 
-.sw-page {
-  animation: sw-fade-in 0.3s ease-in-out both;
-}
-
-.sw-page-header {
-  animation: sw-header-enter 0.5s cubic-bezier(0, 0.71, 0.2, 1.01) both;
-}
-
-@keyframes sw-header-enter {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* The loading screen: a striped cyan progress bar (src/shared/ui/loading-screen). */
 .sw-loading {
   display: flex;
@@ -646,8 +632,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .sw-shell,
-  .sw-page,
-  .sw-page-header,
   .sw-brand-mark,
   .sw-brand-title,
   .sw-hc--version[data-new],
@@ -1291,236 +1275,11 @@ body {
   background: #1b1f26;
 }
 
-/* ------------------------------------------------------------------------------------------------ */
-/* List table. The panel's list tables are `@kastov/mantine-datatable` (MIT), which is a Mantine Table plus a small
-   stylesheet; the variables below are that stylesheet's dark-scheme values (background = body, border = dark-4, striped
-   = dark-6, hover = dark-5; selection and scroll shadows are not used). The table is `border-collapse: separate` so the
-   header and the pinned columns keep their borders while they are sticky. */
-
-.sw-list-table {
-  --sw-table-bg: var(--mantine-color-body);
-  --sw-table-border: var(--mantine-color-dark-4);
-  --sw-table-striped: var(--mantine-color-dark-6);
-  --sw-table-hover: var(--mantine-color-dark-5);
-  --sw-table-head-height: 37px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: var(--mantine-color-text);
-  background: var(--sw-table-bg);
-}
-
-.sw-list-table[data-with-border] {
-  border: 1px solid var(--sw-table-border);
-}
-
-.sw-list-table-scroll {
-  flex: 1 1 100%;
-  min-height: 0;
-}
-
-.sw-list-table-table {
-  width: 100%;
-  /* On a narrow screen the table scrolls inside its card instead of squeezing the columns. */
-  min-width: max-content;
-  border-collapse: separate;
-  border-spacing: 0;
-  color: inherit;
-  background: var(--sw-table-bg);
-}
-
-/* The header: on the body colour, a line under it, sticky while the body scrolls. */
-.sw-list-table[data-sticky] .sw-list-table-head {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-}
-
-.sw-list-table-th {
-  background: var(--sw-table-bg);
-  border-bottom: 1px solid var(--sw-table-border);
-  font-weight: 700;
-  transition: background-color 0.2s;
-}
-
-.sw-list-table-th-text {
-  min-width: 0;
-  flex-grow: 1;
-}
-
-.sw-list-table-sort {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.25em;
-  width: 100%;
-  font: inherit;
-  color: inherit;
-  text-align: inherit;
-}
-
-.sw-list-table-sort:focus-visible {
-  outline: 2px solid var(--mantine-color-cyan-outline);
-  outline-offset: 2px;
-}
-
-.sw-list-table-th:has(.sw-list-table-sort):hover {
-  background: var(--mantine-color-dark-6);
-}
-
-.sw-list-table-sort-icon {
-  flex-shrink: 0;
-  transition:
-    transform 0.2s,
-    color 0.2s;
-}
-
-.sw-list-table-sort-icon--desc {
-  transform: scaleY(-1);
-}
-
-.sw-list-table-sort-icon--idle {
-  color: var(--mantine-color-dark-3);
-}
-
-.sw-list-table-th:hover .sw-list-table-sort-icon--idle {
-  color: var(--mantine-color-dark-2);
-}
-
-/* Rows: a line between rows, a line between columns, stripes on the odd rows, a tint under the pointer. */
-.sw-list-table[data-row-borders] tbody tr:not(:last-of-type) td {
-  border-bottom: 1px solid var(--sw-table-border);
-}
-
-.sw-list-table[data-column-borders] :is(th, td):not(:last-child) {
-  border-right: 1px solid var(--sw-table-border);
-}
-
-.sw-list-table[data-striped] tbody tr:nth-of-type(odd) {
-  background: var(--sw-table-striped);
-}
-
-.sw-list-table[data-hover] tbody tr:hover {
-  background: var(--sw-table-hover);
-}
-
-.sw-list-table-row[data-clickable] {
-  cursor: pointer;
-}
-
-.sw-list-table-row:focus-visible {
-  outline: 2px solid var(--mantine-color-cyan-outline);
-  outline-offset: -2px;
-}
-
-.sw-list-table-cell--nowrap {
-  white-space: nowrap;
-}
-
-.sw-list-table-cell--ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A pinned column sticks to its side and keeps an opaque background, also on striped and hovered rows. */
-.sw-list-table [data-pinned] {
-  position: sticky;
-  z-index: 2;
-  background: var(--sw-table-bg);
-}
-
-.sw-list-table th[data-pinned] {
-  z-index: 5;
-}
-
-.sw-list-table [data-pinned='left'] {
-  left: 0;
-}
-
-.sw-list-table [data-pinned='right'] {
-  right: 0;
-}
-
-.sw-list-table[data-striped] tbody tr:nth-of-type(odd) td[data-pinned] {
-  background: var(--sw-table-striped);
-}
-
-.sw-list-table[data-hover] tbody tr:hover td[data-pinned] {
-  background: var(--sw-table-hover);
-}
-
-/* The row that holds the space of an empty table, and the empty state laid over it. */
-.sw-list-table[data-striped] tbody tr.sw-list-table-empty-row,
-.sw-list-table[data-hover] tbody tr.sw-list-table-empty-row:hover {
-  background: transparent;
-}
-
-.sw-list-table .sw-list-table-empty-cell {
-  height: 160px;
-  padding: 0;
-  border-bottom: none;
-}
-
-.sw-list-table-empty {
-  position: absolute;
-  top: var(--sw-table-head-height);
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  pointer-events: none;
-  color: var(--mantine-color-dark-3);
-}
-
-.sw-list-table-empty :where(a, button, input, select, textarea, [role='button']) {
-  pointer-events: auto;
-}
-
-.sw-list-table-empty-icon {
-  display: flex;
-  margin-bottom: calc(var(--mantine-spacing-xs) / 2);
-  padding: var(--mantine-spacing-xs);
-  border-radius: 50%;
-  background: var(--mantine-color-dark-5);
-}
-
-/* The loading overlay: the body colour at 75 % over the rows, and a spinner. */
-.sw-list-table-loader {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: var(--sw-table-head-height);
-  pointer-events: none;
-  background: color-mix(in srgb, var(--sw-table-bg), transparent 25%);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.sw-list-table-loader[data-active] {
-  pointer-events: all;
-  opacity: 1;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .sw-shimmer-skeleton::after,
-  .sw-page-header,
   .sw-dtc-title,
   .sw-settings-card {
     animation: none;
-  }
-
-  .sw-list-table-loader,
-  .sw-list-table-th,
-  .sw-list-table-sort-icon {
-    transition: none;
   }
 }
 

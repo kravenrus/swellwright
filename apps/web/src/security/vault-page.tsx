@@ -18,7 +18,6 @@ import {
   TextInput,
   Textarea,
   Tooltip,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconAlertCircle,
@@ -26,6 +25,7 @@ import {
   IconDeviceFloppy,
   IconDots,
   IconEye,
+  IconFilterOff,
   IconKey,
   IconLock,
   IconLockOpen,
@@ -33,6 +33,7 @@ import {
   IconPlus,
   IconRefresh,
   IconRefreshDot,
+  IconRestore,
   IconShieldLock,
   IconTag,
   IconTrash,
@@ -60,17 +61,20 @@ import {
   ErrorMessageBlock,
   HeaderAction,
   HeaderActions,
-  ListTable,
-  type ListTableColumn,
   LoaderModal,
   LoadingScreen,
+  MantineReactTable,
+  type MRT_ColumnDef,
   MetricCard,
   ModalFooter,
   OverlayHeader,
   PageHeader,
+  panelTableOptions,
   SectionCard,
   SettingsCard,
   StatusBadge,
+  useMantineReactTable,
+  useMrtTableState,
 } from '@swellwright/ui';
 
 import {
@@ -95,6 +99,7 @@ import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
 import { confirmAction, notifyError, notifySuccess, notifyWarning } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
+import { useTableLocalization } from '../tables.js';
 
 const HIDE_AFTER_SECONDS = 30;
 const SOON_MS = 30 * 24 * 3_600_000;
@@ -1143,11 +1148,219 @@ function SecretMenu({
   );
 }
 
+/** The secrets of the vault as the panel's card table: filters under the head, sorting, columns and pages. */
+function SecretsTable({
+  secrets,
+  loading,
+  fetching,
+  loadFailure,
+  canManage,
+  canReveal,
+  open,
+  onAdd,
+  onDelete,
+  onEdit,
+  onReveal,
+}: {
+  secrets: readonly SecretView[];
+  loading: boolean;
+  fetching: boolean;
+  /** The text of the failure when the list could not be read. */
+  loadFailure?: string;
+  canManage: boolean;
+  canReveal: boolean;
+  /** The vault is unsealed. */
+  open: boolean;
+  onAdd: () => void;
+  onDelete: (secret: SecretView) => void;
+  onEdit: (secret: SecretView) => void;
+  onReveal: (secret: SecretView) => void;
+}) {
+  const { t } = useTranslation(['vault', 'common']);
+  const formatDay = useDay();
+  const formatTime = useDateTime('short');
+  const typeOptions = useTypeOptions();
+
+  const columns = useMemo<MRT_ColumnDef<SecretView>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: t('list.name'),
+        size: 320,
+        Cell: ({ row }) => (
+          <Stack gap={0}>
+            <Text fw={500} fz="sm" maw={360} title={row.original.name} truncate="end">
+              {row.original.name}
+            </Text>
+            {row.original.description ? (
+              <Text c="dimmed" fz="xs" maw={360} title={row.original.description} truncate="end">
+                {row.original.description}
+              </Text>
+            ) : null}
+          </Stack>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: t('list.kind'),
+        size: 170,
+        filterVariant: 'select',
+        mantineFilterSelectProps: { data: typeOptions },
+        Cell: ({ row }) => (
+          <Badge color="gray" size="md" variant="light">
+            {t(`types.${row.original.type}`)}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'version',
+        header: t('list.version'),
+        size: 110,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text c="dimmed" fz="sm">
+            v{row.original.version}
+          </Text>
+        ),
+      },
+      {
+        accessorKey: 'expiresAt',
+        header: t('list.expires'),
+        size: 200,
+        enableColumnFilter: false,
+        Cell: ({ row }) => {
+          const secret = row.original;
+          const expiry = expiryState(secret);
+          if (expiry === 'none') {
+            return (
+              <Text c="dimmed" fz="sm">
+                {t('common:never')}
+              </Text>
+            );
+          }
+          const day = secret.expiresAt ? formatDay(secret.expiresAt) : '';
+          return expiry === 'expired' ? (
+            <StatusBadge kind="err">{t('list.expired', { date: day })}</StatusBadge>
+          ) : expiry === 'soon' ? (
+            <StatusBadge kind="warn">{t('list.soon', { date: day })}</StatusBadge>
+          ) : (
+            <StatusBadge kind="ok">{day}</StatusBadge>
+          );
+        },
+      },
+      {
+        accessorKey: 'valueChangedAt',
+        header: t('list.valueChanged'),
+        size: 230,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text c="dimmed" fz="sm">
+            {formatTime(row.original.valueChangedAt)}
+          </Text>
+        ),
+      },
+    ],
+    [t, typeOptions, formatDay, formatTime],
+  );
+
+  const tableState = useMrtTableState('vault-secrets-v1');
+  const localization = useTableLocalization(t('list.empty'));
+  const table = useMantineReactTable<SecretView>({
+    ...panelTableOptions<SecretView>(),
+    columns,
+    data: secrets as SecretView[],
+    localization,
+    ...tableState.handlers,
+    state: {
+      ...tableState.state,
+      isLoading: loading,
+      showAlertBanner: false,
+      showProgressBars: fetching,
+    },
+    getRowId: (secret) => secret.id,
+    enableRowActions: canManage || canReveal,
+    positionActionsColumn: 'last',
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 64 } },
+    renderRowActions: ({ row }) => (
+      <SecretMenu
+        canManage={canManage}
+        canReveal={canReveal}
+        onDelete={() => {
+          onDelete(row.original);
+        }}
+        onEdit={() => {
+          onEdit(row.original);
+        }}
+        onReveal={() => {
+          onReveal(row.original);
+        }}
+        open={open}
+        secret={row.original}
+      />
+    ),
+    renderEmptyRowsFallback: () => (
+      <Stack align="center" gap="xs" p="xl">
+        <PiEmpty size={36} />
+        <Text c="dimmed" size="sm">
+          {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
+        </Text>
+        {canManage && open ? (
+          <Button leftSection={<IconPlus size={16} />} onClick={onAdd} variant="light">
+            {t('header.addSecret')}
+          </Button>
+        ) : null}
+      </Stack>
+    ),
+  });
+
+  return (
+    <DataTableCard.Container>
+      <DataTableCard.Title
+        actions={
+          <HeaderActions>
+            <HeaderAction
+              color="gray"
+              icon={IconFilterOff}
+              label={t('common:clearFilters')}
+              onClick={() => {
+                table.resetColumnFilters(true);
+              }}
+            />
+            <HeaderAction
+              color="gray"
+              icon={IconRestore}
+              label={t('common:resetTable')}
+              onClick={() => {
+                tableState.reset();
+                table.resetColumnFilters(true);
+              }}
+            />
+          </HeaderActions>
+        }
+        icon={<IconKey size={24} />}
+        title={t('list.title')}
+      />
+      <DataTableCard.Content>
+        {loadFailure === undefined ? (
+          <MantineReactTable table={table} />
+        ) : (
+          <Box p="md">
+            <ErrorMessageBlock
+              copiedLabel={t('common:copied')}
+              copyLabel={t('common:copy')}
+              message={loadFailure}
+            />
+          </Box>
+        )}
+      </DataTableCard.Content>
+    </DataTableCard.Container>
+  );
+}
+
 /** The vault: set it up, unseal it, keep secrets. Values are write-only except through a recorded reveal. */
 export function VaultPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['vault', 'common']);
   const formatDay = useDay();
-  const formatTime = useDateTime('short');
   const formatNumber = useNumber();
   const failure = useFailure();
   const isMobile = useIsMobile();
@@ -1298,97 +1511,6 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
   }
 
   const list = secrets.data?.secrets ?? [];
-  const columns: ListTableColumn<SecretView>[] = [
-    {
-      accessor: 'name',
-      title: t('list.name'),
-      render: (secret) => (
-        <Stack gap={0}>
-          <Text fw={500} fz="sm" maw={360} title={secret.name} truncate="end">
-            {secret.name}
-          </Text>
-          {secret.description ? (
-            <Text c="dimmed" fz="xs" maw={360} title={secret.description} truncate="end">
-              {secret.description}
-            </Text>
-          ) : null}
-        </Stack>
-      ),
-    },
-    {
-      accessor: 'type',
-      title: t('list.kind'),
-      render: (secret) => (
-        <Badge color="gray" size="md" variant="light">
-          {t(`types.${secret.type}`)}
-        </Badge>
-      ),
-    },
-    {
-      accessor: 'version',
-      title: t('list.version'),
-      render: (secret) => (
-        <Text c="dimmed" fz="sm">
-          v{secret.version}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'expiresAt',
-      title: t('list.expires'),
-      render: (secret) => {
-        const expiry = expiryState(secret);
-        if (expiry === 'none') {
-          return (
-            <Text c="dimmed" fz="sm">
-              {t('common:never')}
-            </Text>
-          );
-        }
-        const day = secret.expiresAt ? formatDay(secret.expiresAt) : '';
-        return expiry === 'expired' ? (
-          <StatusBadge kind="err">{t('list.expired', { date: day })}</StatusBadge>
-        ) : expiry === 'soon' ? (
-          <StatusBadge kind="warn">{t('list.soon', { date: day })}</StatusBadge>
-        ) : (
-          <StatusBadge kind="ok">{day}</StatusBadge>
-        );
-      },
-    },
-    {
-      accessor: 'valueChangedAt',
-      title: t('list.valueChanged'),
-      render: (secret) => (
-        <Text c="dimmed" fz="sm">
-          {formatTime(secret.valueChangedAt)}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'actions',
-      title: <VisuallyHidden>{t('list.actions')}</VisuallyHidden>,
-      textAlign: 'right',
-      width: 56,
-      pinned: 'right',
-      render: (secret) => (
-        <SecretMenu
-          canManage={canManage}
-          canReveal={canReveal}
-          onDelete={() => {
-            askDelete(secret);
-          }}
-          onEdit={() => {
-            setEditing(secret);
-          }}
-          onReveal={() => {
-            setRevealing(secret);
-          }}
-          open={open}
-          secret={secret}
-        />
-      ),
-    },
-  ];
 
   return (
     <>
@@ -1438,49 +1560,23 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           />
         </SimpleGrid>
 
-        <DataTableCard.Container>
-          <DataTableCard.Title icon={<IconKey size={24} />} title={t('list.title')} />
-          <DataTableCard.Content>
-            {secrets.isError ? (
-              <Box p="md">
-                <ErrorMessageBlock
-                  copiedLabel={t('common:copied')}
-                  copyLabel={t('common:copy')}
-                  message={failure.message(secrets.error, t('list.loadFailed'))}
-                />
-              </Box>
-            ) : (
-              <ListTable
-                aria-label={t('list.title')}
-                borderRadius={0}
-                columns={columns}
-                emptyState={
-                  <Stack align="center" gap="xs">
-                    <PiEmpty size={36} />
-                    <Text c="dimmed" size="sm">
-                      {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
-                    </Text>
-                    {canManage && open ? (
-                      <Button
-                        leftSection={<IconPlus size={16} />}
-                        onClick={() => {
-                          setAdding(true);
-                        }}
-                        variant="light"
-                      >
-                        {t('header.addSecret')}
-                      </Button>
-                    ) : null}
-                  </Stack>
-                }
-                fetching={secrets.isPending}
-                loadingLabel={t('common:loading')}
-                records={list}
-                withTableBorder={false}
-              />
-            )}
-          </DataTableCard.Content>
-        </DataTableCard.Container>
+        <SecretsTable
+          canManage={canManage}
+          canReveal={canReveal}
+          fetching={secrets.isFetching}
+          loading={secrets.isPending}
+          onAdd={() => {
+            setAdding(true);
+          }}
+          onDelete={askDelete}
+          onEdit={setEditing}
+          onReveal={setRevealing}
+          open={open}
+          secrets={list}
+          {...(secrets.isError
+            ? { loadFailure: failure.message(secrets.error, t('list.loadFailed')) }
+            : {})}
+        />
 
         {canManage ? (
           <RotationCard

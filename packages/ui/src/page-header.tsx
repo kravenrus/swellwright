@@ -1,7 +1,7 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/ui/page-header/{page-header.shared.tsx,
-// page-header.module.css}. Changes: `motion` is replaced by the CSS class `sw-page-header` (the same 0.5 s rise from
-// -10 px with the same easing); copying the description reports to an optional `onCopy` callback (the panel shows a
-// toast); a `badges` slot next to the title is ours; the icon is optional when `customIcon` is given.
+// page-header.module.css}. The entrance is the panel's `motion` (the same 0.5 s rise from -10 px with the same easing).
+// Changes: copying the description reports to an optional `onCopy` callback (the panel shows a toast); a `badges` slot
+// next to the title is ours; the icon is optional when `customIcon` is given.
 import {
   Box,
   Card,
@@ -14,7 +14,10 @@ import {
   Title,
 } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
+import { motion } from 'motion/react';
 import type { ReactNode, Ref } from 'react';
+
+import { RISE } from './motion.js';
 
 export interface PageHeaderProps
   extends
@@ -77,29 +80,29 @@ export function PageHeader({
       withBorder={withBorder}
       {...props}
     >
-      <div className="sw-page-header" style={{ position: 'relative', zIndex: 1 }}>
+      <motion.div {...RISE} style={{ position: 'relative', zIndex: 1 }}>
         <Box className="sw-ph-wrapper">
           <Box className="sw-ph-content">
             <Group align="center" gap="md" wrap="nowrap">
-              <div className="sw-page-header">
+              <motion.div {...RISE}>
                 {customIcon ?? (
                   <ThemeIcon size="xl" variant="soft">
                     {icon}
                   </ThemeIcon>
                 )}
-              </div>
+              </motion.div>
 
               <Stack gap={0}>
-                <div className="sw-page-header">
+                <motion.div {...RISE}>
                   <Group gap="sm" wrap="wrap">
                     <Title order={4} pt={0}>
                       {title}
                     </Title>
                     {badges}
                   </Group>
-                </div>
+                </motion.div>
                 {description ? (
-                  <div className="sw-page-header">
+                  <motion.div {...RISE}>
                     <Text
                       c="dimmed"
                       fz="sm"
@@ -116,21 +119,21 @@ export function PageHeader({
                     >
                       {description}
                     </Text>
-                  </div>
+                  </motion.div>
                 ) : null}
               </Stack>
             </Group>
           </Box>
 
           {actions ? (
-            <div className="sw-page-header sw-ph-actions">
+            <motion.div {...RISE} className="sw-ph-actions">
               <Group gap="sm" justify="flex-end" wrap={wrapActions ? 'wrap' : 'nowrap'}>
                 {actions}
               </Group>
-            </div>
+            </motion.div>
           ) : null}
         </Box>
-      </div>
+      </motion.div>
     </Card>
   );
 }

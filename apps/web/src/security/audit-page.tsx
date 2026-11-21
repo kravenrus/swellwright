@@ -11,7 +11,6 @@ import {
   Text,
   Textarea,
   Tooltip,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconBook,
@@ -23,11 +22,12 @@ import {
   IconListCheck,
   IconListDetails,
   IconRefresh,
+  IconRestore,
   IconShieldCheck,
   IconShieldX,
 } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -50,16 +50,19 @@ import {
   EmptyPageLayout,
   HeaderAction,
   HeaderActions,
-  ListTable,
-  type ListTableColumn,
   LoadingScreen,
+  MantineReactTable,
+  type MRT_ColumnDef,
   ModalFooter,
   OverlayHeader,
   PageHeader,
+  panelTableOptions,
   SectionCard,
   StatusBadge,
   StatusText,
   type StatusKind,
+  useMantineReactTable,
+  useMrtTableState,
 } from '@swellwright/ui';
 
 import {
@@ -72,6 +75,7 @@ import {
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { notifyError, notifySuccess } from '../shell/feedback.js';
+import { useTableLocalization } from '../tables.js';
 import { FilterPopover } from './filter-popover.js';
 import { QueryErrorCard } from './query-error.js';
 import { useTimeFirst } from './time-first.js';
@@ -740,7 +744,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
     },
   });
 
-  const events = log.data?.pages.flatMap((p) => p.events) ?? [];
+  const events = useMemo(() => log.data?.pages.flatMap((p) => p.events) ?? [], [log.data]);
   const filtersActive = action !== null || outcome !== null;
   const open = (event: AuditEvent) => {
     setViewed(event);
@@ -752,104 +756,141 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
     }
   };
 
-  const columns: ListTableColumn<AuditEvent>[] = [
-    {
-      accessor: 'seq',
-      title: '#',
-      width: 90,
-      render: (event) => (
-        <Text c="dimmed" ff="monospace" size="sm">
-          {event.seq}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'occurredAt',
-      title: t('columns.time'),
-      width: 260,
-      render: (event) => (
-        <Text ff="monospace" size="sm" title={event.occurredAt}>
-          {formatTime(event.occurredAt)}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'actor',
-      title: t('columns.who'),
-      width: 170,
-      render: (event) =>
-        event.actor?.name ? (
-          <Text fw={500} size="sm" truncate="end">
-            {event.actor.name}
-          </Text>
-        ) : (
-          <Text c="dimmed" size="sm">
-            {t('nobody')}
+  const columns = useMemo<MRT_ColumnDef<AuditEvent>[]>(
+    () => [
+      {
+        accessorKey: 'seq',
+        header: '#',
+        size: 80,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text c="dimmed" ff="monospace" size="sm">
+            {row.original.seq}
           </Text>
         ),
-    },
-    {
-      accessor: 'action',
-      title: t('columns.what'),
-      width: 440,
-      render: (event) => {
-        const summary = eventSummary(event);
-        return (
-          <Box>
-            <Text ff="monospace" size="sm" truncate="end">
-              {event.action}
-            </Text>
-            {summary ? (
-              <Text c="dimmed" size="xs" title={summary} truncate="end">
-                {summary}
-              </Text>
-            ) : null}
-          </Box>
-        );
       },
+      {
+        accessorKey: 'occurredAt',
+        header: t('columns.time'),
+        size: 220,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text ff="monospace" size="sm" title={row.original.occurredAt}>
+            {formatTime(row.original.occurredAt)}
+          </Text>
+        ),
+      },
+      {
+        id: 'actor',
+        header: t('columns.who'),
+        accessorFn: (event) => event.actor?.name ?? '',
+        size: 150,
+        Cell: ({ row }) =>
+          row.original.actor?.name ? (
+            <Text fw={500} size="sm" truncate="end">
+              {row.original.actor.name}
+            </Text>
+          ) : (
+            <Text c="dimmed" size="sm">
+              {t('nobody')}
+            </Text>
+          ),
+      },
+      {
+        accessorKey: 'action',
+        header: t('columns.what'),
+        size: 360,
+        Cell: ({ row }) => {
+          const summary = eventSummary(row.original);
+          return (
+            <Box>
+              <Text ff="monospace" size="sm" truncate="end">
+                {row.original.action}
+              </Text>
+              {summary ? (
+                <Text c="dimmed" size="xs" title={summary} truncate="end">
+                  {summary}
+                </Text>
+              ) : null}
+            </Box>
+          );
+        },
+      },
+      {
+        accessorKey: 'outcome',
+        header: t('columns.outcome'),
+        size: 150,
+        filterVariant: 'select',
+        mantineFilterSelectProps: {
+          data: AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) })),
+        },
+        Cell: ({ row }) => (
+          <StatusText kind={OUTCOME_KIND[row.original.outcome]}>
+            {t(`outcome.${row.original.outcome}`)}
+          </StatusText>
+        ),
+      },
+      {
+        accessorKey: 'ip',
+        header: t('columns.address'),
+        size: 140,
+        Cell: ({ row }) => (
+          <Text ff="monospace" size="sm">
+            {row.original.ip ?? '–'}
+          </Text>
+        ),
+      },
+    ],
+    [t, formatTime],
+  );
+
+  const tableState = useMrtTableState('audit-v1');
+  const localization = useTableLocalization(t('empty'));
+  const table = useMantineReactTable<AuditEvent>({
+    ...panelTableOptions<AuditEvent>(),
+    columns,
+    data: events,
+    localization,
+    ...tableState.handlers,
+    state: {
+      ...tableState.state,
+      isLoading: log.isPending,
+      showAlertBanner: false,
+      showProgressBars: log.isFetching,
     },
-    {
-      accessor: 'outcome',
-      title: t('columns.outcome'),
-      width: 150,
-      render: (event) => (
-        <StatusText kind={OUTCOME_KIND[event.outcome]}>{t(`outcome.${event.outcome}`)}</StatusText>
-      ),
-    },
-    {
-      accessor: 'ip',
-      title: t('columns.address'),
-      width: 150,
-      render: (event) => (
-        <Text ff="monospace" size="sm">
-          {event.ip ?? '–'}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'actions',
-      title: <VisuallyHidden>{t('columns.actions')}</VisuallyHidden>,
-      width: 72,
-      pinned: 'right',
-      textAlign: 'right',
-      render: (event) => (
-        <Tooltip label={t('event.view')} withArrow>
-          <ActionIcon
-            aria-label={t('event.viewAria', { seq: event.seq })}
-            color="gray"
-            onClick={(click) => {
-              click.stopPropagation();
-              open(event);
-            }}
-            size="input-sm"
-            variant="soft"
-          >
-            <IconListDetails size={22} />
-          </ActionIcon>
-        </Tooltip>
-      ),
-    },
-  ];
+    getRowId: (event) => String(event.seq),
+    enableRowActions: true,
+    positionActionsColumn: 'last',
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 72 } },
+    renderRowActions: ({ row }) => (
+      <Tooltip label={t('event.view')} withArrow>
+        <ActionIcon
+          aria-label={t('event.viewAria', { seq: row.original.seq })}
+          color="gray"
+          onClick={(click) => {
+            click.stopPropagation();
+            open(row.original);
+          }}
+          size="input-sm"
+          variant="soft"
+        >
+          <IconListDetails size={22} />
+        </ActionIcon>
+      </Tooltip>
+    ),
+    mantineTableBodyRowProps: ({ row }) => ({
+      onClick: () => {
+        open(row.original);
+      },
+      onKeyDown: (event) => {
+        if (event.key === 'Enter' && event.target === event.currentTarget) {
+          open(row.original);
+        }
+      },
+      tabIndex: 0,
+      style: { cursor: 'pointer' },
+    }),
+  });
 
   return (
     <>
@@ -948,6 +989,17 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
                   setOutcome(null);
                 }}
               />
+              <HeaderAction
+                color="gray"
+                icon={IconRestore}
+                label={t('common:resetTable')}
+                onClick={() => {
+                  setAction(null);
+                  setOutcome(null);
+                  tableState.reset();
+                  table.resetColumnFilters(true);
+                }}
+              />
             </HeaderActions>
           }
           description={filtersActive ? t('list.descriptionFiltered') : t('list.description')}
@@ -973,17 +1025,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
               />
             </Box>
           ) : (
-            <ListTable
-              aria-label={t('title')}
-              borderRadius={0}
-              columns={columns}
-              idAccessor="seq"
-              maxHeight="65vh"
-              onRowClick={open}
-              onScrollToBottom={loadOlder}
-              records={events}
-              withTableBorder={false}
-            />
+            <MantineReactTable table={table} />
           )}
         </DataTableCard.Content>
       </DataTableCard.Container>

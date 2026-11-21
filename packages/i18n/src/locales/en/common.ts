@@ -19,6 +19,8 @@ export const common = {
   create: 'Create',
   delete: 'Delete',
   refresh: 'Refresh',
+  clearFilters: 'Clear filters',
+  resetTable: 'Reset table',
   retry: 'Try again',
   search: 'Search',
   copy: 'Copy',

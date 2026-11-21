@@ -11,23 +11,24 @@ import {
   Stack,
   Text,
   TextInput,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconDots,
+  IconFilterOff,
   IconId,
   IconKeyOff,
   IconLink,
   IconMail,
   IconPencil,
   IconRefresh,
+  IconRestore,
   IconTrash,
   IconUser,
   IconUserPlus,
   IconUserShield,
 } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { type MouseEvent, type SyntheticEvent, useState } from 'react';
+import { type MouseEvent, type SyntheticEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   PiEnvelopeSimpleDuotone,
@@ -54,13 +55,16 @@ import {
   ErrorMessageBlock,
   HeaderAction,
   HeaderActions,
-  type ListTableColumn,
-  ListTable,
+  MantineReactTable,
+  type MRT_ColumnDef,
   MetricCard,
   ModalFooter,
   OverlayHeader,
+  panelTableOptions,
   type StatusKind,
   StatusText,
+  useMantineReactTable,
+  useMrtTableState,
 } from '@swellwright/ui';
 
 import { createUser, deleteUser, listUsers, resetCredentials, updateUser } from '../api.js';
@@ -70,6 +74,7 @@ import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
 import { confirmAction, notifySuccess } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
+import { useTableLocalization } from '../tables.js';
 import { notifyFailure } from './notify-failure.js';
 import { useLastDefined } from './use-last-defined.js';
 
@@ -550,7 +555,7 @@ export function UsersPage({
     retry: false,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['users'] });
-  const users = list.data?.pages.flatMap((p) => p.users) ?? [];
+  const users = useMemo(() => list.data?.pages.flatMap((p) => p.users) ?? [], [list.data]);
 
   // Deleting goes through the panel's confirmation dialog; the work (and a code prompt, if one is due) follows it.
   const remove = useMutation({
@@ -569,24 +574,28 @@ export function UsersPage({
       );
     },
   });
-  const askDelete = (user: UserView) => {
-    confirmAction({
-      title: t('delete.title', { username: user.username }),
-      message: (
-        <Stack gap="xs">
-          <Text fw={600} size="sm">
-            {t('delete.irreversible')}
-          </Text>
-          <Text size="sm">{t('delete.warning', { username: user.username })}</Text>
-        </Stack>
-      ),
-      confirmLabel: t('delete.submit'),
-      cancelLabel: t('common:cancel'),
-      onConfirm: () => {
-        remove.mutate(user);
-      },
-    });
-  };
+  const removeUser = remove.mutate;
+  const askDelete = useCallback(
+    (user: UserView) => {
+      confirmAction({
+        title: t('delete.title', { username: user.username }),
+        message: (
+          <Stack gap="xs">
+            <Text fw={600} size="sm">
+              {t('delete.irreversible')}
+            </Text>
+            <Text size="sm">{t('delete.warning', { username: user.username })}</Text>
+          </Stack>
+        ),
+        confirmLabel: t('delete.submit'),
+        cancelLabel: t('common:cancel'),
+        onConfirm: () => {
+          removeUser(user);
+        },
+      });
+    },
+    [removeUser, t],
+  );
 
   // The API pages the list, so the counts cover what has been loaded; a trailing plus says there is more.
   const more = list.hasNextPage;
@@ -621,74 +630,115 @@ export function UsersPage({
     },
   ];
 
-  const columns: ListTableColumn<UserView>[] = [
-    {
-      accessor: 'username',
-      title: t('fields.loginName'),
-      render: (user) => (
-        <Group gap="xs" wrap="nowrap">
-          <Text fw={500} size="sm">
-            {user.username}
-          </Text>
-          {user.id === currentUserId ? (
-            <Badge color="cyan" size="lg" variant="soft">
-              {t('table.you')}
-            </Badge>
-          ) : null}
-        </Group>
-      ),
-    },
-    { accessor: 'displayName', title: t('fields.displayName') },
-    {
-      accessor: 'role',
-      title: t('fields.role'),
-      render: (user) => (
-        <Badge color="gray" size="lg" variant="soft">
-          {t(`roles:names.${user.role}`)}
-        </Badge>
-      ),
-    },
-    {
-      accessor: 'state',
-      title: t('table.state'),
-      render: (user) => (
-        <Group gap="xs" wrap="nowrap">
-          <StatusText kind={STATE_KIND[user.state]}>{t(`states.${user.state}`)}</StatusText>
-          {user.invitationExpiresAt ? (
-            <Text c="dimmed" size="xs">
-              {t('table.invitationUntil', { when: formatDate(user.invitationExpiresAt) })}
+  const roleOptions = useRoleOptions();
+  const stateOptions = (Object.keys(STATE_KIND) as UserView['state'][]).map((value) => ({
+    value,
+    label: t(`states.${value}`),
+  }));
+
+  const columns = useMemo<MRT_ColumnDef<UserView>[]>(
+    () => [
+      {
+        accessorKey: 'username',
+        header: t('fields.loginName'),
+        size: 220,
+        minSize: 150,
+        Cell: ({ row }) => (
+          <Group gap="xs" wrap="nowrap">
+            <Text fw={500} size="sm">
+              {row.original.username}
             </Text>
-          ) : null}
-        </Group>
-      ),
-    },
-    {
-      accessor: 'lastLoginAt',
-      title: t('table.lastSignIn'),
-      render: (user) =>
-        user.lastLoginAt ? (
-          <Text ff="monospace" size="sm">
-            {formatDate(user.lastLoginAt)}
-          </Text>
-        ) : (
-          <Text c="dimmed" size="sm">
-            {t('common:never')}
-          </Text>
+            {row.original.id === currentUserId ? (
+              <Badge color="cyan" size="lg" variant="soft">
+                {t('table.you')}
+              </Badge>
+            ) : null}
+          </Group>
         ),
+      },
+      {
+        accessorKey: 'displayName',
+        header: t('fields.displayName'),
+        size: 200,
+        Cell: ({ row }) => {
+          const name = row.original.displayName;
+          return name === null || name === '' ? '–' : name;
+        },
+      },
+      {
+        accessorKey: 'role',
+        header: t('fields.role'),
+        size: 170,
+        filterVariant: 'select',
+        mantineFilterSelectProps: { data: roleOptions },
+        Cell: ({ row }) => (
+          <Badge color="gray" size="lg" variant="soft">
+            {t(`roles:names.${row.original.role}`)}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'state',
+        header: t('table.state'),
+        size: 300,
+        filterVariant: 'select',
+        mantineFilterSelectProps: { data: stateOptions },
+        Cell: ({ row }) => (
+          <Group gap="xs" wrap="nowrap">
+            <StatusText kind={STATE_KIND[row.original.state]}>
+              {t(`states.${row.original.state}`)}
+            </StatusText>
+            {row.original.invitationExpiresAt ? (
+              <Text c="dimmed" size="xs">
+                {t('table.invitationUntil', { when: formatDate(row.original.invitationExpiresAt) })}
+              </Text>
+            ) : null}
+          </Group>
+        ),
+      },
+      {
+        accessorKey: 'lastLoginAt',
+        header: t('table.lastSignIn'),
+        size: 250,
+        enableColumnFilter: false,
+        Cell: ({ row }) =>
+          row.original.lastLoginAt ? (
+            <Text ff="monospace" size="sm">
+              {formatDate(row.original.lastLoginAt)}
+            </Text>
+          ) : (
+            <Text c="dimmed" size="sm">
+              {t('common:never')}
+            </Text>
+          ),
+      },
+    ],
+    // `roleOptions` and `stateOptions` follow `t`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, currentUserId, formatDate],
+  );
+
+  const tableState = useMrtTableState('users-v1');
+  const localization = useTableLocalization(t('table.empty'));
+  const table = useMantineReactTable<UserView>({
+    ...panelTableOptions<UserView>(),
+    columns,
+    data: users,
+    localization,
+    ...tableState.handlers,
+    state: {
+      ...tableState.state,
+      isLoading: list.isPending,
+      showAlertBanner: false,
+      showProgressBars: list.isFetching,
     },
-    {
-      accessor: 'actions',
-      hidden: !canWrite,
-      pinned: 'right',
-      textAlign: 'right',
-      width: 64,
-      title: (
-        <Group c="dimmed" gap={4} justify="flex-end" pr={4} wrap="nowrap">
-          <IconPencil aria-hidden size={18} />
-          <VisuallyHidden>{t('table.actions')}</VisuallyHidden>
-        </Group>
-      ),
-      render: (user) => (
+    getRowId: (user) => user.id,
+    enableRowActions: canWrite,
+    positionActionsColumn: 'last',
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 64 } },
+    renderRowActions: ({ row }) => {
+      const user = row.original;
+      return (
         <Group gap={4} justify="flex-end" wrap="nowrap">
           <Menu position="bottom-end" trigger="click-hover" width={220}>
             <Menu.Target>
@@ -738,9 +788,32 @@ export function UsersPage({
             </Menu.Dropdown>
           </Menu>
         </Group>
-      ),
+      );
     },
-  ];
+    mantineTableBodyRowProps: ({ row }) =>
+      canWrite
+        ? {
+            onClick: () => {
+              setEditing(row.original);
+            },
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' && event.target === event.currentTarget) {
+                setEditing(row.original);
+              }
+            },
+            tabIndex: 0,
+            style: { cursor: 'pointer' },
+          }
+        : {},
+  });
+
+  const clearFilters = () => {
+    table.resetColumnFilters(true);
+  };
+  const resetTable = () => {
+    tableState.reset();
+    table.resetColumnFilters(true);
+  };
 
   return (
     <Stack>
@@ -768,6 +841,18 @@ export function UsersPage({
                 loading={list.isRefetching && !list.isFetchingNextPage}
                 onClick={() => void list.refetch()}
               />
+              <HeaderAction
+                color="gray"
+                icon={IconFilterOff}
+                label={t('common:clearFilters')}
+                onClick={clearFilters}
+              />
+              <HeaderAction
+                color="gray"
+                icon={IconRestore}
+                label={t('common:resetTable')}
+                onClick={resetTable}
+              />
               {canWrite ? (
                 <HeaderAction
                   color="teal"
@@ -794,23 +879,7 @@ export function UsersPage({
               />
             </Box>
           ) : (
-            <ListTable
-              aria-label={t('header.title')}
-              borderRadius={0}
-              columns={columns}
-              emptyText={t('table.empty')}
-              fetching={list.isFetching}
-              loadingLabel={t('common:loading')}
-              records={users}
-              withTableBorder={false}
-              {...(canWrite
-                ? {
-                    onRowClick: (user: UserView) => {
-                      setEditing(user);
-                    },
-                  }
-                : {})}
-            />
+            <MantineReactTable table={table} />
           )}
         </DataTableCard.Content>
       </DataTableCard.Container>
