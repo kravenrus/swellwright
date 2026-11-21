@@ -115,7 +115,6 @@ export const plugins = {
     forbidden: 'Your role may not change the settings of plugins.',
     readOnly: 'Your role may see these settings but not change them.',
     problemsTitle: 'These settings need attention',
-    save: 'Save settings',
     saved: 'Settings saved.',
     lastChanged: 'Last changed by {{who}} on {{when}}.',
     neverSaved: 'Nothing has been saved yet.',
