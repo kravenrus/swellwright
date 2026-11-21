@@ -16,7 +16,7 @@ t_syntax_posix_tools() {
     done
 }
 
-# shellcheck is run by CI as its own step; here it only has to agree when it is installed.
+# CI runs the tool as a step of its own; here it only has to agree when it is installed.
 t_shellcheck_error_level() {
     [ -n "$REAL_SHELLCHECK" ] || skip "shellcheck is not installed"
     "$REAL_SHELLCHECK" -s sh -S error "$INSTALLER" >"$T/out" 2>&1 || fail "shellcheck found an error"
