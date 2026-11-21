@@ -1,7 +1,6 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/ui/table/{index.ts,table.card-titile.tsx,
-// table.container.shared.tsx,table.table-content.tsx,table.module.css}. Changes: `motion` is replaced by the CSS class
-// `sw-page-header` (the same rise); the CSS module became `sw-dtc-*` classes (shared with the page header); the glyph in
-// the title is an inert `div`, not a button that does nothing.
+// table.container.shared.tsx,table.table-content.tsx,table.module.css}. The entrance is the panel's `motion`. Changes:
+// the CSS module became `sw-dtc-*` classes; the glyph in the title is an inert `div`, not a button that does nothing.
 import {
   ActionIcon,
   type ActionIconProps,
@@ -15,9 +14,11 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { motion } from 'motion/react';
 import type { ReactNode, Ref } from 'react';
 
 import { cx } from './internal.js';
+import { RISE } from './motion.js';
 
 export type DataTableCardContainerProps = CardProps & ElementProps<'div', keyof CardProps>;
 
@@ -61,11 +62,11 @@ function DataTableCardTitle({
       withBorder={withBorder}
       {...props}
     >
-      <div className="sw-page-header" style={{ position: 'relative', zIndex: 1 }}>
+      <motion.div {...RISE} style={{ position: 'relative', zIndex: 1 }}>
         <Box className="sw-ph-wrapper">
           <Box className="sw-ph-content">
             <Group align="center" gap="md" wrap="nowrap">
-              <div className="sw-page-header">
+              <motion.div {...RISE}>
                 <ActionIcon
                   aria-hidden
                   className="sw-dtc-icon"
@@ -77,34 +78,34 @@ function DataTableCardTitle({
                 >
                   {icon}
                 </ActionIcon>
-              </div>
+              </motion.div>
 
               <Stack gap={0}>
-                <div className="sw-page-header">
+                <motion.div {...RISE}>
                   <Title order={4} pt={0}>
                     {title}
                   </Title>
-                </div>
+                </motion.div>
                 {description ? (
-                  <div className="sw-page-header">
+                  <motion.div {...RISE}>
                     <Text c="dimmed" fz="sm">
                       {description}
                     </Text>
-                  </div>
+                  </motion.div>
                 ) : null}
               </Stack>
             </Group>
           </Box>
 
           {actions ? (
-            <div className="sw-page-header sw-ph-actions">
+            <motion.div {...RISE} className="sw-ph-actions">
               <Group align="flex-end" gap="sm" wrap="nowrap">
                 {actions}
               </Group>
-            </div>
+            </motion.div>
           ) : null}
         </Box>
-      </div>
+      </motion.div>
     </Card.Section>
   );
 }
@@ -122,8 +123,8 @@ function DataTableCardContent({ children, ref, ...props }: DataTableCardContentP
 
 /**
  * The titled card that wraps a list: a header with a soft cyan icon, a title, a description and icon-only actions,
- * then the list on the page background. Compose it as `Container > Title + Content` and put a `ListTable` in the
- * content (with `withTableBorder={false}` and `borderRadius={0}`, since the card already has a border).
+ * then the list on the page background. Compose it as `Container > Title + Content` and put a `MantineReactTable`
+ * (see `panelTableOptions`) in the content, as the panel's Users page does.
  */
 export const DataTableCard = {
   Container: DataTableCardContainer,

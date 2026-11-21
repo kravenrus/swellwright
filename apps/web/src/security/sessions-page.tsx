@@ -8,13 +8,13 @@ import {
   Stack,
   Text,
   Tooltip,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconDevices,
   IconFilterOff,
   IconLogout,
   IconRefresh,
+  IconRestore,
   IconUsersGroup,
 } from '@tabler/icons-react';
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,12 +28,15 @@ import {
   EmptyPageLayout,
   HeaderAction,
   HeaderActions,
-  ListTable,
-  type ListTableColumn,
   LoaderModal,
+  MantineReactTable,
+  type MRT_ColumnDef,
   OverlayHeader,
   PageHeader,
+  panelTableOptions,
   SectionCard,
+  useMantineReactTable,
+  useMrtTableState,
 } from '@swellwright/ui';
 
 import {
@@ -47,6 +50,7 @@ import {
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { confirmAction, notifyError, notifySuccess } from '../shell/feedback.js';
+import { useTableLocalization } from '../tables.js';
 import { FilterPopover } from './filter-popover.js';
 import { QueryErrorCard } from './query-error.js';
 import { useTimeFirst } from './time-first.js';
@@ -351,98 +355,121 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [all]);
   const selected = users.find((user) => user.value === userId);
-  const shown = selected ? (all ?? []).filter((s) => s.userId === selected.value) : (all ?? []);
+  const selectedId = selected?.value;
+  const shown = useMemo(
+    () =>
+      selectedId === undefined ? (all ?? []) : (all ?? []).filter((s) => s.userId === selectedId),
+    [all, selectedId],
+  );
   const canEndUser = canRevoke && selected !== undefined && selected.value !== currentUserId;
 
-  const columns: ListTableColumn<SessionSummary>[] = [
-    {
-      accessor: 'username',
-      title: t('columns.user'),
-      width: 160,
-      render: (session) => (
-        <Text fw={500} size="sm" truncate="end">
-          {session.username}
-        </Text>
+  const endOneMutate = endOne.mutate;
+  const endingId = endOne.isPending ? endOne.variables : undefined;
+  const columns = useMemo<MRT_ColumnDef<SessionSummary>[]>(
+    () => [
+      {
+        accessorKey: 'username',
+        header: t('columns.user'),
+        size: 140,
+        Cell: ({ row }) => (
+          <Text fw={500} size="sm" truncate="end">
+            {row.original.username}
+          </Text>
+        ),
+      },
+      {
+        accessorKey: 'createdAt',
+        header: t('columns.started'),
+        size: 220,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text ff="monospace" size="sm" title={row.original.createdAt}>
+            {formatTime(row.original.createdAt)}
+          </Text>
+        ),
+      },
+      {
+        accessorKey: 'lastSeenAt',
+        header: t('columns.lastActive'),
+        size: 220,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          <Text ff="monospace" size="sm" title={row.original.lastSeenAt}>
+            {formatTime(row.original.lastSeenAt)}
+          </Text>
+        ),
+      },
+      {
+        accessorKey: 'ip',
+        header: t('columns.address'),
+        size: 130,
+        Cell: ({ row }) => (
+          <Text ff="monospace" size="sm">
+            {row.original.ip ?? '–'}
+          </Text>
+        ),
+      },
+      {
+        accessorKey: 'userAgent',
+        header: t('columns.browser'),
+        size: 230,
+        Cell: ({ row }) => (
+          <Text size="sm" title={row.original.userAgent ?? ''} truncate="end">
+            {row.original.userAgent ?? '–'}
+          </Text>
+        ),
+      },
+      {
+        id: 'state',
+        header: t('columns.state'),
+        size: 200,
+        enableColumnFilter: false,
+        enableSorting: false,
+        Cell: ({ row }) => <SessionBadges nowrap session={row.original} />,
+      },
+    ],
+    [t, formatTime],
+  );
+
+  const tableState = useMrtTableState('sessions-all-v1');
+  const localization = useTableLocalization(selected ? t('all.emptyFiltered') : t('all.empty'));
+  const table = useMantineReactTable<SessionSummary>({
+    ...panelTableOptions<SessionSummary>(),
+    columns,
+    data: shown,
+    localization,
+    ...tableState.handlers,
+    state: {
+      ...tableState.state,
+      isLoading: list.isPending,
+      showAlertBanner: false,
+      showProgressBars: list.isFetching,
+    },
+    getRowId: (session) => session.id,
+    enableRowActions: canRevoke,
+    positionActionsColumn: 'last',
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 72 } },
+    renderRowActions: ({ row }) =>
+      row.original.current ? null : (
+        <Tooltip label={t('all.end')} withArrow>
+          <ActionIcon
+            aria-label={t('all.endAria', {
+              username: row.original.username,
+              when: formatTime(row.original.createdAt),
+            })}
+            color="red"
+            loading={endingId === row.original.id}
+            onClick={() => {
+              endOneMutate(row.original.id);
+            }}
+            size="md"
+            variant="outline"
+          >
+            <IconLogout size={18} />
+          </ActionIcon>
+        </Tooltip>
       ),
-    },
-    {
-      accessor: 'createdAt',
-      title: t('columns.started'),
-      width: 260,
-      render: (session) => (
-        <Text ff="monospace" size="sm" title={session.createdAt}>
-          {formatTime(session.createdAt)}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'lastSeenAt',
-      title: t('columns.lastActive'),
-      width: 260,
-      render: (session) => (
-        <Text ff="monospace" size="sm" title={session.lastSeenAt}>
-          {formatTime(session.lastSeenAt)}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'ip',
-      title: t('columns.address'),
-      width: 150,
-      render: (session) => (
-        <Text ff="monospace" size="sm">
-          {session.ip ?? '–'}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'userAgent',
-      title: t('columns.browser'),
-      width: 300,
-      render: (session) => (
-        <Text size="sm" title={session.userAgent ?? ''} truncate="end">
-          {session.userAgent ?? '–'}
-        </Text>
-      ),
-    },
-    {
-      accessor: 'state',
-      title: t('columns.state'),
-      width: 360,
-      render: (session) => <SessionBadges nowrap session={session} />,
-    },
-    ...(canRevoke
-      ? [
-          {
-            accessor: 'actions',
-            title: <VisuallyHidden>{t('columns.actions')}</VisuallyHidden>,
-            width: 72,
-            pinned: 'right' as const,
-            textAlign: 'right' as const,
-            render: (session: SessionSummary) =>
-              session.current ? null : (
-                <Tooltip label={t('all.end')} withArrow>
-                  <ActionIcon
-                    aria-label={t('all.endAria', {
-                      username: session.username,
-                      when: formatTime(session.createdAt),
-                    })}
-                    color="red"
-                    loading={endOne.isPending && endOne.variables === session.id}
-                    onClick={() => {
-                      endOne.mutate(session.id);
-                    }}
-                    size="md"
-                    variant="outline"
-                  >
-                    <IconLogout size={18} />
-                  </ActionIcon>
-                </Tooltip>
-              ),
-          },
-        ]
-      : []),
-  ];
+  });
 
   return (
     <DataTableCard.Container>
@@ -468,6 +495,17 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
               label={t('all.clearFilter')}
               onClick={() => {
                 setUserId(null);
+                table.resetColumnFilters(true);
+              }}
+            />
+            <HeaderAction
+              color="gray"
+              icon={IconRestore}
+              label={t('common:resetTable')}
+              onClick={() => {
+                setUserId(null);
+                tableState.reset();
+                table.resetColumnFilters(true);
               }}
             />
             {canEndUser ? (
@@ -507,19 +545,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
             />
           </Box>
         ) : (
-          <ListTable
-            aria-label={t('all.title')}
-            borderRadius={0}
-            columns={columns}
-            emptyText={selected ? t('all.emptyFiltered') : t('all.empty')}
-            fetching={list.isPending}
-            idAccessor="id"
-            loadingLabel={t('common:loading')}
-            maxHeight="65vh"
-            {...(list.isPending ? { minHeight: 240 } : {})}
-            records={shown}
-            withTableBorder={false}
-          />
+          <MantineReactTable table={table} />
         )}
       </DataTableCard.Content>
     </DataTableCard.Container>

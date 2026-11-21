@@ -17,6 +17,7 @@ import { NavigationProgress } from '@mantine/nprogress';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { polyfillCountryFlagEmojis } from 'country-flag-emoji-polyfill';
 import flagFont from 'country-flag-emoji-polyfill/dist/TwemojiCountryFlags.woff2?url';
+import { MotionConfig } from 'motion/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -47,9 +48,12 @@ createRoot(root).render(
       <ModalsProvider>
         <Notifications position="top-right" />
         <NavigationProgress />
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
+        {/* The panel's entrances use `motion`; a person who asked their system for less motion gets none of them. */}
+        <MotionConfig reducedMotion="user">
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </MotionConfig>
       </ModalsProvider>
     </MantineProvider>
   </StrictMode>,

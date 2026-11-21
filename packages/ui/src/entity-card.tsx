@@ -1,9 +1,9 @@
 // Adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/ui/entity-card/{index.ts,
 // entity-card.root.tsx,entity-card.header.tsx,entity-card.icon.tsx,entity-card.content.tsx,entity-card.actions.tsx,
 // entity-card.menu-action.tsx,entity-card.tags.tsx,entity-card.module.css}. Changes: the CSS module became `sw-entity-card*`
-// classes; the `color-hash` package is replaced by a small local hash (tag colours are stable but not identical to the
-// panel's); the menu button has an accessible name; the decorative icon is hidden from assistive technology; the optional
-// `wrap` prop lets the badges drop under the title at any width (the panel does it only below 48em).
+// classes; the tag colours come from the same `color-hash` package with the panel's options (lightness 0.65); the menu
+// button has an accessible name; the decorative icon is hidden from assistive technology; the optional `wrap` prop lets
+// the badges drop under the title at any width (the panel does it only below 48em).
 import {
   ActionIcon,
   type ActionIconProps,
@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import ColorHash from 'color-hash';
 import type { ElementProps } from '@mantine/core';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { TbDots, TbTag } from 'react-icons/tb';
@@ -184,25 +185,11 @@ function EntityCardMenu({ children, label = 'Actions' }: EntityCardMenuProps) {
   );
 }
 
-/** Stable, readable colour for a tag (lightness 0.65, as the panel asks of its colour hash). */
-export function tagColor(tag: string): string {
-  let hash = 0;
-  for (const char of `${tag}x`) {
-    hash = (hash * 131 + (char.codePointAt(0) ?? 0)) % 2_147_483_647;
-  }
-  const hue = hash % 359;
-  const saturation = [0.35, 0.5, 0.65][Math.floor(hash / 360) % 3] ?? 0.5;
-  const lightness = 0.65;
+/** Stable, readable colour for a tag: the panel's `color-hash` with its lightness of 0.65. */
+const colorHash = new ColorHash({ lightness: [0.65, 0.65, 0.65] });
 
-  const a = saturation * Math.min(lightness, 1 - lightness);
-  const channel = (n: number) => {
-    const k = (n + hue / 30) % 12;
-    const value = lightness - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(value * 255)
-      .toString(16)
-      .padStart(2, '0');
-  };
-  return `#${channel(0)}${channel(8)}${channel(4)}`;
+export function tagColor(tag: string): string {
+  return colorHash.hex(tag);
 }
 
 /** Tags in a single row: the first two, and a "+N" badge whose tooltip lists the rest. */
