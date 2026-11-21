@@ -35,7 +35,13 @@ import { getPluginSidecar } from '../api.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useNumber } from '../format.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
-import { DetailList, DetailRow, useCopyLabels, usePluginFailure } from './plugin-shared.js';
+import {
+  DetailList,
+  DetailRow,
+  MODAL_SIZE,
+  useCopyLabels,
+  usePluginFailure,
+} from './plugin-shared.js';
 
 /** The file the compose fragment is saved as, and the command that applies it. */
 const fragmentFile = (pluginId: string): string => `plugin-${pluginId}.yml`;
@@ -76,7 +82,7 @@ function FragmentDialog({
       fullScreen={isMobile}
       onClose={onClose}
       opened={fragment !== undefined}
-      size="xl"
+      size={MODAL_SIZE}
       title={<OverlayHeader icon={IconFileCode} iconColor="orange" title={t('fragment.title')} />}
       // Above the review dialog it was opened from, below the confirmation with a code.
       zIndex={300}
