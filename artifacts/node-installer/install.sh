@@ -162,6 +162,7 @@ if [ "$UI_UTF" = 1 ]; then
 else
     S_OK="+"; S_ERR="x"; S_WARN="!"; S_INFO="i"; S_RUN=">"; S_DOT="*"; S_RING="o"; S_ARROW="->"; S_BOX="[ ]"
     H="-"; V="|"; TL="+"; TR="+"; BL="+"; BR="+"; DOTS="-"
+    # shellcheck disable=SC1003
     SPIN='| / - \'
 fi
 
@@ -655,7 +656,8 @@ write_file() {
 
 # make_dir MODE OWNER PATH (OWNER is user:group or empty)
 make_dir() {
-    mkdir -p "$3" && chmod "$1" "$3" || die "Could not create ${3#"$R"}"
+    mkdir -p "$3" || die "Could not create ${3#"$R"}"
+    chmod "$1" "$3" || die "Could not set the mode of ${3#"$R"}"
     [ -z "$2" ] || chown "$2" "$3" || die "Could not change the owner of ${3#"$R"}"
 }
 
@@ -1861,6 +1863,7 @@ main() {
     done
     [ $# -eq 0 ] || die "Only one action may be given"
     [ -n "$ACTION" ] || ACTION=menu
+    # shellcheck source=/dev/null
     [ -r "$R/etc/os-release" ] && . "$R/etc/os-release"
 
     # These three need no root and change nothing.

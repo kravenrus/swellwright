@@ -5,8 +5,8 @@
   "description": "Installs and hardens a Remnawave node: firewall, Docker, HAProxy SNI routing, nginx default site, the node container and the checks.",
   "file": "install.sh",
   "interpreter": "sh",
-  "sha256": "491560ffe33da27facb1223f52764dac928693df432b585c153cb90ab71f873a",
-  "size": 101334,
+  "sha256": "118d244b962486daae6236f98b372d67cec9cd6fc046a3dd21881a0064b84a5c",
+  "size": 101446,
   "minOs": "debian 12 / ubuntu 22.04",
   "steps": [
     {

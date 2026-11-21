@@ -225,10 +225,12 @@ jobs:
         run: |
           sh -n artifacts/node-installer/install.sh
           dash -n artifacts/node-installer/install.sh
-      - name: shellcheck
-        run: shellcheck -s sh -S error artifacts/node-installer/install.sh artifacts/node-installer/test/*.sh
-      - name: shellcheck report (warnings and notes, not a gate)
-        run: shellcheck -s sh -S style artifacts/node-installer/install.sh || true
+      - name: shellcheck (the installer: warnings and errors; the test scripts: errors)
+        run: |
+          shellcheck -s sh -S warning artifacts/node-installer/install.sh
+          shellcheck -s sh -S error artifacts/node-installer/test/*.sh
+      - name: shellcheck notes (not a gate)
+        run: shellcheck -s sh -S style artifacts/node-installer/install.sh artifacts/node-installer/test/*.sh || true
       - name: Test suite
         run: sh artifacts/node-installer/test/run-tests.sh
 
