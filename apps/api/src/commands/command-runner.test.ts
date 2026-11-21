@@ -310,8 +310,11 @@ describe('stopping a run', { skip: !databaseUrl }, () => {
       ids.push(await h.server(host));
     }
     const run = await h.createRun(h.operator, h.inline(ids, '# fake:gate\n'));
-    await h.waitFor(run.id, 'the first two to wait at the gate', (r) => r.counts.running === 2);
+    // A target counts as running as soon as a slot is taken; the program is on the server some moments later.
+    await until('the first two scripts to wait at the gate', () => host.maxRunning === 2);
     await sleep(200);
+    assert.equal((await h.getRun(run.id)).counts.running, 2);
+    assert.equal(host.runningSteps().length, 2, 'two at a time, and no third one started');
     assert.equal(host.maxRunning, 2, 'two at a time');
     release.open();
     const done = await h.finished(run.id);
