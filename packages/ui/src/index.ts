@@ -3,6 +3,7 @@ export * from './copyable-code-block.js';
 export * from './copyable-data-list-item.js';
 export * from './copyable-field.js';
 export * from './data-table-card.js';
+export * from './date-picker.js';
 export * from './mrt-table.js';
 export * from './drawer-footer.js';
 export * from './empty-page-layout.js';

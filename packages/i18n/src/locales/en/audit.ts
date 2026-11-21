@@ -10,15 +10,6 @@ export const audit = {
   exportForbidden: 'Your role may not export the audit log.',
   checkpointForbidden: 'Your role may not make or check checkpoints.',
 
-  filters: {
-    title: 'Filters',
-    clear: 'Clear filters',
-    actionLabel: 'Action',
-    actionPlaceholder: 'Any action',
-    outcomeLabel: 'Outcome',
-    outcomePlaceholder: 'Any outcome',
-  },
-
   outcome: {
     success: 'Success',
     failure: 'Failure',
@@ -31,7 +22,6 @@ export const audit = {
     what: 'What',
     outcome: 'Outcome',
     address: 'Address',
-    actions: 'Actions',
   },
   nobody: 'nobody identified',
 
@@ -45,6 +35,9 @@ export const audit = {
     title: 'Event {{seq}}',
     view: 'Event details',
     viewAria: 'Show the details of event {{seq}}',
+    sectionEvent: 'Event',
+    sectionDetails: 'Details',
+    sectionChain: 'Chain',
     object: 'Object',
     requestId: 'Request ID',
     prevHash: 'Previous hash',
@@ -53,7 +46,6 @@ export const audit = {
 
   empty: 'Nothing recorded yet.',
   emptyFiltered: 'Nothing recorded yet for these filters.',
-  loadOlder: 'Load older events',
 
   verification: {
     intactTitle: 'The chain is intact',

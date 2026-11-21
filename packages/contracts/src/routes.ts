@@ -638,7 +638,8 @@ export const listAuditRoute = defineRoute({
   path: '/audit',
   tags: ['audit'],
   summary: 'Read the audit log',
-  description: 'Newest first. Page back with `cursor`. Filters combine.',
+  description:
+    'Newest first. Page back with `cursor`, or by page number with `offset`; `total` counts what the filters match. Filters combine.',
   auth: 'any',
   permission: 'audit:read',
   request: { query: AuditQuerySchema },

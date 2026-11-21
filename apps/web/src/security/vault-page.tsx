@@ -4,10 +4,9 @@ import {
   Badge,
   Box,
   Button,
+  Card,
   Checkbox,
-  Divider,
   Group,
-  Menu,
   Modal,
   PasswordInput,
   Progress,
@@ -17,16 +16,17 @@ import {
   Text,
   TextInput,
   Textarea,
+  ThemeIcon,
   Tooltip,
 } from '@mantine/core';
 import {
   IconAlertCircle,
-  IconClock,
+  IconCalendar,
   IconDeviceFloppy,
-  IconDots,
   IconEye,
   IconFilterOff,
   IconKey,
+  IconLifebuoy,
   IconLock,
   IconLockOpen,
   IconPencil,
@@ -37,11 +37,12 @@ import {
   IconShieldLock,
   IconTag,
   IconTrash,
+  type TablerIcon,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Fragment, type SyntheticEvent, useEffect, useMemo, useState } from 'react';
+import { type SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PiCalendarCheckDuotone, PiEmpty, PiKeyDuotone, PiLockKeyDuotone } from 'react-icons/pi';
+import { PiCalendarCheckDuotone, PiKeyDuotone, PiLockKeyDuotone } from 'react-icons/pi';
 
 import {
   CreateSecretRequestSchema,
@@ -57,9 +58,11 @@ import {
   Callout,
   CopyableCodeBlock,
   DataTableCard,
+  DatePickerInput,
   EmptyPageLayout,
   ErrorMessageBlock,
   HeaderAction,
+  HeaderActionGroup,
   HeaderActions,
   LoaderModal,
   LoadingScreen,
@@ -96,23 +99,14 @@ import {
 } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime, useNumber } from '../format.js';
+import { useNumber } from '../format.js';
 import { confirmAction, notifyError, notifySuccess, notifyWarning } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
 import { useTableLocalization } from '../tables.js';
+import { useFullDate, useTimeFirst } from './time-first.js';
 
 const HIDE_AFTER_SECONDS = 30;
 const SOON_MS = 30 * 24 * 3_600_000;
-
-/** A date without the time (`12 Nov 2026`), in the language of the console. An expiry is a day, not a moment. */
-function useDay(): (value: string | number | Date) => string {
-  const { i18n } = useTranslation();
-  const language = i18n.language;
-  return useMemo(() => {
-    const format = new Intl.DateTimeFormat(language, { dateStyle: 'medium' });
-    return (value) => format.format(new Date(value));
-  }, [language]);
-}
 
 /** The kinds of secret for a select, named in the language of the console. */
 function useTypeOptions() {
@@ -163,7 +157,7 @@ function Strength({ length }: { length: number }) {
   const color = length < VAULT_PASSPHRASE_MIN_LENGTH ? 'red' : length < 24 ? 'yellow' : 'teal';
   return (
     <Stack gap={4}>
-      <Progress color={color} size="xs" value={percent} />
+      <Progress color={color} radius="sm" size="sm" value={percent} />
       <Text c="dimmed" fz="xs">
         {length < VAULT_PASSPHRASE_MIN_LENGTH
           ? t('strength.tooShort', { count: VAULT_PASSPHRASE_MIN_LENGTH })
@@ -593,7 +587,7 @@ function SecretForm({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const { t } = useTranslation(['vault', 'common']);
+  const { t, i18n } = useTranslation(['vault', 'common']);
   const typeOptions = useTypeOptions();
   const failure = useFailure();
   const step = useStepUp();
@@ -690,15 +684,19 @@ function SecretForm({
           }}
           value={description}
         />
-        <TextInput
+        <DatePickerInput
+          clearable
           description={t('form.expiresHint')}
+          highlightToday
           label={t('form.expiresOn')}
-          leftSection={<IconClock size={16} />}
-          onChange={(e) => {
-            setExpires(e.currentTarget.value);
+          leftSection={<IconCalendar size={16} />}
+          locale={i18n.resolvedLanguage ?? i18n.language}
+          minDate={new Date()}
+          onChange={(value) => {
+            setExpires(value ?? '');
           }}
-          type="date"
-          value={expires}
+          valueFormat="D MMMM, YYYY"
+          value={expires === '' ? null : expires}
         />
       </Stack>
       <ModalFooter>
@@ -720,15 +718,26 @@ function SecretForm({
 /** The four operations of the key-rotation card, in the order they are listed. */
 type RotationKind = 'passphrase' | 'recoveryKey' | 'kek' | 'dataKeys';
 
-/** `needsOpen`: the key is needed in memory, so the vault has to be unsealed. */
-const ROTATIONS: readonly { readonly kind: RotationKind; readonly needsOpen: boolean }[] = [
-  { kind: 'passphrase', needsOpen: false },
-  { kind: 'recoveryKey', needsOpen: false },
-  { kind: 'kek', needsOpen: true },
-  { kind: 'dataKeys', needsOpen: true },
+/**
+ * `needsOpen`: the key is needed in memory, so the vault has to be unsealed. The icon and its colour tell the four
+ * apart, as the icons of the tools in the panel's backend-tools card do.
+ */
+const ROTATIONS: readonly {
+  readonly kind: RotationKind;
+  readonly needsOpen: boolean;
+  readonly icon: TablerIcon;
+  readonly color: string;
+}[] = [
+  { kind: 'passphrase', needsOpen: false, icon: IconKey, color: 'blue' },
+  { kind: 'recoveryKey', needsOpen: false, icon: IconLifebuoy, color: 'orange' },
+  { kind: 'kek', needsOpen: true, icon: IconShieldLock, color: 'violet' },
+  { kind: 'dataKeys', needsOpen: true, icon: IconRefreshDot, color: 'teal' },
 ];
 
-/** One row per operation: what it does, when it was last done, and the button. */
+/**
+ * One card per operation, as the panel lists its backend tools: what it does, when it was last done, and a small
+ * button on the right.
+ */
 function RotationCard({
   status,
   onStart,
@@ -737,7 +746,7 @@ function RotationCard({
   onStart: (kind: RotationKind) => void;
 }) {
   const { t } = useTranslation('vault');
-  const formatTime = useDateTime('short');
+  const formatTime = useTimeFirst();
   const open = status.state === 'unsealed';
   const lastDone: Record<RotationKind, string | null> = {
     passphrase: status.passphraseChangedAt,
@@ -751,49 +760,53 @@ function RotationCard({
       <SettingsCard.Header
         description={t('rotation.description')}
         icon={<IconRefreshDot size={24} />}
+        iconColor="blue"
         title={t('rotation.title')}
       />
       <SettingsCard.Content>
-        <Stack gap="md">
-          {ROTATIONS.map(({ kind, needsOpen }, index) => {
-            const at = lastDone[kind];
-            const blocked = needsOpen && !open;
-            return (
-              <Fragment key={kind}>
-                {index > 0 ? <Divider style={{ opacity: 0.3 }} /> : null}
-                <Group align="center" gap="md" justify="space-between" wrap="wrap">
-                  <Stack flex={1} gap={2} miw={240}>
-                    <Text fw={500} fz="sm">
+        {ROTATIONS.map(({ kind, needsOpen, icon: Icon, color }) => {
+          const at = lastDone[kind];
+          const blocked = needsOpen && !open;
+          return (
+            <Card key={kind} radius="md" withBorder>
+              <Group gap="md" justify="space-between" wrap="nowrap">
+                <Group gap="md" wrap="nowrap">
+                  <ThemeIcon color={color} size="lg" variant="soft">
+                    <Icon size={20} />
+                  </ThemeIcon>
+                  <Stack gap={2} miw={0}>
+                    <Text fw={600} size="sm">
                       {t(`rotation.${kind}.title`)}
                     </Text>
-                    <Text c="dimmed" fz="sm">
+                    <Text c="dimmed" size="xs">
                       {t(`rotation.${kind}.description`)}
                     </Text>
-                    <Text c="dimmed" fz="xs">
+                    <Text c="dimmed" size="xs">
                       {at ? t('rotation.lastDone', { date: formatTime(at) }) : t('rotation.never')}
                     </Text>
                     {blocked ? (
-                      <Text c="yellow" fz="xs">
+                      <Text c="yellow" size="xs">
                         {t('rotation.needsOpen')}
                       </Text>
                     ) : null}
                   </Stack>
-                  <Button
-                    color="teal"
-                    disabled={blocked}
-                    onClick={() => {
-                      onStart(kind);
-                    }}
-                    size="sm"
-                    variant="soft"
-                  >
-                    {t(`rotation.${kind}.action`)}
-                  </Button>
                 </Group>
-              </Fragment>
-            );
-          })}
-        </Stack>
+
+                <Button
+                  disabled={blocked}
+                  flex="none"
+                  onClick={() => {
+                    onStart(kind);
+                  }}
+                  size="xs"
+                  variant="soft"
+                >
+                  {t(`rotation.${kind}.action`)}
+                </Button>
+              </Group>
+            </Card>
+          );
+        })}
       </SettingsCard.Content>
     </SettingsCard.Container>
   );
@@ -1093,8 +1106,8 @@ function expiryState(secret: SecretView): 'none' | 'ok' | 'soon' | 'expired' {
   return left <= 0 ? 'expired' : left < SOON_MS ? 'soon' : 'ok';
 }
 
-/** The row menu of a secret: reveal, change, delete. */
-function SecretMenu({
+/** The row actions of a secret, as the panel's card tables show them: soft icon buttons in one group. */
+function SecretActions({
   secret,
   canReveal,
   canManage,
@@ -1113,38 +1126,48 @@ function SecretMenu({
   onDelete: () => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
-  if (!canManage && !canReveal) {
-    return null;
-  }
-  const label = t('list.actionsFor', { name: secret.name });
   return (
-    <Menu position="bottom-end" withinPortal>
-      <Tooltip label={label} withArrow>
-        <Menu.Target>
-          <ActionIcon aria-label={label} color="gray" size="md" variant="subtle">
-            <IconDots size={18} />
+    <ActionIcon.Group>
+      {canReveal ? (
+        <Tooltip label={t('menu.reveal')} withArrow>
+          <ActionIcon
+            aria-label={t('list.revealAria', { name: secret.name })}
+            disabled={!open}
+            onClick={onReveal}
+            size="input-sm"
+            variant="soft"
+          >
+            <IconEye size="1.5rem" />
           </ActionIcon>
-        </Menu.Target>
-      </Tooltip>
-      <Menu.Dropdown>
-        {canReveal ? (
-          <Menu.Item disabled={!open} leftSection={<IconEye size={18} />} onClick={onReveal}>
-            {t('menu.reveal')}
-          </Menu.Item>
-        ) : null}
-        {canManage ? (
-          <>
-            <Menu.Item leftSection={<IconPencil size={18} />} onClick={onEdit}>
-              {t('menu.change')}
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item color="red" leftSection={<IconTrash size={18} />} onClick={onDelete}>
-              {t('common:delete')}
-            </Menu.Item>
-          </>
-        ) : null}
-      </Menu.Dropdown>
-    </Menu>
+        </Tooltip>
+      ) : null}
+      {canManage ? (
+        <>
+          <Tooltip label={t('menu.change')} withArrow>
+            <ActionIcon
+              aria-label={t('list.changeAria', { name: secret.name })}
+              color="teal"
+              onClick={onEdit}
+              size="input-sm"
+              variant="soft"
+            >
+              <IconPencil size="1.5rem" />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={t('common:delete')} withArrow>
+            <ActionIcon
+              aria-label={t('list.deleteAria', { name: secret.name })}
+              color="red"
+              onClick={onDelete}
+              size="input-sm"
+              variant="soft"
+            >
+              <IconTrash size="1.5rem" />
+            </ActionIcon>
+          </Tooltip>
+        </>
+      ) : null}
+    </ActionIcon.Group>
   );
 }
 
@@ -1157,7 +1180,6 @@ function SecretsTable({
   canManage,
   canReveal,
   open,
-  onAdd,
   onDelete,
   onEdit,
   onReveal,
@@ -1171,14 +1193,13 @@ function SecretsTable({
   canReveal: boolean;
   /** The vault is unsealed. */
   open: boolean;
-  onAdd: () => void;
   onDelete: (secret: SecretView) => void;
   onEdit: (secret: SecretView) => void;
   onReveal: (secret: SecretView) => void;
 }) {
   const { t } = useTranslation(['vault', 'common']);
-  const formatDay = useDay();
-  const formatTime = useDateTime('short');
+  const formatDay = useFullDate();
+  const formatTime = useTimeFirst();
   const typeOptions = useTypeOptions();
 
   const columns = useMemo<MRT_ColumnDef<SecretView>[]>(
@@ -1207,7 +1228,7 @@ function SecretsTable({
         filterVariant: 'select',
         mantineFilterSelectProps: { data: typeOptions },
         Cell: ({ row }) => (
-          <Badge color="gray" size="md" variant="light">
+          <Badge color="gray" size="lg" variant="soft">
             {t(`types.${row.original.type}`)}
           </Badge>
         ),
@@ -1249,21 +1270,18 @@ function SecretsTable({
         },
       },
       {
-        accessorKey: 'valueChangedAt',
+        id: 'valueChangedAt',
         header: t('list.valueChanged'),
-        size: 230,
+        accessorFn: (secret) => formatTime(secret.valueChangedAt),
+        minSize: 250,
         enableColumnFilter: false,
-        Cell: ({ row }) => (
-          <Text c="dimmed" fz="sm">
-            {formatTime(row.original.valueChangedAt)}
-          </Text>
-        ),
+        mantineTableBodyCellProps: { ff: 'monospace' },
       },
     ],
     [t, typeOptions, formatDay, formatTime],
   );
 
-  const tableState = useMrtTableState('vault-secrets-v1');
+  const tableState = useMrtTableState('vault-secrets-v2');
   const localization = useTableLocalization(t('list.empty'));
   const table = useMantineReactTable<SecretView>({
     ...panelTableOptions<SecretView>(),
@@ -1279,10 +1297,9 @@ function SecretsTable({
     },
     getRowId: (secret) => secret.id,
     enableRowActions: canManage || canReveal,
-    positionActionsColumn: 'last',
-    displayColumnDefOptions: { 'mrt-row-actions': { size: 64 } },
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 140 } },
     renderRowActions: ({ row }) => (
-      <SecretMenu
+      <SecretActions
         canManage={canManage}
         canReveal={canReveal}
         onDelete={() => {
@@ -1298,28 +1315,16 @@ function SecretsTable({
         secret={row.original}
       />
     ),
-    renderEmptyRowsFallback: () => (
-      <Stack align="center" gap="xs" p="xl">
-        <PiEmpty size={36} />
-        <Text c="dimmed" size="sm">
-          {canManage && open ? t('list.emptyCanAdd') : t('list.empty')}
-        </Text>
-        {canManage && open ? (
-          <Button leftSection={<IconPlus size={16} />} onClick={onAdd} variant="light">
-            {t('header.addSecret')}
-          </Button>
-        ) : null}
-      </Stack>
-    ),
   });
 
   return (
     <DataTableCard.Container>
       <DataTableCard.Title
         actions={
-          <HeaderActions>
+          <HeaderActionGroup>
             <HeaderAction
               color="gray"
+              grouped
               icon={IconFilterOff}
               label={t('common:clearFilters')}
               onClick={() => {
@@ -1328,6 +1333,7 @@ function SecretsTable({
             />
             <HeaderAction
               color="gray"
+              grouped
               icon={IconRestore}
               label={t('common:resetTable')}
               onClick={() => {
@@ -1335,7 +1341,7 @@ function SecretsTable({
                 table.resetColumnFilters(true);
               }}
             />
-          </HeaderActions>
+          </HeaderActionGroup>
         }
         icon={<IconKey size={24} />}
         title={t('list.title')}
@@ -1360,7 +1366,7 @@ function SecretsTable({
 /** The vault: set it up, unseal it, keep secrets. Values are write-only except through a recorded reveal. */
 export function VaultPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['vault', 'common']);
-  const formatDay = useDay();
+  const formatDay = useFullDate();
   const formatNumber = useNumber();
   const failure = useFailure();
   const isMobile = useIsMobile();
@@ -1565,9 +1571,6 @@ export function VaultPage({ permissions }: { permissions: readonly Permission[] 
           canReveal={canReveal}
           fetching={secrets.isFetching}
           loading={secrets.isPending}
-          onAdd={() => {
-            setAdding(true);
-          }}
           onDelete={askDelete}
           onEdit={setEditing}
           onReveal={setRevealing}

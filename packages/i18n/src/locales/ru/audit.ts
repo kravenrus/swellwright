@@ -11,15 +11,6 @@ export const audit = {
   exportForbidden: 'Возможно, вашей роли не разрешено выгружать журнал аудита.',
   checkpointForbidden: 'Возможно, вашей роли не разрешено создавать и проверять контрольные точки.',
 
-  filters: {
-    title: 'Фильтры',
-    clear: 'Сбросить фильтры',
-    actionLabel: 'Действие',
-    actionPlaceholder: 'Любое действие',
-    outcomeLabel: 'Результат',
-    outcomePlaceholder: 'Любой результат',
-  },
-
   outcome: {
     success: 'Успешно',
     failure: 'Неудача',
@@ -32,7 +23,6 @@ export const audit = {
     what: 'Что',
     outcome: 'Результат',
     address: 'Адрес',
-    actions: 'Действия',
   },
   nobody: 'никто не опознан',
 
@@ -46,6 +36,9 @@ export const audit = {
     title: 'Событие {{seq}}',
     view: 'Подробности события',
     viewAria: 'Показать подробности события {{seq}}',
+    sectionEvent: 'Событие',
+    sectionDetails: 'Подробности',
+    sectionChain: 'Цепочка',
     object: 'Объект',
     requestId: 'Идентификатор запроса',
     prevHash: 'Предыдущий хеш',
@@ -54,7 +47,6 @@ export const audit = {
 
   empty: 'Пока ничего не записано.',
   emptyFiltered: 'Для этих фильтров ничего не записано.',
-  loadOlder: 'Загрузить более ранние события',
 
   verification: {
     intactTitle: 'Цепочка цела',
