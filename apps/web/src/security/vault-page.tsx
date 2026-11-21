@@ -78,6 +78,7 @@ import {
   StatusBadge,
   useMantineReactTable,
   useMrtTableState,
+  usePreventTableBackScroll,
 } from '@swellwright/ui';
 
 import {
@@ -103,7 +104,9 @@ import { useNumber } from '../format.js';
 import { confirmAction, notifyError, notifySuccess, notifyWarning } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
 import { useTableLocalization } from '../tables.js';
-import { useFullDate, useTimeFirst } from './time-first.js';
+import { useFullDate } from './full-date.js';
+import { LABEL_WEIGHT } from './form-styles.js';
+import { useTimeFirst } from './time-first.js';
 
 const HIDE_AFTER_SECONDS = 30;
 const SOON_MS = 30 * 24 * 3_600_000;
@@ -195,6 +198,7 @@ function NewPassphraseFields({
   return (
     <>
       <PasswordInput
+        styles={LABEL_WEIGHT}
         autoComplete="new-password"
         data-autofocus={autoFocus ? true : undefined}
         label={passphraseLabel}
@@ -207,6 +211,7 @@ function NewPassphraseFields({
       />
       <Strength length={passphrase.length} />
       <PasswordInput
+        styles={LABEL_WEIGHT}
         autoComplete="new-password"
         error={repeat.length > 0 && repeat !== passphrase ? t('setup.mismatch') : undefined}
         label={repeatLabel}
@@ -419,6 +424,7 @@ function Unseal({ onDone }: { onDone: () => void }) {
           <Stack gap="xs">
             {recovery ? (
               <TextInput
+                styles={LABEL_WEIGHT}
                 autoComplete="off"
                 data-autofocus
                 description={t('unseal.recoveryKeyDescription')}
@@ -432,6 +438,7 @@ function Unseal({ onDone }: { onDone: () => void }) {
               />
             ) : (
               <PasswordInput
+                styles={LABEL_WEIGHT}
                 autoComplete="off"
                 data-autofocus
                 error={fieldError}
@@ -641,6 +648,7 @@ function SecretForm({
     <form onSubmit={submit}>
       <Stack gap="md">
         <TextInput
+          styles={LABEL_WEIGHT}
           autoComplete="off"
           data-autofocus
           label={t('form.name')}
@@ -652,6 +660,7 @@ function SecretForm({
           value={name}
         />
         <Select
+          styles={LABEL_WEIGHT}
           allowDeselect={false}
           data={typeOptions}
           description={secret ? t('form.kindLocked') : undefined}
@@ -674,10 +683,14 @@ function SecretForm({
           }}
           required={secret === undefined}
           spellCheck={false}
-          styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+          styles={{
+            ...LABEL_WEIGHT,
+            input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+          }}
           value={value}
         />
         <TextInput
+          styles={LABEL_WEIGHT}
           label={t('form.description')}
           onChange={(e) => {
             setDescription(e.currentTarget.value);
@@ -685,6 +698,7 @@ function SecretForm({
           value={description}
         />
         <DatePickerInput
+          styles={LABEL_WEIGHT}
           clearable
           description={t('form.expiresHint')}
           highlightToday
@@ -876,6 +890,7 @@ function ChangePassphraseDialog({
             {t('rotation.passphrase.intro')}
           </Text>
           <PasswordInput
+            styles={LABEL_WEIGHT}
             autoComplete="off"
             data-autofocus
             error={failure.fieldMessage(
@@ -1001,6 +1016,7 @@ function NewRecoveryKeyDialog({
               {t(`rotation.${kind}.intro`)}
             </Text>
             <PasswordInput
+              styles={LABEL_WEIGHT}
               autoComplete="off"
               data-autofocus
               error={failure.fieldMessage(
@@ -1282,6 +1298,7 @@ function SecretsTable({
   );
 
   const tableState = useMrtTableState('vault-secrets-v2');
+  usePreventTableBackScroll();
   const localization = useTableLocalization(t('list.empty'));
   const table = useMantineReactTable<SecretView>({
     ...panelTableOptions<SecretView>(),

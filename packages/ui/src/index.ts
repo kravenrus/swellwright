@@ -19,6 +19,7 @@ export * from './metric-card.js';
 export * from './modal-footer.js';
 export * from './overlay-header.js';
 export * from './page-header.js';
+export * from './prevent-table-back-scroll.js';
 export * from './section-card.js';
 export * from './settings-card.js';
 export * from './shimmer-skeleton.js';

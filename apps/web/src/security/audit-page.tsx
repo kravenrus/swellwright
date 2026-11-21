@@ -63,6 +63,7 @@ import {
   type StatusKind,
   useMantineReactTable,
   useMrtTableState,
+  usePreventTableBackScroll,
 } from '@swellwright/ui';
 
 import {
@@ -76,6 +77,7 @@ import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { notifyError, notifySuccess } from '../shell/feedback.js';
 import { useTableLocalization } from '../tables.js';
+import { LABEL_WEIGHT } from './form-styles.js';
 import { useTimeFirst } from './time-first.js';
 
 /** Events per request when the log is exported: fewer requests, and each one is recorded in the log. */
@@ -159,7 +161,7 @@ function VerificationResult({ result }: { result: ChainVerification }) {
             <CopyableCodeBlock
               copiedLabel={t('common:copied')}
               copyLabel={t('common:copy')}
-              inputWrapperProps={{ label: t('verification.headLabel') }}
+              inputWrapperProps={{ label: t('verification.headLabel'), styles: LABEL_WEIGHT }}
               size="small"
               value={result.head.hash}
             />
@@ -177,7 +179,7 @@ function VerifyCommand() {
     <CopyableCodeBlock
       copiedLabel={t('common:copied')}
       copyLabel={t('common:copy')}
-      inputWrapperProps={{ label: t('export.verifyHint') }}
+      inputWrapperProps={{ label: t('export.verifyHint'), styles: LABEL_WEIGHT }}
       size="small"
       value={VERIFY_COMMAND}
     />
@@ -315,7 +317,7 @@ function ExportDialog({ opened, onClose }: { opened: boolean; onClose: () => voi
                     <CopyableCodeBlock
                       copiedLabel={t('common:copied')}
                       copyLabel={t('common:copy')}
-                      inputWrapperProps={{ label: t('export.headLabel') }}
+                      inputWrapperProps={{ label: t('export.headLabel'), styles: LABEL_WEIGHT }}
                       size="small"
                       value={done.head.hash}
                     />
@@ -399,6 +401,7 @@ function CheckpointDialog({
               copiedLabel={t('common:copied')}
               copyLabel={t('common:copy')}
               inputWrapperProps={{
+                styles: LABEL_WEIGHT,
                 label: t('checkpoint.valueLabel'),
                 description: t('checkpoint.valueDescription'),
               }}
@@ -535,7 +538,10 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
             }}
             placeholder={t('check.inputPlaceholder')}
             spellCheck={false}
-            styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+            styles={{
+              ...LABEL_WEIGHT,
+              input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+            }}
             value={text}
           />
           {check.data ? <CheckpointResult result={check.data} /> : null}
@@ -715,6 +721,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
   const formatTime = useTimeFirst();
   const queryClient = useQueryClient();
   const tableState = useMrtTableState('audit-v2');
+  usePreventTableBackScroll();
   const [exporting, setExporting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
@@ -745,6 +752,23 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
     refetchInterval: REFRESH_MS,
     retry: false,
   });
+
+  // A page that is no longer there (the saved page number of an earlier visit, or a filter that matches less) goes to
+  // the last one that is.
+  const total = log.data?.total;
+  const { onPaginationChange } = tableState.handlers;
+  useEffect(() => {
+    if (
+      total !== undefined &&
+      pagination.pageIndex > 0 &&
+      pagination.pageIndex * pagination.pageSize >= total
+    ) {
+      onPaginationChange((previous) => ({
+        ...previous,
+        pageIndex: Math.max(0, Math.ceil(total / previous.pageSize) - 1),
+      }));
+    }
+  }, [total, pagination.pageIndex, pagination.pageSize, onPaginationChange]);
 
   const verify = useMutation({
     mutationFn: verifyAuditChain,
