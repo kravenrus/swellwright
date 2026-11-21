@@ -107,7 +107,7 @@ export function RunsPage({ permissions }: { permissions: readonly Permission[] }
       {
         accessorKey: 'state',
         header: t('commands:runs.table.state'),
-        size: 170,
+        size: 220,
         filterVariant: 'select',
         mantineFilterSelectProps: { data: stateOptions },
         mantineTableBodyCellProps: { align: 'center' },

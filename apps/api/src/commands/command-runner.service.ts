@@ -348,24 +348,23 @@ export class CommandRunner implements OnApplicationBootstrap, BeforeApplicationS
       return 'done';
     }
     if (row.serverId === null) {
-      return this.end(row, 'failed', {
-        errorCode: 'server_deleted',
-        errorMessage: row.launched
-          ? 'The server was deleted while the script ran on it. The script may still be running.'
-          : 'The server was deleted before the script started.',
-      });
+      return this.endDeleted(row);
     }
     let info;
     try {
       info = await this.servers.connectionInfo(row.serverId);
     } catch (error) {
       if (error instanceof NotFoundException) {
-        return this.end(row, 'failed', {
-          errorCode: 'server_deleted',
-          errorMessage: 'The server was deleted while the run was going.',
-        });
+        return this.endDeleted(row);
       }
       throw error;
+    }
+    if (
+      (info.fingerprints.length === 0 || info.access.length === 0) &&
+      !(await this.serverExists(row.serverId))
+    ) {
+      // The server went while its keys and access entries were read: it is what happened, not a missing key.
+      return this.endDeleted(row);
     }
     if (info.fingerprints.length === 0) {
       return this.end(row, 'failed', {
@@ -427,6 +426,24 @@ export class CommandRunner implements OnApplicationBootstrap, BeforeApplicationS
     }
   }
 
+  /** The server of a target is gone: the target ends, and says whether the script may still be running there. */
+  private endDeleted(row: TargetRow): Promise<'done' | 'quiet'> {
+    return this.end(row, 'failed', {
+      errorCode: 'server_deleted',
+      errorMessage: row.launched
+        ? 'The server was deleted while the script ran on it. The script may still be running.'
+        : 'The server was deleted before the script started.',
+    });
+  }
+
+  private async serverExists(serverId: string): Promise<boolean> {
+    const found = await this.db.server.findUnique({
+      where: { id: serverId },
+      select: { id: true },
+    });
+    return found !== null;
+  }
+
   /** What a failed poll means: end the target, or wait and try again. */
   private async afterFailure(
     row: TargetRow,
@@ -434,11 +451,15 @@ export class CommandRunner implements OnApplicationBootstrap, BeforeApplicationS
     context: TargetContext,
   ): Promise<'done' | 'quiet'> {
     const verdict = classify(error);
-    if (verdict.kind === 'fatal') {
-      return this.end(row, 'failed', { errorCode: verdict.code, errorMessage: verdict.message });
-    }
     if (verdict.kind === 'stale') {
       return 'quiet';
+    }
+    // A server that was deleted in the middle of a poll fails in whatever way the poll happened to be: say what happened.
+    if (row.serverId !== null && !(await this.serverExists(row.serverId))) {
+      return this.endDeleted(row);
+    }
+    if (verdict.kind === 'fatal') {
+      return this.end(row, 'failed', { errorCode: verdict.code, errorMessage: verdict.message });
     }
     if (verdict.kind === 'unknown') {
       context.unknownFailures += 1;

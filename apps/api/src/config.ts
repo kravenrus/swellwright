@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
@@ -159,6 +160,20 @@ const EnvSchema = z.object({
   SW_COMMAND_LOST_AFTER_MINUTES: z.coerce.number().min(0.02).max(1440).default(30),
   /** How many runs one user may start per minute. */
   SW_COMMAND_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(10),
+  /**
+   * The catalogue of built-in artifacts (ADR 0039): a directory with one sub-directory per artifact. The default is
+   * the `artifacts` directory of the repository, which is where the container image puts it too.
+   */
+  SW_ARTIFACTS_DIR: optionalString,
+  /** The biggest file an artifact may be, in bytes; a bigger one is broken. A push holds the file in memory. */
+  SW_ARTIFACT_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .max(512 * 1024 * 1024)
+    .default(64 * 1024 * 1024),
+  /** How many pushes, checks and removals of artifacts one user may start per minute. */
+  SW_ARTIFACT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(10),
 });
 
 export interface AppConfig {
@@ -237,6 +252,12 @@ export interface AppConfig {
     readonly outputLimitBytes: number;
     readonly pollMs: number;
     readonly lostAfterMs: number;
+    readonly rateLimitPerMinute: number;
+  };
+  /** The artifact catalogue and how it is distributed (ADR 0039). */
+  readonly artifacts: {
+    readonly directory: string;
+    readonly maxBytes: number;
     readonly rateLimitPerMinute: number;
   };
 }
@@ -409,6 +430,14 @@ export function loadConfig(
       pollMs: e.SW_COMMAND_POLL_MS,
       lostAfterMs: e.SW_COMMAND_LOST_AFTER_MINUTES * 60_000,
       rateLimitPerMinute: e.SW_COMMAND_RATE_LIMIT_PER_MINUTE,
+    },
+    artifacts: {
+      // apps/api/{src,dist}/config.js: three levels up is the root of the repository, and of the image (/app).
+      directory: resolve(
+        e.SW_ARTIFACTS_DIR ?? fileURLToPath(new URL('../../../artifacts', import.meta.url)),
+      ),
+      maxBytes: e.SW_ARTIFACT_MAX_BYTES,
+      rateLimitPerMinute: e.SW_ARTIFACT_RATE_LIMIT_PER_MINUTE,
     },
   };
 }

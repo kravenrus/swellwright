@@ -3,6 +3,15 @@ import {
   type AcceptInvitationRequest,
   type AccessVerification,
   AccessVerificationSchema,
+  type ArtifactList,
+  ArtifactListSchema,
+  type ArtifactPushResult,
+  ArtifactPushResultSchema,
+  type ArtifactVerification,
+  ArtifactVerificationSchema,
+  type PushArtifactRequest,
+  type ServerArtifactList,
+  ServerArtifactListSchema,
   type AuditCheckpoint,
   AuditCheckpointSchema,
   type AuditCheckpointVerification,
@@ -579,6 +588,41 @@ export const getCommandOutput = (
 
 export const cancelCommandRun = (id: string): Promise<CommandRunView> =>
   send('POST', `/command-runs/${id}/cancel`, undefined, CommandRunViewSchema);
+/** The catalogue of built-in artifacts (`servers:read`), each file checked against its manifest. */
+export const listArtifacts = (): Promise<ArtifactList> =>
+  send('GET', '/artifacts', undefined, ArtifactListSchema);
+
+/** Where a file of the catalogue is downloaded from: the browser follows it, with the session cookie. */
+export const artifactDownloadPath = (name: string, version: string): string =>
+  `${BASE}/artifacts/${name}/versions/${version}/content`;
+
+/** What was pushed to a server, with the last check of each copy. Never connects to the server. */
+export const listServerArtifacts = (id: string): Promise<ServerArtifactList> =>
+  send('GET', `/servers/${id}/artifacts`, undefined, ServerArtifactListSchema);
+
+/** Uploads a file of the catalogue (`servers:write`); the answer says whether anything was uploaded. */
+export const pushServerArtifact = (
+  id: string,
+  request: PushArtifactRequest,
+): Promise<ArtifactPushResult> =>
+  send('POST', `/servers/${id}/artifacts`, request, ArtifactPushResultSchema);
+
+/** Hashes the copies of an artifact on the server and compares them with the catalogue. */
+export const verifyServerArtifact = (
+  id: string,
+  name: string,
+  version?: string,
+): Promise<ArtifactVerification> =>
+  send(
+    'POST',
+    `/servers/${id}/artifacts/${name}/verify${version === undefined ? '' : `?version=${version}`}`,
+    undefined,
+    ArtifactVerificationSchema,
+  );
+
+/** Deletes a copy from the server and forgets it. */
+export const removeServerArtifact = (id: string, name: string, version: string): Promise<void> =>
+  send('DELETE', `/servers/${id}/artifacts/${name}/${version}`, undefined, undefined);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

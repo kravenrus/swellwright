@@ -7,12 +7,13 @@ import { CommandRunViewSchema } from '@swellwright/contracts';
 
 import { databaseUrl } from '../test-support.js';
 import {
-  Harness,
-  PASSPHRASE,
   createGate,
   eventsOf,
+  Harness,
+  PASSPHRASE,
   sleep,
   standardPrograms,
+  targetOf,
   until,
 } from './commands-test-support.js';
 
@@ -35,7 +36,7 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
     await h.waitFor(
       run.id,
       'the first part of the output',
-      (r) => r.targets[0].stdout.storedBytes > 0,
+      (r) => targetOf(r, 0).stdout.storedBytes > 0,
     );
 
     proxy.cut();
@@ -60,18 +61,18 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
       const proxy = await lost.proxyFor(host);
       const id = await lost.server(proxy);
       const run = await lost.createRun(lost.operator, lost.inline([id], '# fake:forever\n'));
-      await lost.waitFor(run.id, 'output', (r) => r.targets[0].stdout.storedBytes > 0);
+      await lost.waitFor(run.id, 'output', (r) => targetOf(r, 0).stdout.storedBytes > 0);
       await proxy.close();
       // For a while the script is simply out of reach: the target says so, and is still running.
       const waiting = await lost.waitFor(
         run.id,
         'the waiting note',
-        (r) => r.targets[0].waiting === 'ssh_connect_failed',
+        (r) => targetOf(r, 0).waiting === 'ssh_connect_failed',
       );
-      assert.equal(waiting.targets[0].state, 'running', 'the script is not affected');
+      assert.equal(targetOf(waiting, 0).state, 'running', 'the script is not affected');
       const done = await lost.finished(run.id, 30_000);
-      assert.equal(done.targets[0].state, 'lost');
-      assert.equal(done.targets[0].errorCode, 'unreachable');
+      assert.equal(targetOf(done, 0).state, 'lost');
+      assert.equal(targetOf(done, 0).errorCode, 'unreachable');
       assert.equal(done.state, 'failed');
     } finally {
       await lost.close();
@@ -82,15 +83,15 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
     const host = await h.host(standardPrograms({ gate: gates.gate }));
     const id = await h.server(host);
     const run = await h.createRun(h.operator, h.inline([id], '# fake:gate\n'));
-    await h.waitFor(run.id, 'the first output', (r) => r.targets[0].stdout.storedBytes > 0);
+    await h.waitFor(run.id, 'the first output', (r) => targetOf(r, 0).stdout.storedBytes > 0);
 
     assert.equal((await h.owner.post('/vault/seal')).status, 200);
     const waiting = await h.waitFor(
       run.id,
       'the sealed vault',
-      (r) => r.targets[0].waiting === 'vault_sealed',
+      (r) => targetOf(r, 0).waiting === 'vault_sealed',
     );
-    assert.equal(waiting.targets[0].state, 'running');
+    assert.equal(targetOf(waiting, 0).state, 'running');
     gates.gate.open();
     await sleep(200);
     assert.equal(
@@ -102,20 +103,20 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
     assert.equal((await h.owner.post('/vault/unseal', { passphrase: PASSPHRASE })).status, 200);
     const done = await h.finished(run.id);
     assert.equal(done.state, 'succeeded');
-    assert.equal(done.targets[0].stdout.tail, 'waiting\nreleased\n');
-    assert.equal(done.targets[0].waiting, null);
+    assert.equal(targetOf(done, 0).stdout.tail, 'waiting\nreleased\n');
+    assert.equal(targetOf(done, 0).waiting, null);
   });
 
   it('marks a server lost when the record of the run has vanished from it', async () => {
     const host = await h.host(standardPrograms());
     const id = await h.server(host);
     const run = await h.createRun(h.operator, h.inline([id], '# fake:forever\n'));
-    const started = await h.waitFor(run.id, 'output', (r) => r.targets[0].stdout.storedBytes > 0);
-    host.forget(`sw-${started.targets[0].id}`);
+    const started = await h.waitFor(run.id, 'output', (r) => targetOf(r, 0).stdout.storedBytes > 0);
+    host.forget(`sw-${targetOf(started, 0).id}`);
     const done = await h.finished(run.id);
-    assert.equal(done.targets[0].state, 'lost');
-    assert.equal(done.targets[0].errorCode, 'step_lost');
-    assert.equal(done.targets[0].stdout.tail, 'started\n', 'what was read before is kept');
+    assert.equal(targetOf(done, 0).state, 'lost');
+    assert.equal(targetOf(done, 0).errorCode, 'step_lost');
+    assert.equal(targetOf(done, 0).stdout.tail, 'started\n', 'what was read before is kept');
   });
 
   it('stops a script that runs too long, and says it was the time', async () => {
@@ -141,9 +142,9 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
     const done = await h.finished(
       (await h.createRun(h.operator, h.inline([id], '# fake:hello\n', { sudo: true }))).id,
     );
-    assert.equal(done.targets[0].state, 'failed');
-    assert.equal(done.targets[0].errorCode, 'start_failed');
-    assert.match(done.targets[0].errorMessage ?? '', /sudo failed/u);
+    assert.equal(targetOf(done, 0).state, 'failed');
+    assert.equal(targetOf(done, 0).errorCode, 'start_failed');
+    assert.match(targetOf(done, 0).errorMessage ?? '', /sudo failed/u);
   });
 
   it('fails a server that does not answer at all after two tries, and goes on with the others', async () => {
@@ -156,9 +157,9 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
       (await h.createRun(h.operator, h.inline([goneId, id], '# fake:hello\n'))).id,
     );
     assert.equal(done.state, 'partial');
-    assert.equal(done.targets[0].state, 'failed');
-    assert.equal(done.targets[0].errorCode, 'ssh_connect_failed');
-    assert.equal(done.targets[1].state, 'succeeded');
+    assert.equal(targetOf(done, 0).state, 'failed');
+    assert.equal(targetOf(done, 0).errorCode, 'ssh_connect_failed');
+    assert.equal(targetOf(done, 1).state, 'succeeded');
   });
 
   it('ends a target whose server was deleted, with the others unaffected', async () => {
@@ -175,15 +176,15 @@ describe('the runner follows a script through trouble', { skip: !databaseUrl }, 
     const afterDelete = await h.waitFor(
       run.id,
       'the deleted server to end',
-      (r) => r.targets[0].state === 'failed',
+      (r) => targetOf(r, 0).state === 'failed',
     );
-    assert.equal(afterDelete.targets[0].errorCode, 'server_deleted');
-    assert.equal(afterDelete.targets[0].serverId, null);
-    assert.equal(afterDelete.targets[0].serverName, 'doomed', 'the name it had is kept');
-    assert.equal(afterDelete.targets[1].state, 'running');
+    assert.equal(targetOf(afterDelete, 0).errorCode, 'server_deleted');
+    assert.equal(targetOf(afterDelete, 0).serverId, null);
+    assert.equal(targetOf(afterDelete, 0).serverName, 'doomed', 'the name it had is kept');
+    assert.equal(targetOf(afterDelete, 1).state, 'running');
     assert.equal((await h.operator.post(`/command-runs/${run.id}/cancel`)).status, 200);
     const done = await h.finished(run.id);
-    assert.equal(done.targets[1].state, 'cancelled');
+    assert.equal(targetOf(done, 1).state, 'cancelled');
   });
 });
 
@@ -253,7 +254,7 @@ describe('stopping a run', { skip: !databaseUrl }, () => {
     const host = await h.host(standardPrograms());
     const id = await h.server(host);
     const run = await h.createRun(h.operator, h.inline([id], '# fake:forever\n'));
-    await h.waitFor(run.id, 'running', (r) => r.targets[0].stdout.storedBytes > 0);
+    await h.waitFor(run.id, 'running', (r) => targetOf(r, 0).stdout.storedBytes > 0);
     const [first, second] = await Promise.all([
       h.operator.post(`/command-runs/${run.id}/cancel`),
       h.owner.post(`/command-runs/${run.id}/cancel`),
@@ -284,7 +285,7 @@ describe('stopping a run', { skip: !databaseUrl }, () => {
     launch.open();
     const done = await h.finished(run.id);
     assert.equal(done.state, 'cancelled');
-    assert.equal(done.targets[0].state, 'cancelled');
+    assert.equal(targetOf(done, 0).state, 'cancelled');
     assert.equal(host.runningSteps().length, 0, 'nothing is left running on the server');
   });
 
@@ -449,6 +450,6 @@ describe('a restart of the server during a run', { skip: !databaseUrl }, () => {
     const done = await h.finished(second.id);
     assert.equal(done.state, 'succeeded');
     assert.equal(host.launches.created, before + 2, 'the first run and the revived one');
-    assert.equal(CommandRunViewSchema.parse(done).targets[0].stdout.tail, 'hello\n');
+    assert.equal(targetOf(CommandRunViewSchema.parse(done)).stdout.tail, 'hello\n');
   });
 });

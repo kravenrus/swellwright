@@ -435,10 +435,12 @@ export class StepHost {
     reply('SWRESULT removed\n');
   }
 
-  /** Makes a step vanish, as when the server was rebuilt. */
+  /** Makes a step vanish, as when the server was rebuilt (a rebuilt server runs nothing of the old one any more). */
   forget(id: string): void {
     for (const key of [...this.steps.keys()]) {
       if (key.endsWith(`/${id}`)) {
+        // The emulated program is told to stop: a program that nobody can reach any more would keep the test process alive.
+        this.steps.get(key)?.abort.abort();
         this.steps.delete(key);
       }
     }

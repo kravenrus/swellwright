@@ -258,4 +258,31 @@ describe('update check configuration', () => {
       assert.throws(() => loadConfig({ SW_UPDATE_API_BASE: bad }, 'v'), /SW_UPDATE_API_BASE/u, bad);
     }
   });
+
+  it('finds the built-in artifacts of the repository by default and lets the installation move them', () => {
+    const defaults = loadConfig({}, 'v').artifacts;
+    assert.match(defaults.directory.replaceAll('\\', '/'), /\/artifacts$/u);
+    assert.equal(defaults.maxBytes, 64 * 1024 * 1024);
+    assert.equal(defaults.rateLimitPerMinute, 10);
+    const moved = loadConfig(
+      {
+        SW_ARTIFACTS_DIR: '/srv/swellwright/artifacts',
+        SW_ARTIFACT_MAX_BYTES: '1048576',
+        SW_ARTIFACT_RATE_LIMIT_PER_MINUTE: '3',
+      },
+      'v',
+    ).artifacts;
+    assert.match(moved.directory.replaceAll('\\', '/'), /\/srv\/swellwright\/artifacts$/u);
+    assert.equal(moved.maxBytes, 1048576);
+    assert.equal(moved.rateLimitPerMinute, 3);
+    // An empty variable is "not set"; a size that makes no sense is refused at start.
+    assert.match(loadConfig({ SW_ARTIFACTS_DIR: '' }, 'v').artifacts.directory, /artifacts$/u);
+    for (const bad of ['0', '100', '-1', 'big', String(1024 * 1024 * 1024)]) {
+      assert.throws(
+        () => loadConfig({ SW_ARTIFACT_MAX_BYTES: bad }, 'v'),
+        /SW_ARTIFACT_MAX_BYTES/u,
+        bad,
+      );
+    }
+  });
 });

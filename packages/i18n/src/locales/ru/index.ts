@@ -1,3 +1,4 @@
+import { artifacts } from './artifacts.js';
 import { audit } from './audit.js';
 import { auth } from './auth.js';
 import { commands } from './commands.js';
@@ -30,4 +31,5 @@ export const ru = {
   plugins,
   servers,
   commands,
+  artifacts,
 } as const;

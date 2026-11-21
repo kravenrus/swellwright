@@ -26,6 +26,12 @@ export const ERROR_CODES = [
   'facts_unreadable',
   // Commands and scripts (ADR 0038). `confirmation_required` carries `details: { level }`.
   'confirmation_required',
+  // Artifacts and their distribution (ADR 0039). `artifact_hash_mismatch` carries `details`.
+  'artifact_broken',
+  'artifact_busy',
+  'artifact_destination_conflict',
+  'artifact_hash_mismatch',
+  'sudo_unavailable',
   'internal_error',
 ] as const;
 

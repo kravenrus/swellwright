@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Swellwright API",
-    "version": "0.20.0",
+    "version": "0.22.0",
     "description": "Deploy and operate Remnawave fleets. Unofficial community project.",
     "license": {
       "name": "AGPL-3.0-only",
@@ -53,7 +53,15 @@
     },
     {
       "name": "servers",
-      "description": "The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, and facts collected over SSH."
+      "description": "The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, facts collected over SSH, and the artifacts pushed to each server."
+    },
+    {
+      "name": "artifacts",
+      "description": "The catalogue of built-in artifacts: versioned files whose SHA-256 is checked before they are served or sent to a server."
+    },
+    {
+      "name": "commands",
+      "description": "The script library and runs of a script or a command on several servers at once, with the output of each server (ADR 0038). Writing scripts and starting or stopping runs need `servers:exec` and a fresh authenticator code; reading the history needs `servers:read`."
     }
   ],
   "paths": {
@@ -3822,6 +3830,1174 @@
         ],
         "x-sw-permission": "servers:read"
       }
+    },
+    "/scripts": {
+      "get": {
+        "operationId": "listScripts",
+        "tags": [
+          "commands"
+        ],
+        "summary": "The script library",
+        "responses": {
+          "200": {
+            "description": "The scripts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The built-in diagnostics and the scripts of this instance, with their parameters and danger level. The text of a script is in `GET /scripts/{id}`.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      },
+      "post": {
+        "operationId": "createScript",
+        "tags": [
+          "commands"
+        ],
+        "summary": "Add a script to the library",
+        "responses": {
+          "201": {
+            "description": "The script.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "A script is code that will run on servers, usually as root, so writing one needs the permission to run commands (`servers:exec`) and a fresh authenticator code, not only the permission to read servers. A taken name answers 409. The parameters are checked as a whole: duplicate names, a default outside its range or pattern, a pattern that is not a regular expression all answer 400.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScriptRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "servers:exec",
+        "x-sw-step-up": true
+      }
+    },
+    "/scripts/{id}": {
+      "get": {
+        "operationId": "getScript",
+        "tags": [
+          "commands"
+        ],
+        "summary": "One script with its text",
+        "responses": {
+          "200": {
+            "description": "The script.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      },
+      "patch": {
+        "operationId": "updateScript",
+        "tags": [
+          "commands"
+        ],
+        "summary": "Change a script",
+        "responses": {
+          "200": {
+            "description": "The script after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Changing the text raises the version. Runs that happened before keep the text they ran. A built-in script cannot be changed: 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScriptRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "servers:exec",
+        "x-sw-step-up": true
+      },
+      "delete": {
+        "operationId": "deleteScript",
+        "tags": [
+          "commands"
+        ],
+        "summary": "Delete a script",
+        "responses": {
+          "204": {
+            "description": "The script is gone."
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The history keeps what every run executed, so deleting a script loses nothing of it. A built-in script cannot be deleted: 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "servers:exec",
+        "x-sw-step-up": true
+      }
+    },
+    "/command-runs": {
+      "post": {
+        "operationId": "createCommandRun",
+        "tags": [
+          "commands"
+        ],
+        "summary": "Run a script or a command on several servers",
+        "responses": {
+          "201": {
+            "description": "The run as it was queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandRunView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Queues a run and returns at once; the servers are worked on in the background, at most `SW_COMMAND_CONCURRENCY` at a time, each as a target of its own with its own state, exit status and output: one server failing never fails another. The script runs on the server as a detached step, so it survives a dropped connection and a restart of this API. Values of parameters reach it only as environment variables. The host key must be pinned and the address policy applies. A run whose level is not `read` must be confirmed (`confirmedLevel`); the engine's approvals come in a later phase. Output can hold secrets: whoever may read servers may read it. Errors: 400 `validation_failed` (the body, or a parameter value that does not fit its definition: `details` names it), 404 (no such script or server), 409 `confirmation_required` (the level of the run is not `read` and `confirmedLevel` is missing or different; `details.level` says which), 429 `rate_limited`. A server that cannot be used (no pinned host key, no access entry) is not an error of the request: its target is `skipped` with the reason, and the others run.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommandRunRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "servers:exec",
+        "x-sw-step-up": true
+      },
+      "get": {
+        "operationId": "listCommandRuns",
+        "tags": [
+          "commands"
+        ],
+        "summary": "The history of runs",
+        "responses": {
+          "200": {
+            "description": "One page of runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandRunList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Newest first, with the number of servers in each state. Needs only `servers:read`: the history shows who ran what where, and the output of a run may contain whatever the script printed.",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "enum": [
+                "pending",
+                "running",
+                "succeeded",
+                "failed",
+                "cancelled",
+                "partial"
+              ]
+            }
+          },
+          {
+            "name": "serverId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Only runs that had this server among their targets.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "50 by default.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/command-runs/{id}": {
+      "get": {
+        "operationId": "getCommandRun",
+        "tags": [
+          "commands"
+        ],
+        "summary": "One run with its servers",
+        "responses": {
+          "200": {
+            "description": "The run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandRunView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The exact text that ran, the parameters, and every target with its state, exit status, error and the end of its output (`tail`). Poll it while the run is `pending` or `running`; the rest of the output is paged through `.../targets/{targetId}/output`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/command-runs/{id}/targets/{targetId}/output": {
+      "get": {
+        "operationId": "getCommandOutput",
+        "tags": [
+          "commands"
+        ],
+        "summary": "A page of the output of one server",
+        "responses": {
+          "200": {
+            "description": "The page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandOutputPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reads what Swellwright kept of one stream, by byte offset. Start at 0 and continue with `nextOffset` until `eof`; while the run is going, `eof` only means \"up to now\". At most 256 KiB a page, ended between two UTF-8 characters.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "stream",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "enum": [
+                "stdout",
+                "stderr"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Bytes to skip; 0 by default.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "At most this many bytes; 65536 by default.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 262144
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/command-runs/{id}/cancel": {
+      "post": {
+        "operationId": "cancelCommandRun",
+        "tags": [
+          "commands"
+        ],
+        "summary": "Stop a run",
+        "responses": {
+          "200": {
+            "description": "The run after the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandRunView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Servers that have not started are cancelled at once; on those that run, the script gets TERM and then KILL. Asking twice is harmless (the second answer is the same run). A run that has ended answers 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "x-sw-permission": "servers:exec",
+        "x-sw-step-up": true
+      }
+    },
+    "/artifacts": {
+      "get": {
+        "operationId": "listArtifacts",
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "The catalogue of artifacts",
+        "responses": {
+          "200": {
+            "description": "The artifacts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The files Swellwright ships to servers (the node installer, later the node engine): each with its versions, the SHA-256 and size its manifest declares, its steps and parameters, and whether the file on disk still is what the manifest says (`ok`) or not (`broken`, with the reason). A broken artifact is listed so that it can be seen, and is neither downloaded nor pushed. The files are checked when the server starts and again whenever one is used.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/artifacts/{name}": {
+      "get": {
+        "operationId": "getArtifact",
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "One artifact with all its versions",
+        "responses": {
+          "200": {
+            "description": "The artifact.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/artifacts/{name}/versions/{version}": {
+      "get": {
+        "operationId": "getArtifactVersion",
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "One version of an artifact",
+        "responses": {
+          "200": {
+            "description": "The version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactVersionView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "With its manifest. A version that is broken answers 200 with `state: broken` and the reason.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/artifacts/{name}/content": {
+      "get": {
+        "operationId": "downloadArtifact",
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Download the latest intact version of an artifact",
+        "responses": {
+          "200": {
+            "description": "The file.",
+            "headers": {
+              "Content-Disposition": {
+                "description": "An attachment with the file name from the manifest.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Content-SHA256": {
+                "description": "The SHA-256 of the bytes that follow, as the manifest declares it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "The file, streamed. `X-Content-SHA256` carries the hash the manifest declares, so that the receiver can check what it got. A broken artifact, and one with no intact version, answers 409 `artifact_broken`: it is never served.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/artifacts/{name}/versions/{version}/content": {
+      "get": {
+        "operationId": "downloadArtifactVersion",
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Download one version of an artifact",
+        "responses": {
+          "200": {
+            "description": "The file.",
+            "headers": {
+              "Content-Disposition": {
+                "description": "An attachment with the file name from the manifest.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Content-SHA256": {
+                "description": "The SHA-256 of the bytes that follow, as the manifest declares it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "As the latest version, for a version that is named.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      }
+    },
+    "/servers/{id}/artifacts": {
+      "get": {
+        "operationId": "listServerArtifacts",
+        "tags": [
+          "servers"
+        ],
+        "summary": "The artifacts pushed to a server",
+        "responses": {
+          "200": {
+            "description": "The copies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerArtifactList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "What Swellwright put on the server, with the result of the last check of each copy. Reading never connects to the server.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:read"
+      },
+      "post": {
+        "operationId": "pushServerArtifact",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Push an artifact to a server",
+        "responses": {
+          "200": {
+            "description": "The same file was already there.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactPushResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The file was uploaded and checked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactPushResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reads the file of the catalogue and hashes it (a file that is not what its manifest says is never sent), uploads it over SFTP to `<dir>/<name>/<version>/<file>` under a temporary name, hashes what arrived on the server and renames it into place only when it matches, sets the mode (a script 0755, a data file 0644, never writable by others) and hashes it once more in its place. A failure leaves no partial file. `destination: user` (the default) is `~/.swellwright/artifacts` of the login, private to it; `destination: system` is `/var/lib/swellwright/artifacts`, root-owned, written through sudo. When the same file is already there nothing is uploaded and the answer is 200 `unchanged`; a new or replaced copy answers 201 `pushed`. One push per server runs at a time. Access entries are tried by priority until one logs in. Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`. Also 409 `artifact_broken`, `artifact_busy` (another push or removal is running on this server), `artifact_destination_conflict` (this version is on the server at the other destination: remove it first), `sudo_unavailable` (destination `system` needs root or a working sudo), `no_access_entry`, 502 `artifact_hash_mismatch` (the copy on the server does not hash to the catalogue's value: nothing is left there; `details` has `expected`, `actual`, `stage`), `ssh_connect_failed`, `ssh_auth_failed`, `ssh_key_invalid`, `ssh_failed`, 504 `ssh_timeout`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushArtifactRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/artifacts/{name}/verify": {
+      "post": {
+        "operationId": "verifyServerArtifact",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Check the copies of an artifact on a server",
+        "responses": {
+          "200": {
+            "description": "The result of the check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactVerification"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Hashes each copy on the server (`sha256sum`) and compares it with the catalogue: `ok`, `differs` (somebody or something changed the file) or `missing`. A copy of a version the catalogue no longer has is compared with what was pushed. The time and the result are kept and shown. A copy that differs or is missing is a result (200 with `ok: false`), not an error. Nothing is repaired: push again to replace it. Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`. 404 when no copy of that artifact is on the server.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "description": "Only this version; every version of the artifact on the server by default.",
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
+    },
+    "/servers/{id}/artifacts/{name}/{version}": {
+      "delete": {
+        "operationId": "removeServerArtifact",
+        "tags": [
+          "servers"
+        ],
+        "summary": "Remove an artifact from a server",
+        "responses": {
+          "204": {
+            "description": "The copy is gone."
+          },
+          "default": {
+            "description": "Error envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Deletes the copy on the server (and the directories left empty) and forgets it. Nothing is removed that Swellwright did not put there: the path comes from the record of the push and is checked against the layout before anything is deleted. A copy that is already gone is not an error. Errors: 404 (no such server or entry), 409 `host_key_not_pinned` (nothing is pinned yet), `host_key_mismatch` (the server shows another key than the pinned one: `details` has `expected` and `actual`), `address_not_allowed` (the outbound policy refuses the address), 423 `vault_sealed`, 429 `rate_limited`. Also 409 `artifact_busy`, `sudo_unavailable`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "x-sw-permission": "servers:write"
+      }
     }
   },
   "components": {
@@ -3850,6 +5026,12 @@
           "ssh_timeout",
           "ssh_failed",
           "facts_unreadable",
+          "confirmation_required",
+          "artifact_broken",
+          "artifact_busy",
+          "artifact_destination_conflict",
+          "artifact_hash_mismatch",
+          "sudo_unavailable",
           "internal_error"
         ]
       },
@@ -4362,6 +5544,7 @@
         "enum": [
           "servers:read",
           "servers:write",
+          "servers:exec",
           "panel:read",
           "panel:write",
           "runs:read",
@@ -4507,7 +5690,17 @@
           "server.access.updated",
           "server.access.removed",
           "server.access.verified",
-          "server.facts.refreshed"
+          "server.facts.refreshed",
+          "script.created",
+          "script.updated",
+          "script.deleted",
+          "command.run.started",
+          "command.run.finished",
+          "command.run.cancelled",
+          "artifact.pushed",
+          "artifact.verified",
+          "artifact.removed",
+          "artifact.broken"
         ]
       },
       "AuditOutcome": {
@@ -5751,7 +6944,7 @@
           },
           "permissions": {
             "minItems": 1,
-            "maxItems": 23,
+            "maxItems": 24,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Permission"
@@ -8414,6 +9607,1700 @@
           "remoteUser",
           "isRoot",
           "sudo"
+        ],
+        "additionalProperties": false
+      },
+      "DangerLevel": {
+        "type": "string",
+        "enum": [
+          "read",
+          "change",
+          "destructive"
+        ],
+        "description": "`read` only looks (the built-in diagnostics). `change` modifies something that can be put back. `destructive` removes or overwrites something that cannot."
+      },
+      "StringParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "string"
+          },
+          "pattern": {
+            "description": "A regular expression (JavaScript syntax) the whole value must match. Without one any text up to `maxLength` is accepted: it reaches the script quoted, never as shell code.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxLength": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "default": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "required",
+          "type",
+          "maxLength"
+        ],
+        "additionalProperties": false
+      },
+      "IntegerParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "integer"
+          },
+          "min": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "max": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "default": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "required",
+          "type",
+          "min",
+          "max"
+        ],
+        "additionalProperties": false
+      },
+      "EnumParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "enum"
+          },
+          "options": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/+-]{0,63}$"
+            }
+          },
+          "default": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "required",
+          "type",
+          "options"
+        ],
+        "additionalProperties": false
+      },
+      "BooleanParameter": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "boolean"
+          },
+          "default": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "required",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "ScriptParameter": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringParameter"
+          },
+          {
+            "$ref": "#/components/schemas/IntegerParameter"
+          },
+          {
+            "$ref": "#/components/schemas/EnumParameter"
+          },
+          {
+            "$ref": "#/components/schemas/BooleanParameter"
+          }
+        ],
+        "description": "A typed parameter of a script. Its value reaches the script as the environment variable `SW_PARAM_<NAME>` (booleans as `1` or `0`), never inside the script text."
+      },
+      "ParameterValues": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,31}$"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 1000
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "description": "Values by parameter name: text, whole numbers and booleans."
+      },
+      "ScriptSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean",
+            "description": "Runs as root: through sudo with the stored sudo secret."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptParameter"
+            }
+          },
+          "builtin": {
+            "type": "boolean",
+            "description": "Ships with Swellwright. Read only: it cannot be changed or deleted."
+          },
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Raised by one with every change of the text."
+          },
+          "bodySha256": {
+            "type": "string",
+            "description": "SHA-256 of the text, in hex."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "dangerLevel",
+          "sudo",
+          "parameters",
+          "builtin",
+          "version",
+          "bodySha256",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "ScriptView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean",
+            "description": "Runs as root: through sudo with the stored sudo secret."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptParameter"
+            }
+          },
+          "builtin": {
+            "type": "boolean",
+            "description": "Ships with Swellwright. Read only: it cannot be changed or deleted."
+          },
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Raised by one with every change of the text."
+          },
+          "bodySha256": {
+            "type": "string",
+            "description": "SHA-256 of the text, in hex."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "dangerLevel",
+          "sudo",
+          "parameters",
+          "builtin",
+          "version",
+          "bodySha256",
+          "createdAt",
+          "updatedAt",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "ScriptList": {
+        "type": "object",
+        "properties": {
+          "scripts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptSummary"
+            },
+            "description": "Built-in scripts first, then by name."
+          }
+        },
+        "required": [
+          "scripts"
+        ],
+        "additionalProperties": false
+      },
+      "CreateScriptRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 _.-]{1,64}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean"
+          },
+          "parameters": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptParameter"
+            }
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "POSIX sh, run as `sh script.sh`. Line endings are made LF when it is saved."
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "dangerLevel",
+          "sudo",
+          "parameters",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateScriptRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 _.-]{1,64}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean"
+          },
+          "parameters": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptParameter"
+            }
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "POSIX sh, run as `sh script.sh`. Line endings are made LF when it is saved."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Fields that are absent stay as they are. Changing the text raises the version; runs that happened before keep the text they ran."
+      },
+      "CommandRunState": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "partial"
+        ],
+        "description": "`pending`: queued. `running`: at least one server is not finished. When all are: `succeeded` (every server succeeded), `failed` (none did), `partial` (some did), `cancelled` (a person stopped the run)."
+      },
+      "CommandTargetState": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "lost",
+          "cancelled",
+          "skipped"
+        ],
+        "description": "`pending`: waiting for a free slot. `running`: the script runs on the server. `succeeded`: it exited with status 0. `failed`: it exited with another status, timed out, or the server could not be used (see `errorCode`). `lost`: contact was lost for good, or the record of the run vanished from the server, so the result is unknown. `cancelled`: stopped by a person. `skipped`: never tried because the server cannot be used (no pinned host key, no access entry)."
+      },
+      "CommandRunMode": {
+        "type": "string",
+        "enum": [
+          "script",
+          "inline"
+        ]
+      },
+      "CommandOutput": {
+        "type": "object",
+        "properties": {
+          "storedBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How many bytes Swellwright keeps of this stream."
+          },
+          "totalBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "How many bytes the script wrote. More than `storedBytes` when the output was cut at the limit."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "The output went over the limit: the end is not kept."
+          },
+          "tail": {
+            "type": "string",
+            "description": "The last bytes that are kept, as text (invalid UTF-8 shows as U+FFFD)."
+          },
+          "tailOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Where `tail` starts in the kept output; 0 when the whole output is in `tail`."
+          }
+        },
+        "required": [
+          "storedBytes",
+          "totalBytes",
+          "truncated",
+          "tail",
+          "tailOffset"
+        ],
+        "additionalProperties": false
+      },
+      "CommandTargetView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "serverId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the server was deleted since."
+          },
+          "serverName": {
+            "type": "string",
+            "description": "The name the server had when the run was made."
+          },
+          "state": {
+            "$ref": "#/components/schemas/CommandTargetState"
+          },
+          "exitCode": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The exit status of the script, when it ended by itself."
+          },
+          "errorCode": {
+            "description": "Why a server did not succeed, besides a non-zero exit: an API error code such as `ssh_auth_failed` or `host_key_mismatch`, or `timeout`, `server_deleted`, `step_lost`, `unreachable`, `cancelled_unreachable`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "errorMessage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "waiting": {
+            "description": "Set while Swellwright cannot reach a running server for now (`vault_sealed`, `ssh_connect_failed`, ...): it keeps trying and the script is not affected.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stdout": {
+            "$ref": "#/components/schemas/CommandOutput"
+          },
+          "stderr": {
+            "$ref": "#/components/schemas/CommandOutput"
+          }
+        },
+        "required": [
+          "id",
+          "serverId",
+          "serverName",
+          "state",
+          "exitCode",
+          "errorCode",
+          "errorMessage",
+          "waiting",
+          "startedAt",
+          "finishedAt",
+          "stdout",
+          "stderr"
+        ],
+        "additionalProperties": false
+      },
+      "CommandRunCounts": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "running": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "succeeded": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "lost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "cancelled": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "total",
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "lost",
+          "cancelled",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "CommandRunSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CommandRunMode"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CommandRunState"
+          },
+          "label": {
+            "type": "string",
+            "description": "The name of the script, or the first line of an inline command (cut at 80 characters)."
+          },
+          "scriptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for an inline command, or when the script was deleted since."
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "The login name at the time."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancelRequestedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CommandRunCounts"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "state",
+          "label",
+          "scriptId",
+          "dangerLevel",
+          "sudo",
+          "timeoutSeconds",
+          "createdBy",
+          "createdAt",
+          "startedAt",
+          "finishedAt",
+          "cancelRequestedAt",
+          "counts"
+        ],
+        "additionalProperties": false
+      },
+      "CommandRunView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CommandRunMode"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CommandRunState"
+          },
+          "label": {
+            "type": "string",
+            "description": "The name of the script, or the first line of an inline command (cut at 80 characters)."
+          },
+          "scriptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for an inline command, or when the script was deleted since."
+          },
+          "dangerLevel": {
+            "$ref": "#/components/schemas/DangerLevel"
+          },
+          "sudo": {
+            "type": "boolean"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "The login name at the time."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancelRequestedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CommandRunCounts"
+          },
+          "body": {
+            "type": "string",
+            "description": "The exact text that ran: the script as it was when the run was made, or the inline command. Never changes."
+          },
+          "bodySha256": {
+            "type": "string"
+          },
+          "scriptName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scriptVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/ParameterValues"
+          },
+          "confirmedLevel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DangerLevel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The level the person confirmed when the run was started; null for a `read` run."
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandTargetView"
+            },
+            "description": "In the order the servers were chosen."
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "state",
+          "label",
+          "scriptId",
+          "dangerLevel",
+          "sudo",
+          "timeoutSeconds",
+          "createdBy",
+          "createdAt",
+          "startedAt",
+          "finishedAt",
+          "cancelRequestedAt",
+          "counts",
+          "body",
+          "bodySha256",
+          "scriptName",
+          "scriptVersion",
+          "parameters",
+          "confirmedLevel",
+          "targets"
+        ],
+        "additionalProperties": false
+      },
+      "CommandRunList": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandRunSummary"
+            },
+            "description": "Newest first."
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "runs",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "CreateCommandRunRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "script"
+              },
+              "serverIds": {
+                "minItems": 1,
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "description": "One to 50 servers; each becomes a target of its own."
+              },
+              "timeoutSeconds": {
+                "description": "Per server, from the moment the script starts there; 300 by default. When it passes, the script is stopped and the server counts as failed.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "confirmedLevel": {
+                "description": "Required when the level of the run is not `read`, and it must be that level: the person confirmed it.",
+                "$ref": "#/components/schemas/DangerLevel"
+              },
+              "scriptId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/ParameterValues"
+              }
+            },
+            "required": [
+              "mode",
+              "serverIds",
+              "scriptId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "inline"
+              },
+              "serverIds": {
+                "minItems": 1,
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "description": "One to 50 servers; each becomes a target of its own."
+              },
+              "timeoutSeconds": {
+                "description": "Per server, from the moment the script starts there; 300 by default. When it passes, the script is stopped and the server counts as failed.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "confirmedLevel": {
+                "description": "Required when the level of the run is not `read`, and it must be that level: the person confirmed it.",
+                "$ref": "#/components/schemas/DangerLevel"
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "POSIX sh. It is kept with the run, so do not put a secret in it: use a script with a vault-backed value, or type it on the server."
+              },
+              "sudo": {
+                "description": "Run as root through sudo. False by default.",
+                "type": "boolean"
+              },
+              "dangerLevel": {
+                "description": "What the person says the command does. Swellwright cannot know; `change` by default, so that it asks for a confirmation.",
+                "$ref": "#/components/schemas/DangerLevel"
+              }
+            },
+            "required": [
+              "mode",
+              "serverIds",
+              "command"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "Run a stored script (`mode: script`, with its parameters) or a command typed in (`mode: inline`) on one to fifty servers at once."
+      },
+      "CommandOutputPage": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "string",
+            "enum": [
+              "stdout",
+              "stderr"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Where the next page starts. It never lies inside a UTF-8 character: a page is shortened to end between two."
+          },
+          "text": {
+            "type": "string"
+          },
+          "storedBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "totalBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "eof": {
+            "type": "boolean",
+            "description": "`nextOffset` has reached the end of what is kept (more may still arrive while the script runs)."
+          }
+        },
+        "required": [
+          "stream",
+          "offset",
+          "nextOffset",
+          "text",
+          "storedBytes",
+          "totalBytes",
+          "truncated",
+          "eof"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactInterpreter": {
+        "type": "string",
+        "enum": [
+          "sh",
+          "bash",
+          "python3",
+          "none"
+        ]
+      },
+      "ArtifactStep": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]{0,31}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "The step changes nothing on the server."
+          },
+          "needsRoot": {
+            "type": "boolean"
+          },
+          "inFull": {
+            "type": "boolean",
+            "description": "The `full` action runs this step."
+          },
+          "params": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+            }
+          },
+          "requires": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+            },
+            "description": "Parameters without which the step stops when it cannot ask."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "readOnly",
+          "needsRoot",
+          "inFull",
+          "params",
+          "requires"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactParam": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Some step requires it."
+          },
+          "secret": {
+            "type": "boolean",
+            "description": "Never printed or logged by the artifact."
+          },
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "enum": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "example": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "group",
+          "description",
+          "required",
+          "secret",
+          "default"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactManifest": {
+        "type": "object",
+        "properties": {
+          "manifestVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 32,
+            "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "interpreter": {
+            "$ref": "#/components/schemas/ArtifactInterpreter"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 of the file, which every use of it is checked against."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1073741824,
+            "description": "Bytes."
+          },
+          "minOs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The systems it is written for, as text."
+          },
+          "steps": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactStep"
+            }
+          },
+          "params": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ArtifactParam"
+            }
+          }
+        },
+        "required": [
+          "manifestVersion",
+          "name",
+          "version",
+          "description",
+          "file",
+          "interpreter",
+          "sha256",
+          "size",
+          "minOs",
+          "steps",
+          "params"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactState": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "broken"
+        ]
+      },
+      "ArtifactVersionView": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "description": "Null when the manifest is so malformed that it names no version.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/ArtifactState"
+          },
+          "problem": {
+            "description": "Why it is broken; null when it is ok.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sha256": {
+            "description": "The hash the manifest declares.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The size the manifest declares."
+          },
+          "manifest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactManifest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the manifest is malformed."
+          }
+        },
+        "required": [
+          "version",
+          "state",
+          "problem",
+          "sha256",
+          "size",
+          "manifest"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactView": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name in the manifest, or the directory name when it has none."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latestVersion": {
+            "description": "The highest version that is ok; null when none is.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactVersionView"
+            },
+            "description": "Newest first."
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "latestVersion",
+          "versions"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactList": {
+        "type": "object",
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactView"
+            },
+            "description": "Ordered by name."
+          }
+        },
+        "required": [
+          "artifacts"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactDestination": {
+        "type": "string",
+        "enum": [
+          "user",
+          "system"
+        ]
+      },
+      "ArtifactCheckState": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "differs",
+          "missing"
+        ]
+      },
+      "ArtifactCatalogueState": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "broken",
+          "missing"
+        ]
+      },
+      "ServerArtifact": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "What was pushed: the hash the catalogue declared."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "destination": {
+            "$ref": "#/components/schemas/ArtifactDestination"
+          },
+          "remotePath": {
+            "type": "string",
+            "description": "The absolute path of the file on the server."
+          },
+          "pushedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "pushedBy": {
+            "description": "The login name of the user who pushed it; null when that user no longer exists.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verify": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "$ref": "#/components/schemas/ArtifactCheckState"
+                  },
+                  "verifiedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  "remoteSha256": {
+                    "description": "What the copy hashed to; null when missing.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "state",
+                  "verifiedAt",
+                  "remoteSha256"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last check of the copy; null if it was never checked after the push."
+          },
+          "catalogue": {
+            "$ref": "#/components/schemas/ArtifactCatalogueState"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "sha256",
+          "size",
+          "destination",
+          "remotePath",
+          "pushedAt",
+          "pushedBy",
+          "verify",
+          "catalogue"
+        ],
+        "additionalProperties": false
+      },
+      "ServerArtifactList": {
+        "type": "object",
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerArtifact"
+            },
+            "description": "By name, then version."
+          }
+        },
+        "required": [
+          "artifacts"
+        ],
+        "additionalProperties": false
+      },
+      "PushArtifactRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z](?:[a-z0-9-]{0,62}[a-z0-9])?$"
+          },
+          "version": {
+            "description": "The version to push; the latest one that is ok by default.",
+            "type": "string",
+            "maxLength": 32,
+            "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+          },
+          "destination": {
+            "description": "`user` by default.",
+            "$ref": "#/components/schemas/ArtifactDestination"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactPushResult": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "pushed",
+              "unchanged"
+            ],
+            "description": "`unchanged`: the same file was already there; nothing was uploaded."
+          },
+          "artifact": {
+            "$ref": "#/components/schemas/ServerArtifact"
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "result",
+          "artifact",
+          "durationMs"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactCheck": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ArtifactCheckState"
+          },
+          "expectedSha256": {
+            "type": "string",
+            "description": "What the copy must hash to: the catalogue, or what was pushed when the catalogue no longer has it."
+          },
+          "actualSha256": {
+            "description": "What it hashed to now; null when it is missing.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "catalogue": {
+            "$ref": "#/components/schemas/ArtifactCatalogueState"
+          }
+        },
+        "required": [
+          "version",
+          "state",
+          "expectedSha256",
+          "actualSha256",
+          "catalogue"
+        ],
+        "additionalProperties": false
+      },
+      "ArtifactVerification": {
+        "type": "object",
+        "properties": {
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "ok": {
+            "type": "boolean",
+            "description": "Every copy that was checked is intact."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactCheck"
+            }
+          }
+        },
+        "required": [
+          "verifiedAt",
+          "ok",
+          "results"
         ],
         "additionalProperties": false
       }

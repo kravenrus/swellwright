@@ -10,6 +10,7 @@ export const nav = {
   certificates: 'Certificates',
 
   operations: 'Operations',
+  artifacts: 'Artifacts',
   runs: 'Runs',
   scripts: 'Scripts',
   scenarios: 'Scenarios',

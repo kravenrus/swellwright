@@ -2,6 +2,9 @@ import { type DynamicModule, Module, type OnApplicationShutdown, Inject } from '
 import { APP_GUARD } from '@nestjs/core';
 import { Database } from '@swellwright/db';
 
+import { ArtifactsController } from './artifacts/artifacts.controller.js';
+import { CatalogueService } from './artifacts/catalogue.service.js';
+import { DistributionService } from './artifacts/distribution.service.js';
 import { AuditController } from './audit/audit.controller.js';
 import { AuditService } from './audit/audit.service.js';
 import { AuthController } from './auth/auth.controller.js';
@@ -110,6 +113,7 @@ export class AppModule implements OnApplicationShutdown {
         PluginsController,
         ServersController,
         CommandsController,
+        ArtifactsController,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -140,6 +144,8 @@ export class AppModule implements OnApplicationShutdown {
         ScriptsService,
         CommandRunner,
         CommandRunsService,
+        CatalogueService,
+        DistributionService,
         PluginRuntime,
         PluginBroker,
         PluginsService,

@@ -11,14 +11,15 @@ import {
 
 import { databaseUrl, errorCode } from '../test-support.js';
 import {
+  eventsOf,
   FP_OTHER,
   Harness,
   LOGIN,
   OTHER,
-  SUDO,
-  eventsOf,
   sleep,
   standardPrograms,
+  SUDO,
+  targetOf,
 } from './commands-test-support.js';
 
 const programsWith = (name: string) => ({
@@ -181,9 +182,9 @@ describe('runs on several servers', { skip: !databaseUrl }, () => {
       (await h.createRun(h.operator, h.inline(ids, '# fake:hello\n'))).id,
     );
     assert.equal(run.state, 'partial');
-    assert.equal(run.targets[0].state, 'succeeded');
-    assert.equal(run.targets[1].state, 'failed');
-    assert.equal(run.targets[1].errorCode, 'host_key_mismatch');
+    assert.equal(targetOf(run, 0).state, 'succeeded');
+    assert.equal(targetOf(run, 1).state, 'failed');
+    assert.equal(targetOf(run, 1).errorCode, 'host_key_mismatch');
     assert.equal(changed.server.authAttempts.length, 0, 'not even the user name was sent');
     assert.equal(changed.launches.created, 0);
   });
@@ -276,7 +277,7 @@ describe('runs on several servers', { skip: !databaseUrl }, () => {
     assert.equal(run.state, 'succeeded');
     assert.deepEqual(run.parameters, { note: hostile, count: 3, verbose: true, level: 'warning' });
     assert.equal(
-      run.targets[0].stdout.tail,
+      targetOf(run, 0).stdout.tail,
       [
         'SW_PARAM_COUNT=[3]',
         'SW_PARAM_LEVEL=[warning]',
@@ -596,7 +597,8 @@ describe('runs on several servers', { skip: !databaseUrl }, () => {
     );
     assert.equal((await h.observer.get(`/command-runs/${wrongTarget}`)).status, 404);
     assert.equal(
-      (await h.observer.get(`/command-runs/${run.id}/targets/${run.targets[0].id}/output`)).status,
+      (await h.observer.get(`/command-runs/${run.id}/targets/${targetOf(run, 0).id}/output`))
+        .status,
       400,
       'a stream is needed',
     );

@@ -55,6 +55,7 @@ import { QueryErrorCard } from '../security/query-error.js';
 import { useLastDefined } from '../security/use-last-defined.js';
 import { confirmAction, notifySuccess } from '../shell/feedback.js';
 import { AccessCard } from './access-card.js';
+import { ArtifactsCard } from './artifacts-card.js';
 import { useCountries } from './countries.js';
 import { FactsCard } from './facts-card.js';
 import { HostKeysCard } from './host-keys-card.js';
@@ -505,6 +506,7 @@ function ServerBody({
               server={server}
             />
             <FactsCard canWrite={canWrite} onChanged={refreshAll} server={server} />
+            <ArtifactsCard canWrite={canWrite} onChanged={refreshAll} server={server} />
           </>
         ) : null}
       </Stack>

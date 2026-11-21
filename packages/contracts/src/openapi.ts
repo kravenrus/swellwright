@@ -1,6 +1,25 @@
 import { z } from 'zod';
 
 import {
+  ArtifactCatalogueStateSchema,
+  ArtifactCheckSchema,
+  ArtifactCheckStateSchema,
+  ArtifactDestinationSchema,
+  ArtifactInterpreterSchema,
+  ArtifactListSchema,
+  ArtifactManifestSchema,
+  ArtifactParamSchema,
+  ArtifactPushResultSchema,
+  ArtifactStateSchema,
+  ArtifactStepSchema,
+  ArtifactVerificationSchema,
+  ArtifactVersionViewSchema,
+  ArtifactViewSchema,
+  PushArtifactRequestSchema,
+  ServerArtifactListSchema,
+  ServerArtifactSchema,
+} from './artifacts.js';
+import {
   AuditActionSchema,
   AuditCheckpointSchema,
   AuditCheckpointVerificationSchema,
@@ -146,7 +165,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.21.0';
+export const OPENAPI_INFO_VERSION = '0.22.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -276,6 +295,23 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   CommandRunListSchema,
   CreateCommandRunRequestSchema,
   CommandOutputPageSchema,
+  ArtifactInterpreterSchema,
+  ArtifactStepSchema,
+  ArtifactParamSchema,
+  ArtifactManifestSchema,
+  ArtifactStateSchema,
+  ArtifactVersionViewSchema,
+  ArtifactViewSchema,
+  ArtifactListSchema,
+  ArtifactDestinationSchema,
+  ArtifactCheckStateSchema,
+  ArtifactCatalogueStateSchema,
+  ServerArtifactSchema,
+  ServerArtifactListSchema,
+  PushArtifactRequestSchema,
+  ArtifactPushResultSchema,
+  ArtifactCheckSchema,
+  ArtifactVerificationSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -332,6 +368,19 @@ function parameters(route: RouteDef): Json[] {
 function operation(route: RouteDef): Json {
   const responses: Json = {};
   for (const [status, def] of Object.entries(route.responses)) {
+    if (def.binary) {
+      responses[status] = {
+        description: def.description,
+        headers: Object.fromEntries(
+          Object.entries(def.binary.headers).map(([name, description]) => [
+            name,
+            { description, schema: { type: 'string' } },
+          ]),
+        ),
+        content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+      };
+      continue;
+    }
     responses[status] = def.empty
       ? { description: def.description }
       : {
@@ -425,7 +474,12 @@ export function buildOpenApi(): Json {
       {
         name: 'servers',
         description:
-          'The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, and facts collected over SSH.',
+          'The inventory of servers: addresses, pinned SSH host keys (read from the server and confirmed by a person), access entries that name vault secrets and can be tried, facts collected over SSH, and the artifacts pushed to each server.',
+      },
+      {
+        name: 'artifacts',
+        description:
+          'The catalogue of built-in artifacts: versioned files whose SHA-256 is checked before they are served or sent to a server.',
       },
       {
         name: 'commands',

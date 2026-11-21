@@ -162,8 +162,8 @@ describe('step-up authentication on routes', () => {
       .map((r) => r.operationId)
       .sort();
     assert.deepEqual(stepped, [
-      'changePassword',
       'cancelCommandRun',
+      'changePassword',
       'changeVaultPassphrase',
       'checkPlugin',
       'createCommandRun',

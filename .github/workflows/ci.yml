@@ -268,6 +268,9 @@ jobs:
           fi
           docker compose exec -T swellwright node apps/api/dist/healthcheck.js
           docker compose exec -T swellwright node apps/api/dist/admin.js users | grep -q '^owner'
+          # The built-in artifacts are in the image and every file is what its manifest says (ADR 0039).
+          docker compose exec -T swellwright node apps/api/dist/admin.js artifacts | tee "$RUNNER_TEMP/artifacts.txt"
+          grep -Eq '^node-installer +[0-9]+\.[0-9]+\.[0-9]+ +ok ' "$RUNNER_TEMP/artifacts.txt"
       - name: Logs
         if: failure()
         run: docker compose logs --no-color --tail 200

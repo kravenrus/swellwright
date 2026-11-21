@@ -65,6 +65,14 @@ The console uses the libraries the Remnawave panel renders its tables, entrances
 - `@mantine/code-highlight` 9.5.2 (MIT, Mantine): the details of the 500 page.
 - `@mantine/dates` 9.5.2, `dayjs` 1.11.23 and `clsx` 2.1.1 (MIT): peers of the table package; `dayjs` (MIT, iamkun) also formats the dates of the console, as in the panel.
 
+## Code editor (MIT)
+
+The script editor and the command box of the console are Monaco, as the code editors of the Remnawave panel (ADR 0038). They are ordinary dependencies at the versions the panel pins, bundled with the console (nothing is fetched from a CDN):
+
+- `monaco-editor` 0.56.0 (MIT, Copyright (c) Microsoft Corporation), with `dompurify` (MPL-2.0 OR Apache-2.0, Cure53 and contributors; the newest 3.4.18 by an override, because Monaco pins 3.4.8, which has advisories) and `marked` 14.0.0 (MIT, Christopher Jeffrey and contributors). Its own third-party notices ship in the package (`ThirdPartyNotices.txt`).
+- `@monaco-editor/react` 4.7.0 and `@monaco-editor/loader` 1.7.0 (MIT, Suren Atoyan), `state-local` 1.0.7 (MIT, Suren Atoyan): the React wrapper and its loader, which is told to use the bundled Monaco and never loads the one from the CDN.
+- The editor's dark theme and options are adapted from the panel's `src/shared/constants/monaco-theme/*` (AGPL-3.0-only) in `apps/web/src/commands/monaco-theme.ts` and its setup from `src/shared/utils/setup-monaco/setup-monaco.ts` in `monaco-setup.ts`; the bar of selected rows of the servers table from `src/features/dashboard/hosts/multi-select-hosts/multi-select-hosts.feature.tsx`.
+
 ## SSH layer (`packages/ssh`)
 
 The SSH layer uses `ssh2` 1.17.0 (MIT, Copyright Brian White) in its pure JavaScript mode, with its four runtime dependencies: `asn1` 0.2.6 (MIT, Copyright (c) 2011 Mark Cavage), `bcrypt-pbkdf` 1.0.2 (BSD-3-Clause, with the Blowfish portions of Niels Provos, Copyright 1997, and Implementation advice by David Mazieres), `safer-buffer` 2.1.2 (MIT, Copyright (c) 2018 Nikita Skovoroda) and `tweetnacl` 0.14.5 (Unlicense, public domain). `@types/ssh2` 1.15.6 (MIT, DefinitelyTyped contributors) is a development dependency. They are ordinary dependencies, not copied code; the license texts ship inside the packages and a release adds them next to the build output. `ssh2` lists two optional native add-ons (`cpu-features`, `nan`) that are never installed (`ignoredOptionalDependencies` in `pnpm-workspace.yaml`). The review of the dependency is in ADR 0035.

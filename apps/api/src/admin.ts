@@ -9,7 +9,8 @@ import { AuditService } from './audit/audit.service.js';
 import { checkpointKey, checkpointSignatureValid, parseCheckpoint } from './audit/checkpoint.js';
 import { findEventHash, verifyExportText } from './audit/export-file.js';
 import type { RequestMeta } from './auth/context.js';
-import { loadConfig } from './config.js';
+import { loadCatalogue } from './artifacts/catalogue.js';
+import { type AppConfig, loadConfig } from './config.js';
 import { UsersService } from './users/users.service.js';
 
 /**
@@ -32,10 +33,12 @@ const HELP = `Usage: node dist/admin.js <command>
   audit-verify <file> [--checkpoint <text>]
                                  Check an exported audit log without the database: every number, link and
                                  hash, and, with a checkpoint, that the file reaches it and agrees with it.
+  artifacts                      List the built-in artifacts with their SHA-256 checked against the manifest
+                                 (SW_ARTIFACTS_DIR); exits 1 when one is broken or there is none.
   help                           This text.
 
-Run it with the environment of the server (SW_DATABASE_URL, and SW_AUTH_KEY in production). The command
-audit-verify needs no database.`;
+Run it with the environment of the server (SW_DATABASE_URL, and SW_AUTH_KEY in production). The commands
+audit-verify and artifacts need no database.`;
 
 const NO_REQUEST: RequestMeta = { ip: undefined, userAgent: undefined, requestId: undefined };
 
@@ -177,6 +180,35 @@ async function auditCheckpoint(
   return 0;
 }
 
+/** Lists the artifact catalogue as the server would see it at start: each file hashed against its manifest. */
+export async function artifactsCheck(config: AppConfig, io: AdminIo): Promise<number> {
+  const entries = await loadCatalogue(config.artifacts.directory, config.artifacts.maxBytes);
+  if (entries.length === 0) {
+    io.err(`There is no artifact in ${config.artifacts.directory}.`);
+    return 1;
+  }
+  let broken = 0;
+  for (const entry of entries) {
+    const manifest = entry.manifest;
+    io.out(
+      [
+        (manifest?.name ?? entry.directory).padEnd(24),
+        (manifest?.version ?? '-').padEnd(12),
+        entry.state.padEnd(8),
+        manifest ? manifest.sha256.slice(0, 12) : '-'.padEnd(12),
+        manifest ? `${String(manifest.size)} bytes` : '',
+      ]
+        .join(' ')
+        .trimEnd(),
+    );
+    if (entry.state === 'broken') {
+      broken += 1;
+      io.out(`  ${entry.problem ?? 'unknown problem'}`);
+    }
+  }
+  return broken === 0 ? 0 : 1;
+}
+
 /** Runs one command against a database. Returns the exit code. */
 export async function runAdmin(
   args: readonly string[],
@@ -228,6 +260,10 @@ async function main(): Promise<void> {
   if (wanted === 'audit-verify') {
     // A file needs no database.
     process.exitCode = await auditVerify(process.argv.slice(3), io, authKey);
+    return;
+  }
+  if (wanted === 'artifacts') {
+    process.exitCode = await artifactsCheck(config, io);
     return;
   }
   if (!config.databaseUrl) {

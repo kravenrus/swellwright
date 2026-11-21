@@ -36,6 +36,8 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 
 **Built in Phase 2 (ADR 0034):** `Server`, `ServerHostKey` (the pinned SHA-256 fingerprints), `ServerAccess` and `ServerFact`. A server has a unique name, an address, an SSH port, a country, a provider as text, a state, tags and notes. An access entry (`password` or `key`) names a vault secret of the matching kind and optionally a second secret for `sudo`; both references restrict on delete, so a secret in use cannot be removed, and a server has at most five entries. Facts are collected over SSH (ADR 0037): `ServerFact` holds a typed document (`schemaVersion` 1, every field nullable, warnings for what could not be read), when and by which access, and the SHA-256 of the read-only script that produced it; an access entry remembers when it was last tried and whether it logged in. The provider as an object, the maintenance window, the link to a panel node, certificates as a method and the other entities of this section are not built yet.
 
+**Built in Phase 2 (ADR 0038):** `Script` (name, description, text, danger level `read`/`change`/`destructive`, whether it runs as root, typed parameters as JSON, built-in or not, a version that rises with every change of the text, the SHA-256 of the text; the built-in ones are made and kept current by name at start), `CommandRun` (the mode `script` or `inline`, the state, the exact text that ran with its hash, the script name and version, the parameter values, the level and the confirmed level, the time limit, who started it, `cancel_requested_at`; it keeps its text when the script is edited or deleted), `CommandRunTarget` (one server of a run: its state `pending`, `running`, `succeeded`, `failed`, `lost`, `cancelled` or `skipped`, the access entry that worked, the step id derived from its id, exit status, error code and message, `waiting`, times, and per stream the bytes kept, the size seen on the server, a `truncated` flag and the last 16 KiB) and `CommandOutputChunk` (the output as raw bytes, one chunk per read, keyed by target, stream and offset). The design table row for `Script` below is the library of this slice; permissions per script are not built (`servers:exec` covers them all).
+
 ## 4. Configuration and baselines
 | Entity | Fields |
 |---|---|
@@ -86,6 +88,7 @@ The Prisma schema ([`packages/db`](../../../packages/db/README.md), ADR 0013) is
 | Entity | Fields |
 |---|---|
 | `Artifact` | type (`installer`, `node-engine`, `baseline`, `script`, `template`), version, SHA256 hash, content, signature, note |
+| `ServerArtifact` | Built (ADR 0039): server (cascade), name and version of the catalogue artifact, SHA-256 and size that were pushed, destination (`user` or `system`), remote path, when and by whom it was pushed, the last check (`ok`, `differs`, `missing`, when, the hash seen). One row per server, name and version. The catalogue itself is the `artifacts/` directory of the image, verified against its manifests, not a table |
 | `Script` | script library (audit, diagnostics): body, parameters, permissions, danger level |
 | `ChangeAdvisory` | vulnerability and release records (CVE, USN, GitHub), affected versions, recommendation, "fact/hypothesis" label |
 

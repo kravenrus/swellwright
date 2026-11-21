@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   type AuditEvent,
   type CommandRunView,
+  type CommandTargetView,
   CommandRunViewSchema,
   SecretViewSchema,
   ServerAccessSchema,
@@ -71,6 +72,13 @@ export async function until<T>(
 /** The audit events of one kind, oldest first. */
 export async function eventsOf(instance: Instance, action: string): Promise<AuditEvent[]> {
   return (await auditEvents(instance)).filter((event) => event.action === action);
+}
+
+/** One server of a run; a test that asks for a server that is not there fails here, not three lines later. */
+export function targetOf(run: CommandRunView, index = 0): CommandTargetView {
+  const target = run.targets[index];
+  assert.ok(target, `the run has no server number ${String(index)}`);
+  return target;
 }
 
 export const FINISHED_RUN = ['succeeded', 'failed', 'cancelled', 'partial'];

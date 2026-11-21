@@ -6,7 +6,7 @@ An artifact is a file that Swellwright ships to a server and runs there: immutab
 | --- | --- |
 | [`node-installer`](node-installer/README.md) | Installs and hardens a Remnawave node: preflight and verify (read-only), firewall, fail2ban, Docker, the node API port open to the panel only, nginx default site, HAProxy SNI routing, the node container, SSH, rename. |
 
-The second planned artifact is the `node-engine` (snapshot, undo plan and a safety timer for SSH and firewall changes). Decision record: [ADR 0036](../docs/adr/0036-node-installer-artifact.md).
+The catalogue is served by the API (`GET /artifacts`) and shown in the console (Operations, Artifacts); an artifact is pushed to a server from the server's drawer. The second planned artifact is the `node-engine` (snapshot, undo plan and a safety timer for SSH and firewall changes). Decision record: [ADR 0036](../docs/adr/0036-node-installer-artifact.md).
 
 ## What is in an artifact directory
 
@@ -35,7 +35,7 @@ A pattern or a default written as `@NAME` in a `#@param` line is the text of the
 
 ## How an artifact is verified
 
-The hash is the integrity check. Swellwright checks it before it uploads the file (the bytes it holds against `sha256` of the manifest) and again after the upload (`sha256sum` on the server against the same value) and refuses to run anything on a mismatch. The script does not check itself; a changed script would check whatever it liked. (The mechanism in the server, with SFTP upload and the `Artifact` record, is a later slice. Until then do it by hand, see the README of the artifact.)
+The hash is the integrity check. Swellwright checks the file when it starts and again every time the file is used, hashes the bytes before it uploads them, has the server hash what arrived (the temporary file, then the file in its place, `sha256sum` against the same value) and refuses to put anything in place on a mismatch. The script does not check itself; a changed script would check whatever it liked. How the server does this, where a copy goes and what the audit chain records: [ADR 0039](../docs/adr/0039-artifact-distribution.md). The files of this directory are what the container image carries; `node apps/api/dist/admin.js artifacts` checks them against their manifests. You can do the same by hand, see the README of the artifact.
 
 Line endings matter: the hash covers the bytes, and a carriage return breaks `sh`. A `.gitattributes` rule keeps the file `LF`, and `--check` refuses a file that has a `CR`.
 

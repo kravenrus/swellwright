@@ -537,7 +537,7 @@ export function ScriptDrawer({
       opened={target !== undefined}
       padding="lg"
       position="right"
-      size="800px"
+      size="700px"
       title={
         <OverlayHeader
           icon={IconCode}

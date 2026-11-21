@@ -600,7 +600,7 @@ export function RunDrawer({
       opened={runId !== undefined}
       padding="lg"
       position="right"
-      size="800px"
+      size="700px"
       title={
         <OverlayHeader
           icon={IconListCheck}

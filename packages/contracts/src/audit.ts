@@ -69,6 +69,10 @@ export const AUDIT_ACTIONS = [
   'command.run.started',
   'command.run.finished',
   'command.run.cancelled',
+  'artifact.pushed',
+  'artifact.verified',
+  'artifact.removed',
+  'artifact.broken',
 ] as const;
 export const AuditActionSchema = z.enum(AUDIT_ACTIONS).meta({ id: 'AuditAction' });
 export type AuditAction = z.infer<typeof AuditActionSchema>;

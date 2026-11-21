@@ -18,7 +18,7 @@ import {
 import { databaseUrl } from '../test-support.js';
 import { findShell, shellHandler } from '../servers/ssh-test-support.js';
 import { loadBuiltinScripts } from './builtin-scripts.js';
-import { Harness, LOGIN, PASSPHRASE, sleep, until } from './commands-test-support.js';
+import { Harness, LOGIN, PASSPHRASE, sleep, targetOf, until } from './commands-test-support.js';
 
 const shell = findShell();
 /** A directory with a `setsid`, for a machine that has none of its own (the tests of the author's Windows machine). */
@@ -143,9 +143,9 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
       60_000,
     );
     assert.equal(done.state, 'failed');
-    assert.equal(done.targets[0].exitCode, 7);
-    assert.equal(done.targets[0].stdout.tail, 'before\n');
-    assert.equal(done.targets[0].stderr.tail, 'oops\n');
+    assert.equal(targetOf(done, 0).exitCode, 7);
+    assert.equal(targetOf(done, 0).stdout.tail, 'before\n');
+    assert.equal(targetOf(done, 0).stderr.tail, 'oops\n');
   });
 
   it('delivers hostile parameter values as data: nothing is executed, nothing is written', async () => {
@@ -181,7 +181,7 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
         60_000,
       );
       assert.equal(done.state, 'succeeded', JSON.stringify(note));
-      assert.equal(done.targets[0].stdout.tail, `[${note}]`, JSON.stringify(note));
+      assert.equal(targetOf(done, 0).stdout.tail, `[${note}]`, JSON.stringify(note));
       assert.ok(!existsSync(marker), `a payload ran a command: ${JSON.stringify(note)}`);
     }
     await until('the records to go', () => stepDirectories(host).length === 0, 10_000);
@@ -225,7 +225,7 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
       60_000,
     );
     assert.equal(done.state, 'succeeded');
-    assert.equal(done.targets[0].stdout.tail, 'through sudo\n');
+    assert.equal(targetOf(done, 0).stdout.tail, 'through sudo\n');
   });
 
   it('follows a script that writes over time, and reads the end once it has finished', async () => {
@@ -237,17 +237,17 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
     const middle = await h.waitFor(
       run.id,
       'the first line',
-      (r) => r.targets[0].stdout.storedBytes > 0,
+      (r) => targetOf(r, 0).stdout.storedBytes > 0,
       30_000,
     );
     assert.equal(middle.state, 'running');
     assert.equal(
-      middle.targets[0].stdout.tail,
+      targetOf(middle, 0).stdout.tail,
       'first\n',
       'what the script wrote so far, while it runs',
     );
     const done = await h.finished(run.id, 60_000);
-    assert.equal(done.targets[0].stdout.tail, 'first\nsecond\nthird\n');
+    assert.equal(targetOf(done, 0).stdout.tail, 'first\nsecond\nthird\n');
   });
 
   it('continues after a cut connection without losing or repeating a byte', async () => {
@@ -260,11 +260,11 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
       fingerprint: real.server.hostKeyFingerprint,
     });
     const run = await h.createRun(h.operator, h.inline([id], 'echo one\nsleep 2\necho two\n'));
-    await h.waitFor(run.id, 'the first line', (r) => r.targets[0].stdout.storedBytes > 0, 30_000);
+    await h.waitFor(run.id, 'the first line', (r) => targetOf(r, 0).stdout.storedBytes > 0, 30_000);
     proxy.cut();
     const done = await h.finished(run.id, 60_000);
     assert.equal(done.state, 'succeeded');
-    assert.equal(done.targets[0].stdout.tail, 'one\ntwo\n');
+    assert.equal(targetOf(done, 0).stdout.tail, 'one\ntwo\n');
   });
 
   it(
@@ -279,15 +279,15 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
       await h.waitFor(
         run.id,
         'the script to start',
-        (r) => r.targets[0].stdout.tail === 'started\n',
+        (r) => targetOf(r, 0).stdout.tail === 'started\n',
         30_000,
       );
       assert.equal((await h.operator.post(`/command-runs/${run.id}/cancel`)).status, 200);
       const done = await h.finished(run.id, 60_000);
       assert.equal(done.state, 'cancelled');
-      assert.equal(done.targets[0].state, 'cancelled');
-      assert.equal(done.targets[0].exitCode, 143);
-      assert.equal(done.targets[0].stdout.tail, 'started\n');
+      assert.equal(targetOf(done, 0).state, 'cancelled');
+      assert.equal(targetOf(done, 0).exitCode, 143);
+      assert.equal(targetOf(done, 0).stdout.tail, 'started\n');
       await sleep(300);
       const sleepers = spawnSync('sh', ['-c', `ps -eo args | grep -c "[s]leep 60"`], {
         encoding: 'utf8',
@@ -307,8 +307,8 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
       60_000,
     );
     assert.equal(done.state, 'failed');
-    assert.equal(done.targets[0].errorCode, 'timeout');
-    assert.equal(done.targets[0].exitCode, 143);
+    assert.equal(targetOf(done, 0).errorCode, 'timeout');
+    assert.equal(targetOf(done, 0).exitCode, 143);
   });
 
   it('cuts the output at the limit and leaves the whole of it on the server', async () => {
@@ -348,7 +348,7 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
     await h.waitFor(
       run.id,
       'the first line',
-      (r) => r.targets[0].stdout.tail === 'before\n',
+      (r) => targetOf(r, 0).stdout.tail === 'before\n',
       30_000,
     );
     await h.restart({ SW_COMMAND_POLL_MS: '100', SW_SSH_COMMAND_TIMEOUT_SECONDS: '30' });
@@ -356,7 +356,7 @@ describe('commands against a real shell', { skip: !databaseUrl || !available }, 
     assert.equal((await h.owner.post('/vault/unseal', { passphrase: PASSPHRASE })).status, 200);
     const done = await h.finished(run.id, 60_000);
     assert.equal(done.state, 'succeeded', JSON.stringify(done.targets[0]));
-    assert.equal(done.targets[0].stdout.tail, 'before\nafter\n');
+    assert.equal(targetOf(done, 0).stdout.tail, 'before\nafter\n');
   });
 
   it('runs every built-in script on a real shell to its end, reading nothing it should not, and writing nothing', async () => {
