@@ -1,12 +1,13 @@
 import { useMediaQuery } from '@mantine/hooks';
 
 /**
- * The panel switches to its mobile layout at `lg` (64em). It asks for `max-width: 64rem`, which also matches at
- * exactly 1024 px, where Mantine's AppShell already counts as desktop; this stops a hair before, so both agree.
- * The right layout is chosen on the first render (no flash of the wrong one).
+ * The panel's mobile flag (`MOBILE_QUERY` of its `IsMobileProvider`): `max-width: 64rem`, so up to and including
+ * 1024 px. The right layout is chosen on the first render (no flash of the wrong one). The drawer's AppShell
+ * breakpoint is set one pixel higher (see `console-layout.tsx`), so the drawer opens at exactly 1024 px, where the
+ * panel itself cannot open it.
  */
 export function useIsMobile(): boolean {
-  return useMediaQuery('(max-width: 63.99em)', undefined, { getInitialValueInEffect: false });
+  return useMediaQuery('(max-width: 64rem)', undefined, { getInitialValueInEffect: false });
 }
 
 /** From 2048 px the panel puts the tabs in the brand row and pads the page by 10vw on each side. */

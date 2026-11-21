@@ -7,9 +7,10 @@ export function cx(...parts: (string | false | null | undefined)[]): string | un
 }
 
 /**
- * The panel's mobile flag: below its `lg` breakpoint (64em) the dialogs go full screen and the footers stretch their
- * buttons. It asks for the value on the first render, so there is no flash of the wrong layout.
+ * The panel's mobile flag (`MOBILE_QUERY` of its `IsMobileProvider`, `max-width: 64rem`, so up to and including
+ * 1024 px): the dialogs go full screen and the footers stretch their buttons. It asks for the value on the first
+ * render, so there is no flash of the wrong layout.
  */
 export function useBelowDesktop(): boolean {
-  return useMediaQuery('(max-width: 63.99em)', undefined, { getInitialValueInEffect: false });
+  return useMediaQuery('(max-width: 64rem)', undefined, { getInitialValueInEffect: false });
 }

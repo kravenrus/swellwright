@@ -7,6 +7,7 @@ import '@fontsource/montserrat/900.css';
 import '@fontsource/unbounded/700.css';
 import '@fontsource/fira-mono/400.css';
 import '@mantine/core/styles.css';
+import '@mantine/code-highlight/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/nprogress/styles.css';
 import '@swellwright/ui/styles.css';
