@@ -7,10 +7,11 @@
  * Import after "@mantine/core/styles.css".
  */
 
-/* The stylesheets of the tables (`@kastov/mantine-react-table-open` and the date pickers its filters use); the panel
-   imports both in src/app.tsx the same way. */
+/* The stylesheets of the tables (`@kastov/mantine-react-table-open`, the date pickers its filters use, and
+   `@kastov/mantine-datatable` of the page-level lists); the panel imports them in src/app.tsx the same way. */
 @import '@mantine/dates/styles.css';
 @import '@kastov/mantine-react-table-open/styles.css';
+@import '@kastov/mantine-datatable/styles.css';
 
 html,
 body {

@@ -39,6 +39,21 @@ import {
 } from './plugins.js';
 import { type Permission, RoleCatalogSchema } from './roles.js';
 import {
+  AccessParamsSchema,
+  AddAccessRequestSchema,
+  CreateServerRequestSchema,
+  HostKeyParamsSchema,
+  PinHostKeyRequestSchema,
+  ServerAccessSchema,
+  ServerHostKeySchema,
+  ServerIdParamsSchema,
+  ServerListQuerySchema,
+  ServerListSchema,
+  ServerViewSchema,
+  UpdateAccessRequestSchema,
+  UpdateServerRequestSchema,
+} from './servers.js';
+import {
   SessionIdParamsSchema,
   SessionListQuerySchema,
   SessionListSchema,
@@ -533,7 +548,8 @@ export const deleteSecretRoute = defineRoute({
   path: '/secrets/{id}',
   tags: ['vault'],
   summary: 'Delete a secret',
-  description: 'Works while the vault is sealed. Cannot be undone.',
+  description:
+    'Works while the vault is sealed. Cannot be undone. A secret that a server uses for its login or for sudo cannot be deleted: 409, naming the servers.',
   auth: 'session',
   permission: 'vault:manage',
   stepUp: true,
@@ -965,6 +981,146 @@ export const pluginGatewayRoute = defineRoute({
   },
 });
 
+export const listServersRoute = defineRoute({
+  operationId: 'listServers',
+  method: 'get',
+  path: '/servers',
+  tags: ['servers'],
+  summary: 'List the servers',
+  description:
+    'The inventory, ordered by name, each server with how many host keys are pinned, how many access entries it has and a summary of its facts. The filters combine.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { query: ServerListQuerySchema },
+  responses: { 200: { description: 'The servers.', schema: ServerListSchema } },
+});
+
+export const createServerRoute = defineRoute({
+  operationId: 'createServer',
+  method: 'post',
+  path: '/servers',
+  tags: ['servers'],
+  summary: 'Add a server',
+  description: 'A taken name answers 409. The server starts as a draft unless a state is given.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { body: CreateServerRequestSchema },
+  responses: { 201: { description: 'The server.', schema: ServerViewSchema } },
+});
+
+export const getServerRoute = defineRoute({
+  operationId: 'getServer',
+  method: 'get',
+  path: '/servers/{id}',
+  tags: ['servers'],
+  summary: 'One server in full',
+  description:
+    'With its pinned host keys, its access entries (the names of the secrets, never their values) and its facts.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ServerIdParamsSchema },
+  responses: { 200: { description: 'The server.', schema: ServerViewSchema } },
+});
+
+export const updateServerRoute = defineRoute({
+  operationId: 'updateServer',
+  method: 'patch',
+  path: '/servers/{id}',
+  tags: ['servers'],
+  summary: 'Change a server',
+  description:
+    'Any field, including the state: the five states may follow one another freely, and the audit record keeps the old and the new one. A taken name answers 409.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema, body: UpdateServerRequestSchema },
+  responses: { 200: { description: 'The server after the change.', schema: ServerViewSchema } },
+});
+
+export const deleteServerRoute = defineRoute({
+  operationId: 'deleteServer',
+  method: 'delete',
+  path: '/servers/{id}',
+  tags: ['servers'],
+  summary: 'Delete a server',
+  description:
+    'Only a draft or a retired server; any other state answers 409. Its host keys, access entries and facts go with it; the vault secrets stay.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema },
+  responses: { 204: { description: 'The server is gone.', schema: z.undefined(), empty: true } },
+});
+
+export const pinHostKeyRoute = defineRoute({
+  operationId: 'pinHostKey',
+  method: 'post',
+  path: '/servers/{id}/host-keys',
+  tags: ['servers'],
+  summary: 'Pin a host key by hand',
+  description:
+    'Pins a fingerprint the person checked (for example from the provider console). Idempotent: pinning the same fingerprint again changes nothing and answers 200 with the key that is there; a new key answers 201.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema, body: PinHostKeyRequestSchema },
+  responses: {
+    200: { description: 'That fingerprint was already pinned.', schema: ServerHostKeySchema },
+    201: { description: 'The key is pinned.', schema: ServerHostKeySchema },
+  },
+});
+
+export const revokeHostKeyRoute = defineRoute({
+  operationId: 'revokeHostKey',
+  method: 'delete',
+  path: '/servers/{id}/host-keys/{keyId}',
+  tags: ['servers'],
+  summary: 'Revoke a pinned host key',
+  description:
+    'For a server that was reinstalled: the old key must stop being trusted. Nothing connects to a server whose keys are all revoked until a new one is pinned.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: HostKeyParamsSchema },
+  responses: { 204: { description: 'The key is revoked.', schema: z.undefined(), empty: true } },
+});
+
+export const addAccessRoute = defineRoute({
+  operationId: 'addServerAccess',
+  method: 'post',
+  path: '/servers/{id}/access',
+  tags: ['servers'],
+  summary: 'Add a way to log in',
+  description:
+    'The entry names vault secrets and holds no value. A password entry needs a secret of kind `ssh_password`, a key entry one of kind `ssh_key`, and the sudo secret one of kind `ssh_password`; anything else answers 400, as does a secret that does not exist. A server has at most five entries (409 beyond that). A secret in use cannot be deleted from the vault.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema, body: AddAccessRequestSchema },
+  responses: { 201: { description: 'The entry.', schema: ServerAccessSchema } },
+});
+
+export const updateAccessRoute = defineRoute({
+  operationId: 'updateServerAccess',
+  method: 'patch',
+  path: '/servers/{id}/access/{accessId}',
+  tags: ['servers'],
+  summary: 'Change a way to log in',
+  description: 'The same rules as when adding: the result must be consistent.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: AccessParamsSchema, body: UpdateAccessRequestSchema },
+  responses: { 200: { description: 'The entry after the change.', schema: ServerAccessSchema } },
+});
+
+export const removeAccessRoute = defineRoute({
+  operationId: 'removeServerAccess',
+  method: 'delete',
+  path: '/servers/{id}/access/{accessId}',
+  tags: ['servers'],
+  summary: 'Remove a way to log in',
+  description: 'The secrets it named stay in the vault.',
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: AccessParamsSchema },
+  responses: { 204: { description: 'The entry is gone.', schema: z.undefined(), empty: true } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -1041,6 +1197,16 @@ export const routes = [
   updatePluginConfigRoute,
   getPluginSidecarRoute,
   pluginGatewayRoute,
+  listServersRoute,
+  createServerRoute,
+  getServerRoute,
+  updateServerRoute,
+  deleteServerRoute,
+  pinHostKeyRoute,
+  revokeHostKeyRoute,
+  addAccessRoute,
+  updateAccessRoute,
+  removeAccessRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */

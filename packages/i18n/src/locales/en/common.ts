@@ -19,6 +19,8 @@ export const common = {
   create: 'Create',
   delete: 'Delete',
   refresh: 'Refresh',
+  clear: 'Clear',
+  remove: 'Remove',
   clearFilters: 'Clear filters',
   resetTable: 'Reset table',
   filterBy: 'Filter by...',
@@ -31,4 +33,17 @@ export const common = {
   never: 'never',
   yes: 'Yes',
   no: 'No',
+
+  /** The row under a page-level table (the panel's datatable controls). */
+  datatable: {
+    reset: 'Reset',
+    resetSort: 'Reset sort',
+    columnWidth: 'Column width',
+    columnOrder: 'Column order',
+    columnToggle: 'Column toggle',
+    showAll: 'Show all',
+    hideAll: 'Hide all',
+    columns: 'Columns',
+    all: 'All',
+  },
 } as const;

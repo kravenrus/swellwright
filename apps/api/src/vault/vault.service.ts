@@ -399,26 +399,60 @@ export class VaultService implements OnApplicationShutdown {
     }
   }
 
+  /**
+   * A secret that a server's access entry names (as the login or as the sudo password) cannot be deleted: the
+   * database refuses it too (a restricting foreign key), this check says which servers use it (ADR 0034).
+   */
+  private async refuseWhileInUse(
+    tx: Pick<Prisma.TransactionClient, 'serverAccess'>,
+    id: string,
+  ): Promise<void> {
+    const using = await tx.serverAccess.findMany({
+      where: { OR: [{ secretId: id }, { sudoSecretId: id }] },
+      select: { server: { select: { name: true } } },
+    });
+    if (using.length === 0) {
+      return;
+    }
+    const names = [...new Set(using.map((entry) => entry.server.name))].sort();
+    const shown = names.slice(0, 5).join(', ');
+    const more = names.length > 5 ? ` and ${String(names.length - 5)} more` : '';
+    throw new ConflictException(
+      `This secret is used by ${String(names.length)} server${names.length === 1 ? '' : 's'} (${shown}${more}). Remove it from their access entries first.`,
+    );
+  }
+
   /** Works while the vault is sealed: nothing is decrypted. */
   async remove(actor: Actor, id: string, meta: RequestMeta): Promise<void> {
-    await this.db.$transaction(async (tx) => {
-      const current = await tx.secret.findUnique({ where: { id } });
-      if (!current) {
-        throw new NotFoundException('There is no such secret.');
+    try {
+      await this.db.$transaction(async (tx) => {
+        const current = await tx.secret.findUnique({ where: { id } });
+        if (!current) {
+          throw new NotFoundException('There is no such secret.');
+        }
+        await this.refuseWhileInUse(tx, id);
+        await tx.secret.delete({ where: { id } });
+        await this.audit.record(
+          {
+            action: 'secret.deleted',
+            outcome: 'success',
+            actor,
+            object: { type: 'secret', id },
+            details: { secret_type: current.type, version: current.version },
+            meta,
+          },
+          tx,
+        );
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        // A server started to use it between the check and the delete; the foreign key is the last word.
+        throw new ConflictException(
+          'This secret is used by a server. Remove it from the access entries first.',
+        );
       }
-      await tx.secret.delete({ where: { id } });
-      await this.audit.record(
-        {
-          action: 'secret.deleted',
-          outcome: 'success',
-          actor,
-          object: { type: 'secret', id },
-          details: { secret_type: current.type, version: current.version },
-          meta,
-        },
-        tx,
-      );
-    });
+      throw error;
+    }
   }
 
   /**

@@ -7,11 +7,14 @@ import { pathToFileURL } from 'node:url';
 import { after, before, describe, it } from 'node:test';
 
 import {
+  AccessMethod,
   AuditOutcome,
   Database,
   DatabaseNotReadyError,
   Prisma,
   schemaProblem,
+  SecretType,
+  ServerState,
   SessionStage,
   shippedMigrations,
   UserRole,
@@ -244,6 +247,152 @@ describe('users against a migrated database', { skip: !databaseUrl }, () => {
           },
         }),
       );
+    } finally {
+      await isolated.drop();
+    }
+  });
+});
+
+describe('the server inventory against a migrated database', { skip: !databaseUrl }, () => {
+  const FINGERPRINT = `SHA256:${'A'.repeat(43)}`;
+  const secretData = (name: string, type: SecretType) => ({
+    name,
+    type,
+    ciphertext: new Uint8Array([1]),
+    wrappedDek: new Uint8Array([2]),
+  });
+
+  it('starts a server as a draft on port 22 and keeps its tags as a list', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const server = await client.server.create({
+        data: { name: 'srv-a', address: '192.0.2.10', tags: ['edge', 'eu'] },
+      });
+      assert.equal(server.state, ServerState.draft);
+      assert.equal(server.sshPort, 22);
+      assert.equal(server.country, null);
+      assert.deepEqual(server.tags, ['edge', 'eu']);
+      const tagged = await client.server.findMany({ where: { tags: { has: 'eu' } } });
+      assert.equal(tagged.length, 1);
+      await assert.rejects(
+        client.server.create({ data: { name: 'srv-a', address: '192.0.2.11' } }),
+        (error: unknown) =>
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002',
+      );
+    } finally {
+      await isolated.drop();
+    }
+  });
+
+  it('refuses values the checks of the migration forbid', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      await assert.rejects(
+        client.server.create({ data: { name: 'p0', address: '192.0.2.1', sshPort: 0 } }),
+      );
+      await assert.rejects(
+        client.server.create({ data: { name: 'p1', address: '192.0.2.1', sshPort: 65536 } }),
+      );
+      await assert.rejects(
+        client.server.create({ data: { name: 'c1', address: '192.0.2.1', country: 'de' } }),
+      );
+      const server = await client.server.create({
+        data: { name: 'ok', address: '192.0.2.1', country: 'DE', sshPort: 65535 },
+      });
+      await assert.rejects(
+        client.serverHostKey.create({
+          data: {
+            serverId: server.id,
+            algorithm: 'ssh-ed25519',
+            fingerprintSha256: 'SHA256:short',
+          },
+        }),
+      );
+      const secret = await client.secret.create({
+        data: secretData('pw', SecretType.ssh_password),
+      });
+      await assert.rejects(
+        client.serverAccess.create({
+          data: {
+            serverId: server.id,
+            method: AccessMethod.password,
+            username: 'Root',
+            secretId: secret.id,
+          },
+        }),
+      );
+    } finally {
+      await isolated.drop();
+    }
+  });
+
+  it('keeps a host key once per server and removes the children with the server', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const server = await client.server.create({ data: { name: 'srv', address: '192.0.2.20' } });
+      const other = await client.server.create({ data: { name: 'srv2', address: '192.0.2.21' } });
+      const key = { algorithm: 'ssh-ed25519', fingerprintSha256: FINGERPRINT };
+      await client.serverHostKey.create({ data: { serverId: server.id, ...key } });
+      await assert.rejects(client.serverHostKey.create({ data: { serverId: server.id, ...key } }));
+      // The same key may be pinned on another server.
+      await client.serverHostKey.create({ data: { serverId: other.id, ...key } });
+      const hostKey = await client.serverHostKey.findFirstOrThrow({
+        where: { serverId: server.id },
+      });
+      assert.equal(hostKey.source, 'manual');
+
+      const secret = await client.secret.create({ data: secretData('key', SecretType.ssh_key) });
+      await client.serverAccess.create({
+        data: {
+          serverId: server.id,
+          method: AccessMethod.key,
+          username: 'deploy',
+          secretId: secret.id,
+        },
+      });
+      await client.serverFact.create({
+        data: { serverId: server.id, facts: { os: 'x' }, collectedAt: new Date(), source: 'ssh' },
+      });
+      await client.server.delete({ where: { id: server.id } });
+      assert.equal(await client.serverHostKey.count({ where: { serverId: server.id } }), 0);
+      assert.equal(await client.serverAccess.count(), 0);
+      assert.equal(await client.serverFact.count(), 0);
+      assert.equal(await client.serverHostKey.count(), 1, 'the other server keeps its key');
+      assert.equal(await client.secret.count(), 1, 'a secret outlives the server that used it');
+    } finally {
+      await isolated.drop();
+    }
+  });
+
+  it('refuses to delete a secret that an access entry or a sudo entry names', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const server = await client.server.create({ data: { name: 'srv', address: '192.0.2.30' } });
+      const login = await client.secret.create({
+        data: secretData('login', SecretType.ssh_password),
+      });
+      const sudo = await client.secret.create({
+        data: secretData('sudo', SecretType.ssh_password),
+      });
+      const free = await client.secret.create({ data: secretData('free', SecretType.generic) });
+      await client.serverAccess.create({
+        data: {
+          serverId: server.id,
+          method: AccessMethod.password,
+          username: 'root',
+          secretId: login.id,
+          sudoSecretId: sudo.id,
+        },
+      });
+      const restricted = (error: unknown): boolean =>
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003';
+      await assert.rejects(client.secret.delete({ where: { id: login.id } }), restricted);
+      await assert.rejects(client.secret.delete({ where: { id: sudo.id } }), restricted);
+      await client.secret.delete({ where: { id: free.id } });
     } finally {
       await isolated.drop();
     }

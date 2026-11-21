@@ -52,6 +52,14 @@ export const AUDIT_ACTIONS = [
   'plugin.secret.used',
   'plugin.sidecar.exported',
   'plugin.gateway.denied',
+  'server.created',
+  'server.updated',
+  'server.deleted',
+  'server.host_key.pinned',
+  'server.host_key.revoked',
+  'server.access.added',
+  'server.access.updated',
+  'server.access.removed',
 ] as const;
 export const AuditActionSchema = z.enum(AUDIT_ACTIONS).meta({ id: 'AuditAction' });
 export type AuditAction = z.infer<typeof AuditActionSchema>;
