@@ -21,6 +21,14 @@ export function HeaderActions({ children, ...props }: HeaderActionsProps) {
   );
 }
 
+/**
+ * Joins several `HeaderAction`s into one connected group, as the panel does for related tools (the Users table puts
+ * "clear filters" and "reset table" together, then "refresh" and "create"). Give the actions inside `grouped`.
+ */
+export function HeaderActionGroup({ children }: { children: ReactNode }) {
+  return <ActionIcon.Group>{children}</ActionIcon.Group>;
+}
+
 export interface HeaderActionProps {
   /** The tooltip and the accessible name, already translated. */
   label: string;
@@ -38,6 +46,8 @@ export interface HeaderActionProps {
   href?: string;
   /** For a link: '_blank' also sets `rel="noopener noreferrer"`. */
   target?: string;
+  /** Set inside a `HeaderActionGroup`, which then provides the group (otherwise each action is a group of one). */
+  grouped?: boolean;
 }
 
 /** One icon-only soft action: `ActionIcon size="input-md" variant="soft"` in a group, with a tooltip. */
@@ -50,6 +60,7 @@ export function HeaderAction({
   onClick,
   href,
   target,
+  grouped = false,
 }: HeaderActionProps) {
   const common = {
     'aria-label': label,
@@ -59,31 +70,31 @@ export function HeaderAction({
     ...(loading === undefined ? {} : { loading }),
   } as const;
 
-  return (
-    <ActionIcon.Group>
-      <Tooltip label={label} withArrow>
-        {href === undefined ? (
-          <ActionIcon
-            {...common}
-            {...(disabled === undefined ? {} : { disabled })}
-            {...(onClick === undefined ? {} : { onClick })}
-          >
-            <Icon size={24} />
-          </ActionIcon>
-        ) : (
-          <ActionIcon
-            {...common}
-            component="a"
-            href={href}
-            {...(disabled === true ? { 'data-disabled': true } : {})}
-            {...(onClick === undefined ? {} : { onClick })}
-            {...(target === undefined ? {} : { target })}
-            {...(target === '_blank' ? { rel: 'noopener noreferrer' } : {})}
-          >
-            <Icon size={24} />
-          </ActionIcon>
-        )}
-      </Tooltip>
-    </ActionIcon.Group>
+  const button = (
+    <Tooltip label={label} withArrow>
+      {href === undefined ? (
+        <ActionIcon
+          {...common}
+          {...(disabled === undefined ? {} : { disabled })}
+          {...(onClick === undefined ? {} : { onClick })}
+        >
+          <Icon size={24} />
+        </ActionIcon>
+      ) : (
+        <ActionIcon
+          {...common}
+          component="a"
+          href={href}
+          {...(disabled === true ? { 'data-disabled': true } : {})}
+          {...(onClick === undefined ? {} : { onClick })}
+          {...(target === undefined ? {} : { target })}
+          {...(target === '_blank' ? { rel: 'noopener noreferrer' } : {})}
+        >
+          <Icon size={24} />
+        </ActionIcon>
+      )}
+    </Tooltip>
   );
+
+  return grouped ? button : <ActionIcon.Group>{button}</ActionIcon.Group>;
 }

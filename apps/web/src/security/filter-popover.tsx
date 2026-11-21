@@ -9,33 +9,36 @@ import type { ReactNode } from 'react';
 export function FilterPopover({
   label,
   active,
+  grouped = false,
   children,
 }: {
   /** The tooltip and the accessible name of the button, already translated. */
   label: string;
   active: boolean;
+  /** Set inside a `HeaderActionGroup`, which then provides the joined group (the panel's tools row). */
+  grouped?: boolean;
   /** The fields. A `Select` in here needs `comboboxProps={{ withinPortal: false }}`. */
   children: ReactNode;
 }) {
-  return (
-    <ActionIcon.Group>
-      <Popover position="bottom-end" shadow="md" trapFocus width={280} withArrow>
-        <Tooltip label={label} withArrow>
-          <Popover.Target>
-            <ActionIcon
-              aria-label={label}
-              color={active ? 'cyan' : 'gray'}
-              size="input-md"
-              variant="soft"
-            >
-              <IconFilter size={24} />
-            </ActionIcon>
-          </Popover.Target>
-        </Tooltip>
-        <Popover.Dropdown>
-          <Stack gap="sm">{children}</Stack>
-        </Popover.Dropdown>
-      </Popover>
-    </ActionIcon.Group>
+  const popover = (
+    <Popover position="bottom-end" shadow="md" trapFocus width={280} withArrow>
+      <Tooltip label={label} withArrow>
+        <Popover.Target>
+          <ActionIcon
+            aria-label={label}
+            color={active ? 'cyan' : 'gray'}
+            size="input-md"
+            variant="soft"
+          >
+            <IconFilter size={24} />
+          </ActionIcon>
+        </Popover.Target>
+      </Tooltip>
+      <Popover.Dropdown>
+        <Stack gap="sm">{children}</Stack>
+      </Popover.Dropdown>
+    </Popover>
   );
+
+  return grouped ? popover : <ActionIcon.Group>{popover}</ActionIcon.Group>;
 }

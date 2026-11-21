@@ -179,7 +179,7 @@ export function RolesPage({ currentRole }: { currentRole: UserRole }) {
               />
             </SectionCard.Section>
             <SectionCard.Section>
-              <DataList orientation="vertical" size="xs" withDivider>
+              <DataList orientation="vertical" withDivider>
                 {catalog.data.roles.map((role) => (
                   <DataList.Item key={role.id}>
                     <DataList.ItemLabel>

@@ -106,8 +106,19 @@ export const tokens = {
 
   create: {
     title: 'Create an API token',
-    onceTitle: 'Shown only once',
-    once: 'The value of the token appears once, right after you create it. Only a hash of it is kept, so a lost token cannot be recovered.',
+    onceBefore: 'For safety the value of the token is shown',
+    onceEmphasis: 'only once',
+    onceAfter:
+      ', right after you create it. Only a hash of it is kept, so a lost token cannot be recovered.',
+    namePlaceholder: 'Deploy script',
+    copyPermissions: 'Copy the permissions',
+    pastePermissions: 'Paste permissions from the clipboard',
+    pasted: 'Permissions pasted',
+    pastedCount_one: '{{count}} permission taken from the clipboard.',
+    pastedCount_other: '{{count}} permissions taken from the clipboard.',
+    pasteInvalid: 'Nothing to paste',
+    pasteInvalidHint:
+      'The clipboard must hold a JSON list of permissions, as the copy button makes it.',
     presetRead: 'Read only',
     presetAll: 'Everything I may',
     clear: 'Clear the permissions',
@@ -128,16 +139,16 @@ export const tokens = {
     permissionsEmpty: 'Your role has no permissions that a token can carry.',
     permissionsError: 'Tick at least one permission.',
     forbidden: 'Your role may not create API tokens.',
-    submit: 'Create token',
   },
 
   /** What the person sees right after creating a token: the one time its value is shown. */
   created: {
     title: 'Your new token',
     intro: 'The token “{{name}}” expires {{when}}.',
-    warningTitle: 'Copy it now',
-    warning:
-      'This is the only time the token is shown. Only a hash of it is kept, so a lost token cannot be recovered: revoke it and create another.',
+    warningBefore: 'Copy it now: this is',
+    warningEmphasis: 'the only time',
+    warningAfter:
+      ' the token is shown. Only a hash of it is kept, so a lost token cannot be recovered: revoke it and create another.',
     valueLabel: 'Token',
     copy: 'Copy token',
     exampleLabel: 'Example request',
