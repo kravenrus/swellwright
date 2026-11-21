@@ -17,7 +17,7 @@ What deliberately differs from the panel:
 - **An account control** sits before Sign out: here people have accounts (change password, role), the panel has one administrator.
 - **Planned pages are shown in the menu, disabled**; the panel has only built pages.
 - **Accessibility**: our header controls have labels, the custom controls show a keyboard focus ring (the panel theme sets `focusRing: 'never'`), `user-scalable=no` is not copied, and `prefers-reduced-motion` switches the entrance animations off.
-- **No `motion`, `zustand`, nice-modal or react-table libraries**: CSS keyframes and Mantine cover what the panel uses them for.
+- **Plumbing libraries** (`zustand`, nice-modal) are not used. The panel's display libraries were first imitated (CSS keyframes, a styled Mantine table); ADR 0033 reverses that: they are used as the panel uses them.
 
 ## Consequences
 - A new panel minor version means diffing the ported files and the specification notes (the shell and the components) and updating both; the version is written in the headers.
