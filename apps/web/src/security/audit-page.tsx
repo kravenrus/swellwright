@@ -3,10 +3,10 @@ import {
   Box,
   Button,
   DataList,
+  Drawer,
   Group,
   Modal,
   Progress,
-  Select,
   Stack,
   Text,
   Textarea,
@@ -16,7 +16,6 @@ import {
   IconBook,
   IconBookmark,
   IconCheck,
-  IconChevronDown,
   IconDownload,
   IconFilterOff,
   IconListCheck,
@@ -26,9 +25,10 @@ import {
   IconShieldCheck,
   IconShieldX,
 } from '@tabler/icons-react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PiInfoDuotone, PiLinkDuotone, PiListBulletsDuotone } from 'react-icons/pi';
 
 import {
   AUDIT_ACTIONS,
@@ -47,12 +47,12 @@ import {
   CopyableCodeBlock,
   CopyableDataListItem,
   DataTableCard,
-  EmptyPageLayout,
   HeaderAction,
+  HeaderActionGroup,
   HeaderActions,
-  LoadingScreen,
   MantineReactTable,
   type MRT_ColumnDef,
+  type MRT_ColumnFiltersState,
   ModalFooter,
   OverlayHeader,
   PageHeader,
@@ -63,6 +63,7 @@ import {
   type StatusKind,
   useMantineReactTable,
   useMrtTableState,
+  usePreventTableBackScroll,
 } from '@swellwright/ui';
 
 import {
@@ -76,11 +77,9 @@ import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { notifyError, notifySuccess } from '../shell/feedback.js';
 import { useTableLocalization } from '../tables.js';
-import { FilterPopover } from './filter-popover.js';
-import { QueryErrorCard } from './query-error.js';
+import { LABEL_WEIGHT } from './form-styles.js';
 import { useTimeFirst } from './time-first.js';
 
-const PAGE_SIZE = 50;
 /** Events per request when the log is exported: fewer requests, and each one is recorded in the log. */
 const EXPORT_PAGE_SIZE = 1000;
 /** How the exported file is checked without this server. A command, not a text to translate. */
@@ -162,7 +161,7 @@ function VerificationResult({ result }: { result: ChainVerification }) {
             <CopyableCodeBlock
               copiedLabel={t('common:copied')}
               copyLabel={t('common:copy')}
-              inputWrapperProps={{ label: t('verification.headLabel') }}
+              inputWrapperProps={{ label: t('verification.headLabel'), styles: LABEL_WEIGHT }}
               size="small"
               value={result.head.hash}
             />
@@ -180,7 +179,7 @@ function VerifyCommand() {
     <CopyableCodeBlock
       copiedLabel={t('common:copied')}
       copyLabel={t('common:copy')}
-      inputWrapperProps={{ label: t('export.verifyHint') }}
+      inputWrapperProps={{ label: t('export.verifyHint'), styles: LABEL_WEIGHT }}
       size="small"
       value={VERIFY_COMMAND}
     />
@@ -318,7 +317,7 @@ function ExportDialog({ opened, onClose }: { opened: boolean; onClose: () => voi
                     <CopyableCodeBlock
                       copiedLabel={t('common:copied')}
                       copyLabel={t('common:copy')}
-                      inputWrapperProps={{ label: t('export.headLabel') }}
+                      inputWrapperProps={{ label: t('export.headLabel'), styles: LABEL_WEIGHT }}
                       size="small"
                       value={done.head.hash}
                     />
@@ -402,6 +401,7 @@ function CheckpointDialog({
               copiedLabel={t('common:copied')}
               copyLabel={t('common:copy')}
               inputWrapperProps={{
+                styles: LABEL_WEIGHT,
                 label: t('checkpoint.valueLabel'),
                 description: t('checkpoint.valueDescription'),
               }}
@@ -538,7 +538,10 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
             }}
             placeholder={t('check.inputPlaceholder')}
             spellCheck={false}
-            styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+            styles={{
+              ...LABEL_WEIGHT,
+              input: { fontFamily: 'var(--mantine-font-family-monospace)' },
+            }}
             value={text}
           />
           {check.data ? <CheckpointResult result={check.data} /> : null}
@@ -561,8 +564,8 @@ function CheckDialog({ opened, onClose }: { opened: boolean; onClose: () => void
   );
 }
 
-/** One event in full: every field the hashes cover, each copyable, and the two hashes that chain it. */
-function EventDialog({
+/** One event in full: every field the hashes cover, each copyable, grouped as the panel groups a record in a drawer. */
+function EventDrawer({
   event,
   opened,
   onClose,
@@ -574,93 +577,119 @@ function EventDialog({
   const { t } = useTranslation(['audit', 'common']);
   const formatTime = useTimeFirst();
   const copy = { copiedLabel: t('common:copied'), copyLabel: t('common:copy') };
+  const details = event ? Object.entries(event.details) : [];
   return (
-    <Modal
+    <Drawer
+      closeButtonProps={{ 'aria-label': t('common:close') }}
       onClose={onClose}
       opened={opened && event !== undefined}
+      padding="lg"
+      position="right"
       size="lg"
       title={
         <OverlayHeader
           icon={IconListDetails}
-          iconColor="cyan"
-          subtitle={event?.action ?? ''}
+          iconColor="blue"
           title={t('event.title', { seq: event?.seq ?? 0 })}
         />
       }
     >
       {event ? (
-        <>
+        <Stack gap="md">
           <SectionCard.Root>
             <SectionCard.Section>
-              <DataList orientation="vertical" size="xs" withDivider>
+              <Group align="center" justify="space-between">
+                <OverlayHeader
+                  icon={PiInfoDuotone}
+                  iconColor="blue"
+                  title={t('event.sectionEvent')}
+                />
+                <StatusBadge h={28} kind={OUTCOME_KIND[event.outcome]}>
+                  {t(`outcome.${event.outcome}`)}
+                </StatusBadge>
+              </Group>
+            </SectionCard.Section>
+            <SectionCard.Section>
+              <DataList orientation="vertical" withDivider>
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('columns.time')}
                   monospace
                   value={formatTime(event.occurredAt)}
                   {...copy}
                 />
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('columns.who')}
                   value={event.actor?.name ?? t('nobody')}
                   {...copy}
                 />
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('columns.what')}
                   monospace
                   value={event.action}
                   {...copy}
                 />
-                <DataList.Item>
-                  <DataList.ItemLabel>{t('columns.outcome')}</DataList.ItemLabel>
-                  <DataList.ItemValue>
-                    <StatusBadge kind={OUTCOME_KIND[event.outcome]}>
-                      {t(`outcome.${event.outcome}`)}
-                    </StatusBadge>
-                  </DataList.ItemValue>
-                </DataList.Item>
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('event.object')}
                   monospace
                   value={event.object ? `${event.object.type} ${event.object.id}` : null}
                   {...copy}
                 />
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('columns.address')}
                   monospace
                   value={event.ip}
                   {...copy}
                 />
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('event.requestId')}
                   monospace
                   value={event.requestId}
                   {...copy}
                 />
-                {Object.entries(event.details).map(([key, value]) => (
-                  <CopyableDataListItem
-                    emptyValue="–"
-                    key={key}
-                    label={key}
-                    monospace
-                    value={value === null ? null : String(value)}
-                    {...copy}
-                  />
-                ))}
+              </DataList>
+            </SectionCard.Section>
+          </SectionCard.Root>
+          {details.length > 0 ? (
+            <SectionCard.Root>
+              <SectionCard.Section>
+                <OverlayHeader
+                  icon={PiListBulletsDuotone}
+                  iconColor="violet"
+                  title={t('event.sectionDetails')}
+                />
+              </SectionCard.Section>
+              <SectionCard.Section>
+                <DataList orientation="vertical" withDivider>
+                  {details.map(([key, value]) => (
+                    <CopyableDataListItem
+                      key={key}
+                      label={key}
+                      monospace
+                      value={value === null ? null : String(value)}
+                      {...copy}
+                    />
+                  ))}
+                </DataList>
+              </SectionCard.Section>
+            </SectionCard.Root>
+          ) : null}
+          <SectionCard.Root>
+            <SectionCard.Section>
+              <OverlayHeader
+                icon={PiLinkDuotone}
+                iconColor="gray"
+                title={t('event.sectionChain')}
+              />
+            </SectionCard.Section>
+            <SectionCard.Section>
+              <DataList orientation="vertical" withDivider>
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('event.prevHash')}
                   monospace
                   value={event.prevHash}
                   {...copy}
                 />
                 <CopyableDataListItem
-                  emptyValue="–"
                   label={t('event.hash')}
                   monospace
                   value={event.hash}
@@ -669,47 +698,77 @@ function EventDialog({
               </DataList>
             </SectionCard.Section>
           </SectionCard.Root>
-          <ModalFooter>
-            <Button color="teal" onClick={onClose} size="md" variant="light">
-              {t('common:close')}
-            </Button>
-          </ModalFooter>
-        </>
+        </Stack>
       ) : null}
-    </Modal>
+    </Drawer>
   );
 }
 
-/** The audit log: newest first, filters, and the integrity check for those who may run it. */
+/** The value of a text column filter, or nothing while it is empty. */
+function filterText(filters: MRT_ColumnFiltersState, id: string): string | undefined {
+  const value = filters.find((filter) => filter.id === id)?.value;
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+const isFilled = (value: unknown): boolean => typeof value === 'string' && value !== '';
+
+/** How often the list reads the log again by itself, as the panel's inspector tables do. */
+const REFRESH_MS = 25_000;
+
+/** The audit log: newest first, filters under the head, and the integrity check for those who may run it. */
 export function AuditPage({ permissions }: { permissions: readonly Permission[] }) {
   const { t } = useTranslation(['audit', 'common']);
   const formatTime = useTimeFirst();
   const queryClient = useQueryClient();
-  const [action, setAction] = useState<string | null>(null);
-  const [outcome, setOutcome] = useState<AuditOutcome | null>(null);
+  const tableState = useMrtTableState('audit-v2');
+  usePreventTableBackScroll();
   const [exporting, setExporting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
-  // The event stays after its dialog is closed, so the text does not vanish mid-fade.
+  // The event stays after its drawer is closed, so the text does not vanish mid-slide.
   const [viewed, setViewed] = useState<AuditEvent | undefined>(undefined);
   const [viewing, setViewing] = useState(false);
   const canVerify = permissions.includes('audit:verify');
   const canExport = permissions.includes('audit:export');
   const describeVerification = useVerificationText();
 
-  const log = useInfiniteQuery({
-    queryKey: ['audit', action, outcome],
-    initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) =>
+  const { columnFilters, pagination } = tableState.state;
+  const action = filterText(columnFilters, 'action');
+  const outcomeText = filterText(columnFilters, 'outcome');
+  const outcome = AUDIT_OUTCOMES.find((known) => known === outcomeText);
+  const filtersActive = action !== undefined || outcome !== undefined;
+
+  // The panel's inspector tables page, filter and sort on the server; so does this one (the order is the chain's).
+  const log = useQuery({
+    queryKey: ['audit', 'list', action, outcome, pagination.pageIndex, pagination.pageSize],
+    queryFn: () =>
       listAudit({
-        limit: PAGE_SIZE,
-        ...(pageParam === undefined ? {} : { cursor: pageParam }),
+        limit: pagination.pageSize,
+        offset: pagination.pageIndex * pagination.pageSize,
         ...(action ? { action } : {}),
         ...(outcome ? { outcome } : {}),
       }),
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
+    refetchInterval: REFRESH_MS,
     retry: false,
   });
+
+  // A page that is no longer there (the saved page number of an earlier visit, or a filter that matches less) goes to
+  // the last one that is.
+  const total = log.data?.total;
+  const { onPaginationChange } = tableState.handlers;
+  useEffect(() => {
+    if (
+      total !== undefined &&
+      pagination.pageIndex > 0 &&
+      pagination.pageIndex * pagination.pageSize >= total
+    ) {
+      onPaginationChange((previous) => ({
+        ...previous,
+        pageIndex: Math.max(0, Math.ceil(total / previous.pageSize) - 1),
+      }));
+    }
+  }, [total, pagination.pageIndex, pagination.pageSize, onPaginationChange]);
 
   const verify = useMutation({
     mutationFn: verifyAuditChain,
@@ -744,16 +803,10 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
     },
   });
 
-  const events = useMemo(() => log.data?.pages.flatMap((p) => p.events) ?? [], [log.data]);
-  const filtersActive = action !== null || outcome !== null;
+  const events = useMemo(() => log.data?.events ?? [], [log.data]);
   const open = (event: AuditEvent) => {
     setViewed(event);
     setViewing(true);
-  };
-  const loadOlder = () => {
-    if (log.hasNextPage && !log.isFetchingNextPage) {
-      void log.fetchNextPage();
-    }
   };
 
   const columns = useMemo<MRT_ColumnDef<AuditEvent>[]>(
@@ -761,7 +814,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       {
         accessorKey: 'seq',
         header: '#',
-        size: 80,
+        size: 90,
         enableColumnFilter: false,
         Cell: ({ row }) => (
           <Text c="dimmed" ff="monospace" size="sm">
@@ -770,36 +823,30 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
         ),
       },
       {
-        accessorKey: 'occurredAt',
+        id: 'occurredAt',
         header: t('columns.time'),
-        size: 220,
+        accessorFn: (event) => formatTime(event.occurredAt),
+        minSize: 250,
         enableColumnFilter: false,
-        Cell: ({ row }) => (
-          <Text ff="monospace" size="sm" title={row.original.occurredAt}>
-            {formatTime(row.original.occurredAt)}
-          </Text>
-        ),
+        mantineTableBodyCellProps: { ff: 'monospace' },
       },
       {
         id: 'actor',
         header: t('columns.who'),
-        accessorFn: (event) => event.actor?.name ?? '',
-        size: 150,
-        Cell: ({ row }) =>
-          row.original.actor?.name ? (
-            <Text fw={500} size="sm" truncate="end">
-              {row.original.actor.name}
-            </Text>
-          ) : (
-            <Text c="dimmed" size="sm">
-              {t('nobody')}
-            </Text>
-          ),
+        accessorFn: (event) => event.actor?.name ?? t('nobody'),
+        size: 170,
+        enableColumnFilter: false,
       },
       {
         accessorKey: 'action',
         header: t('columns.what'),
         size: 360,
+        filterVariant: 'select',
+        mantineFilterSelectProps: ({ column }) => ({
+          data: [...AUDIT_ACTIONS],
+          searchable: true,
+          clearable: isFilled(column.getFilterValue()),
+        }),
         Cell: ({ row }) => {
           const summary = eventSummary(row.original);
           return (
@@ -819,11 +866,12 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       {
         accessorKey: 'outcome',
         header: t('columns.outcome'),
-        size: 150,
+        size: 190,
         filterVariant: 'select',
-        mantineFilterSelectProps: {
+        mantineFilterSelectProps: ({ column }) => ({
           data: AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) })),
-        },
+          clearable: isFilled(column.getFilterValue()),
+        }),
         Cell: ({ row }) => (
           <StatusText kind={OUTCOME_KIND[row.original.outcome]}>
             {t(`outcome.${row.original.outcome}`)}
@@ -833,63 +881,66 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       {
         accessorKey: 'ip',
         header: t('columns.address'),
-        size: 140,
-        Cell: ({ row }) => (
-          <Text ff="monospace" size="sm">
-            {row.original.ip ?? '–'}
-          </Text>
-        ),
+        accessorFn: (event) => event.ip ?? '–',
+        size: 150,
+        enableColumnFilter: false,
       },
     ],
     [t, formatTime],
   );
 
-  const tableState = useMrtTableState('audit-v1');
-  const localization = useTableLocalization(t('empty'));
+  const localization = useTableLocalization(filtersActive ? t('emptyFiltered') : t('empty'));
   const table = useMantineReactTable<AuditEvent>({
     ...panelTableOptions<AuditEvent>(),
     columns,
     data: events,
     localization,
     ...tableState.handlers,
+    // A new filter starts again from the first page.
+    onColumnFiltersChange: (updater) => {
+      tableState.handlers.onColumnFiltersChange(updater);
+      tableState.handlers.onPaginationChange((previous) => ({ ...previous, pageIndex: 0 }));
+    },
+    enableClickToCopy: true,
+    enableSorting: false,
+    manualFiltering: true,
+    manualPagination: true,
+    manualSorting: true,
+    rowCount: log.data?.total ?? 0,
+    ...(log.isError
+      ? {
+          mantineToolbarAlertBannerProps: {
+            color: 'red',
+            children: describeError(t, log.error, t('signInAgain'), t('readForbidden')),
+          },
+        }
+      : {}),
     state: {
       ...tableState.state,
       isLoading: log.isPending,
-      showAlertBanner: false,
+      showAlertBanner: log.isError,
       showProgressBars: log.isFetching,
     },
     getRowId: (event) => String(event.seq),
     enableRowActions: true,
-    positionActionsColumn: 'last',
-    displayColumnDefOptions: { 'mrt-row-actions': { size: 72 } },
+    displayColumnDefOptions: { 'mrt-row-actions': { size: 90 } },
     renderRowActions: ({ row }) => (
-      <Tooltip label={t('event.view')} withArrow>
-        <ActionIcon
-          aria-label={t('event.viewAria', { seq: row.original.seq })}
-          color="gray"
-          onClick={(click) => {
-            click.stopPropagation();
-            open(row.original);
-          }}
-          size="input-sm"
-          variant="soft"
-        >
-          <IconListDetails size={22} />
-        </ActionIcon>
-      </Tooltip>
+      <ActionIcon.Group>
+        <Tooltip label={t('event.view')} withArrow>
+          <ActionIcon
+            aria-label={t('event.viewAria', { seq: row.original.seq })}
+            color="gray"
+            onClick={() => {
+              open(row.original);
+            }}
+            size="input-sm"
+            variant="soft"
+          >
+            <IconListDetails size="1.5rem" />
+          </ActionIcon>
+        </Tooltip>
+      </ActionIcon.Group>
     ),
-    mantineTableBodyRowProps: ({ row }) => ({
-      onClick: () => {
-        open(row.original);
-      },
-      onKeyDown: (event) => {
-        if (event.key === 'Enter' && event.target === event.currentTarget) {
-          open(row.original);
-        }
-      },
-      tabIndex: 0,
-      style: { cursor: 'pointer' },
-    }),
   });
 
   return (
@@ -900,7 +951,7 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
             <HeaderAction
               icon={IconRefresh}
               label={t('common:refresh')}
-              loading={log.isRefetching && !log.isFetchingNextPage}
+              loading={log.isRefetching}
               onClick={() => void log.refetch()}
             />
             {canExport ? (
@@ -955,96 +1006,39 @@ export function AuditPage({ permissions }: { permissions: readonly Permission[] 
       <DataTableCard.Container>
         <DataTableCard.Title
           actions={
-            <HeaderActions>
-              <FilterPopover active={filtersActive} label={t('filters.title')}>
-                <Select
-                  clearable
-                  comboboxProps={{ withinPortal: false }}
-                  data={[...AUDIT_ACTIONS]}
-                  label={t('filters.actionLabel')}
-                  onChange={setAction}
-                  placeholder={t('filters.actionPlaceholder')}
-                  searchable
-                  value={action}
-                />
-                <Select
-                  clearable
-                  comboboxProps={{ withinPortal: false }}
-                  data={AUDIT_OUTCOMES.map((value) => ({ value, label: t(`outcome.${value}`) }))}
-                  label={t('filters.outcomeLabel')}
-                  onChange={(value) => {
-                    setOutcome(AUDIT_OUTCOMES.find((known) => known === value) ?? null);
-                  }}
-                  placeholder={t('filters.outcomePlaceholder')}
-                  value={outcome}
-                />
-              </FilterPopover>
+            <HeaderActionGroup>
               <HeaderAction
                 color="gray"
-                disabled={!filtersActive}
+                grouped
                 icon={IconFilterOff}
-                label={t('filters.clear')}
+                label={t('common:clearFilters')}
                 onClick={() => {
-                  setAction(null);
-                  setOutcome(null);
+                  table.resetPageIndex(false);
+                  table.resetColumnFilters(true);
                 }}
               />
               <HeaderAction
                 color="gray"
+                grouped
                 icon={IconRestore}
                 label={t('common:resetTable')}
                 onClick={() => {
-                  setAction(null);
-                  setOutcome(null);
                   tableState.reset();
                   table.resetColumnFilters(true);
                 }}
               />
-            </HeaderActions>
+            </HeaderActionGroup>
           }
           description={filtersActive ? t('list.descriptionFiltered') : t('list.description')}
           icon={<IconBook size={24} />}
           title={t('list.title')}
         />
         <DataTableCard.Content>
-          {log.isPending ? (
-            <LoadingScreen height="60vh" />
-          ) : log.isError ? (
-            <Box p="md">
-              <QueryErrorCard
-                message={describeError(t, log.error, t('signInAgain'), t('readForbidden'))}
-                onRetry={() => void log.refetch()}
-                title={t('title')}
-              />
-            </Box>
-          ) : events.length === 0 ? (
-            <Box p="md">
-              <EmptyPageLayout
-                icon={<IconBook size="3rem" />}
-                title={filtersActive ? t('emptyFiltered') : t('empty')}
-              />
-            </Box>
-          ) : (
-            <MantineReactTable table={table} />
-          )}
+          <MantineReactTable table={table} />
         </DataTableCard.Content>
       </DataTableCard.Container>
 
-      {log.hasNextPage ? (
-        <Group gap="xs" justify="right" mt="md">
-          <Button
-            leftSection={<IconChevronDown size={16} />}
-            loading={log.isFetchingNextPage}
-            onClick={loadOlder}
-            size="sm"
-            variant="default"
-          >
-            {t('loadOlder')}
-          </Button>
-        </Group>
-      ) : null}
-
-      <EventDialog
+      <EventDrawer
         event={viewed}
         onClose={() => {
           setViewing(false);

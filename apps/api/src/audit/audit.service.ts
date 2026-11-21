@@ -153,21 +153,25 @@ export class AuditService {
   /** One page of the log, newest first. */
   async list(query: AuditQuery): Promise<AuditPage> {
     const limit = query.limit ?? AUDIT_PAGE_DEFAULT;
+    const where = {
+      ...(query.cursor === undefined ? {} : { seq: { lt: BigInt(query.cursor) } }),
+      ...(query.action === undefined ? {} : { action: query.action }),
+      ...(query.outcome === undefined ? {} : { outcome: query.outcome }),
+      ...(query.actorId === undefined ? {} : { actorId: query.actorId }),
+    };
     const rows = await this.db.auditEvent.findMany({
-      where: {
-        ...(query.cursor === undefined ? {} : { seq: { lt: BigInt(query.cursor) } }),
-        ...(query.action === undefined ? {} : { action: query.action }),
-        ...(query.outcome === undefined ? {} : { outcome: query.outcome }),
-        ...(query.actorId === undefined ? {} : { actorId: query.actorId }),
-      },
+      where,
       orderBy: { seq: 'desc' },
+      skip: query.offset ?? 0,
       take: limit + 1,
     });
+    const total = await this.db.auditEvent.count({ where });
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];
     return {
       events: page.map(toAuditEvent),
       nextCursor: rows.length > limit && last ? seqNumber(last.seq) : null,
+      total,
     };
   }
 
