@@ -64,3 +64,7 @@ The console uses the libraries the Remnawave panel renders its tables, entrances
 - `react-country-flag` 3.1.0 (MIT, Dan Alloway): the flag of a country in its emoji mode, as in the panel's Nodes table (`packages/ui/src/country-flag.tsx`). Its picture mode loads images from a CDN and is not used.
 - `@mantine/code-highlight` 9.5.2 (MIT, Mantine): the details of the 500 page.
 - `@mantine/dates` 9.5.2, `dayjs` 1.11.23 and `clsx` 2.1.1 (MIT): peers of the table package; `dayjs` (MIT, iamkun) also formats the dates of the console, as in the panel.
+
+## SSH layer (`packages/ssh`)
+
+The SSH layer uses `ssh2` 1.17.0 (MIT, Copyright Brian White) in its pure JavaScript mode, with its four runtime dependencies: `asn1` 0.2.6 (MIT, Copyright (c) 2011 Mark Cavage), `bcrypt-pbkdf` 1.0.2 (BSD-3-Clause, with the Blowfish portions of Niels Provos, Copyright 1997, and Implementation advice by David Mazieres), `safer-buffer` 2.1.2 (MIT, Copyright (c) 2018 Nikita Skovoroda) and `tweetnacl` 0.14.5 (Unlicense, public domain). `@types/ssh2` 1.15.6 (MIT, DefinitelyTyped contributors) is a development dependency. They are ordinary dependencies, not copied code; the license texts ship inside the packages and a release adds them next to the build output. `ssh2` lists two optional native add-ons (`cpu-features`, `nan`) that are never installed (`ignoredOptionalDependencies` in `pnpm-workspace.yaml`). The review of the dependency is in ADR 0035.

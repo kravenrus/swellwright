@@ -2,20 +2,35 @@
   "name": "@swellwright/ssh",
   "version": "0.0.0",
   "private": true,
-  "description": "ssh2 layer: pooling, detached steps, sudo, terminal, SFTP, certificates",
+  "description": "The SSH layer: host key pinning, pooled connections, exec with sudo over stdin, SFTP, detached steps",
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./test-support": {
+      "types": "./dist/test-support/index.d.ts",
+      "default": "./dist/test-support/index.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/step-scenarios.*",
+    "!dist/test-util.*",
+    "!dist/integration-env.*"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "ssh2": "1.17.0"
+  },
+  "devDependencies": {
+    "@types/ssh2": "1.15.6"
   }
 }

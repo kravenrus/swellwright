@@ -7,6 +7,12 @@ packages:
 onlyBuiltDependencies: []
 minimumReleaseAge: 4320
 
+# ssh2 lists two optional native add-ons (cpu-features and nan, built by install scripts). They are never installed:
+# the SSH layer runs in the pure-JavaScript mode of ssh2 (ADR 0035).
+ignoredOptionalDependencies:
+  - cpu-features
+  - nan
+
 # GHSA-7589-6fvf-x4pw (effect < 3.22.1). Prisma's config loader (@prisma/config 7.10.1) pins effect 3.20.0 exactly,
 # and a newer 7.x with a newer effect needs the engine checksums pinned again (packages/db/README.md). The override
 # takes the newest 3.22 release that is old enough for the wait above (the fix is in 3.22.1); drop it when Prisma is upgraded.

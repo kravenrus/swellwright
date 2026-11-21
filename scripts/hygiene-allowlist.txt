@@ -1,1 +1,11 @@
 # Strings that the hygiene check should accept (one per line). Keep this list minimal.
+# Well-known public constants used by the address policy of packages/ssh (examples and tests, not servers).
+8.8.8.8
+1.1.1.1
+100.64.0.0
+100.64.0.1
+100.64.1.1
+100.100.100.200
+100.127.255.255
+100.128.0.1
+172.32.0.1

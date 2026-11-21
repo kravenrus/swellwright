@@ -85,6 +85,63 @@ jobs:
       - name: API description is up to date
         run: pnpm run openapi:check
 
+  # The SSH layer against a real sshd (ADR 0035): a small Ubuntu image with key logins only, a throwaway key and a
+  # throwaway sudo password made in this job. The same suites run in the build job against the in-process server;
+  # these add the real thing (exec, sudo over stdin, SFTP, detached steps that survive a cut connection).
+  sshd:
+    runs-on: ubuntu-latest
+    env:
+      SW_TEST_SSH_HOST: "127.0.0.1"
+      SW_TEST_SSH_PORT: "2222"
+      SW_TEST_SSH_USER: swtest
+      SW_TEST_SSH_BASE_DIR: /var/lib/swellwright-test/steps
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install (frozen lockfile, no lifecycle scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build the SSH package
+        run: pnpm exec turbo run build --filter=@swellwright/ssh
+      - name: Throwaway key and sudo password
+        run: |
+          ssh-keygen -q -t ed25519 -N "" -C swellwright-ci-throwaway -f "$RUNNER_TEMP/swtest_key"
+          sudo_password="$(openssl rand -hex 12)"
+          echo "::add-mask::${sudo_password}"
+          echo "SW_TEST_SSH_SUDO_PASSWORD=${sudo_password}" >> "$GITHUB_ENV"
+          echo "SW_TEST_SSH_KEY=$RUNNER_TEMP/swtest_key" >> "$GITHUB_ENV"
+      - name: Build and start the test sshd
+        run: |
+          docker build -t swellwright-test-sshd packages/ssh/test/sshd
+          # --init: a process that outlives its parent must be reaped by an init, as on a real server.
+          docker run -d --init --name swtest-sshd -p 127.0.0.1:2222:22 \
+            -e SWTEST_PUBLIC_KEY="$(cat "$RUNNER_TEMP/swtest_key.pub")" \
+            -e SWTEST_SUDO_PASSWORD="$SW_TEST_SSH_SUDO_PASSWORD" \
+            swellwright-test-sshd
+          for attempt in $(seq 1 30); do
+            if ssh-keyscan -p 2222 127.0.0.1 2>/dev/null | grep -q ssh-ed25519; then exit 0; fi
+            sleep 1
+          done
+          docker logs swtest-sshd
+          echo "the test sshd did not come up"
+          exit 1
+      - name: Tests against the real sshd
+        working-directory: packages/ssh
+        run: node --test --test-reporter=spec "dist/**/*.integration.test.js"
+      - name: sshd log
+        if: failure()
+        run: docker logs --tail 200 swtest-sshd
+      - name: Stop the test sshd
+        if: always()
+        run: docker rm -f swtest-sshd
+
   # The dependencies a pull request adds or changes: fails on a known vulnerability of high severity. What is already
   # in the lockfile is covered by the Dependabot alerts.
   dependency-review:
