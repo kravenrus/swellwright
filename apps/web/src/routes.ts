@@ -19,6 +19,7 @@ export const ROUTES = {
     },
     OPERATIONS: {
       ROOT: '/dashboard/operations',
+      ARTIFACTS: '/dashboard/operations/artifacts',
       RUNS: '/dashboard/operations/runs',
       SCENARIOS: '/dashboard/operations/scenarios',
       SCHEDULES: '/dashboard/operations/schedules',

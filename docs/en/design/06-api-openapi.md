@@ -53,7 +53,7 @@ OpenAPI 3.1 is a first-class artifact: documentation, SDKs, the CLI, MCP and con
 | alerts, notifications | `/alerts`, `/alert-rules`, `/notification-channels`, `POST /notifications/test` |
 | reports | `POST /reports`, `GET /reports/{id}` (HTML, Markdown, PDF) |
 | audit | `GET /audit` (newest first, `cursor`, filters by action, outcome and actor), `POST /audit/verify-chain` (both built, ADR 0015); export |
-| artifacts | `/artifacts` (installer, node-engine, baselines), `POST /artifacts/{id}/promote` |
+| artifacts | `/artifacts` (installer, node-engine, baselines), `POST /artifacts/{id}/promote` | Built (ADR 0039): `GET /artifacts`, `GET /artifacts/{name}`, `GET /artifacts/{name}/versions/{version}`, `GET /artifacts/{name}/content` and `.../versions/{version}/content` (the file, streamed, with `X-Content-SHA256`), and on servers `GET/POST /servers/{id}/artifacts`, `POST /servers/{id}/artifacts/{name}/verify`, `DELETE /servers/{id}/artifacts/{name}/{version}` (`servers:read` to read, `servers:write` to push, check and remove). Promotion is not built.
 | advisories | `/advisories`, `POST /advisories/{id}/ack` |
 | system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |
 | webhooks | `/webhooks` (subscriptions), `POST /webhooks/{id}/test` |

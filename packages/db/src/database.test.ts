@@ -8,6 +8,8 @@ import { after, before, describe, it } from 'node:test';
 
 import {
   AccessMethod,
+  ArtifactCheckState,
+  ArtifactDestination,
   AuditOutcome,
   Database,
   DatabaseNotReadyError,
@@ -393,6 +395,88 @@ describe('the server inventory against a migrated database', { skip: !databaseUr
       await assert.rejects(client.secret.delete({ where: { id: login.id } }), restricted);
       await assert.rejects(client.secret.delete({ where: { id: sudo.id } }), restricted);
       await client.secret.delete({ where: { id: free.id } });
+    } finally {
+      await isolated.drop();
+    }
+  });
+});
+
+describe('the artifacts on servers against a migrated database', { skip: !databaseUrl }, () => {
+  const SHA = 'a'.repeat(64);
+  const base = {
+    name: 'node-installer',
+    version: '1.0.0',
+    sha256: SHA,
+    size: 100,
+    remotePath: '/home/deploy/.swellwright/artifacts/node-installer/1.0.0/install.sh',
+    pushedAt: new Date(),
+  };
+
+  it('keeps one copy of a version per server, goes with its server, and defaults to the home of the login', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const server = await client.server.create({ data: { name: 'srv', address: '192.0.2.10' } });
+      const copy = await client.serverArtifact.create({ data: { serverId: server.id, ...base } });
+      assert.equal(copy.destination, ArtifactDestination.user);
+      assert.equal(copy.verifyState, null);
+      assert.equal(copy.verifiedAt, null);
+      await assert.rejects(
+        client.serverArtifact.create({ data: { serverId: server.id, ...base } }),
+        (error: unknown) =>
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002',
+      );
+      // Another version, and the same version on another server, are other copies.
+      await client.serverArtifact.create({
+        data: { serverId: server.id, ...base, version: '1.1.0' },
+      });
+      const other = await client.server.create({ data: { name: 'srv2', address: '192.0.2.11' } });
+      await client.serverArtifact.create({ data: { serverId: other.id, ...base } });
+      await client.server.delete({ where: { id: server.id } });
+      assert.equal(await client.serverArtifact.count({ where: { serverId: server.id } }), 0);
+      assert.equal(await client.serverArtifact.count({ where: { serverId: other.id } }), 1);
+    } finally {
+      await isolated.drop();
+    }
+  });
+
+  it('refuses values the checks of the migration forbid', async () => {
+    const isolated = await createIsolatedDatabase(databaseUrl ?? '');
+    try {
+      const { client } = isolated.database;
+      const server = await client.server.create({ data: { name: 'srv', address: '192.0.2.10' } });
+      const create = (data: Partial<Prisma.ServerArtifactUncheckedCreateInput>) =>
+        client.serverArtifact.create({ data: { serverId: server.id, ...base, ...data } });
+      for (const bad of [
+        { name: 'Node' },
+        { name: '-node' },
+        { sha256: 'abc' },
+        { sha256: 'A'.repeat(64) },
+        { size: 0 },
+        { remotePath: 'relative/path' },
+        { remotePath: '/with\nnewline' },
+        // A check that was done must say what it saw: a hash unless the file was missing.
+        { verifiedAt: new Date(), verifyState: ArtifactCheckState.ok },
+        { verifiedAt: new Date(), verifyState: ArtifactCheckState.missing, remoteSha256: SHA },
+        { verifyState: ArtifactCheckState.ok, remoteSha256: SHA },
+        { verifiedAt: new Date(), verifyState: ArtifactCheckState.differs, remoteSha256: 'xyz' },
+      ]) {
+        await assert.rejects(create(bad), JSON.stringify(bad));
+      }
+      const checked = await create({
+        version: '2.0.0',
+        verifiedAt: new Date(),
+        verifyState: ArtifactCheckState.missing,
+        destination: ArtifactDestination.system,
+        remotePath: '/var/lib/swellwright/artifacts/node-installer/2.0.0/install.sh',
+      });
+      assert.equal(checked.remoteSha256, null);
+      await create({
+        version: '3.0.0',
+        verifiedAt: new Date(),
+        verifyState: ArtifactCheckState.differs,
+        remoteSha256: 'b'.repeat(64),
+      });
     } finally {
       await isolated.drop();
     }

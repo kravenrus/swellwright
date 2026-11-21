@@ -51,7 +51,7 @@ OpenAPI 3.1 — первоклассный артефакт: документа�
 | alerts, notifications | `/alerts`, `/alert-rules`, `/notification-channels`, `POST /notifications/test` |
 | reports | `POST /reports`, `GET /reports/{id}` (HTML, Markdown, PDF) |
 | audit | `GET /audit` (сначала новые, `cursor`, фильтры по действию, исходу и субъекту), `POST /audit/verify-chain` (оба реализованы, ADR 0015); экспорт |
-| artifacts | `/artifacts` (установщик, node-engine, эталоны), `POST /artifacts/{id}/promote` |
+| artifacts | `/artifacts` (установщик, node-engine, эталоны), `POST /artifacts/{id}/promote` | Сделано (ADR 0039): `GET /artifacts`, `GET /artifacts/{name}`, `GET /artifacts/{name}/versions/{version}`, `GET /artifacts/{name}/content` и `.../versions/{version}/content` (файл потоком, с `X-Content-SHA256`), а на серверах `GET/POST /servers/{id}/artifacts`, `POST /servers/{id}/artifacts/{name}/verify`, `DELETE /servers/{id}/artifacts/{name}/{version}` (`servers:read` для чтения, `servers:write` для отправки, проверки и удаления). Продвижение версии не сделано.
 | advisories | `/advisories`, `POST /advisories/{id}/ack` |
 | system | `GET /system/health\|ready\|version\|metrics`, `/settings`, `/backups`, `/updates` |
 | webhooks | `/webhooks` (подписки), `POST /webhooks/{id}/test` |

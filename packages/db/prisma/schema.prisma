@@ -361,9 +361,10 @@ model Server {
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  hostKeys ServerHostKey[]
-  access   ServerAccess[]
-  fact     ServerFact?
+  hostKeys  ServerHostKey[]
+  access    ServerAccess[]
+  fact      ServerFact?
+  artifacts ServerArtifact[]
 
   @@index([state])
   @@index([tags], type: Gin)
@@ -432,4 +433,51 @@ model ServerFact {
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@map("server_facts")
+}
+
+/// Where Swellwright put a file of the artifact catalogue on a server: the user's home (`user`) or the root-owned
+/// system directory (`system`). ADR 0039.
+enum ArtifactDestination {
+  user
+  system
+
+  @@map("artifact_destination")
+}
+
+/// What the last check of a copy on a server found: it hashes to the expected value, to another one, or is gone.
+enum ArtifactCheckState {
+  ok
+  differs
+  missing
+
+  @@map("artifact_check_state")
+}
+
+/// A copy of an artifact version on a server, as Swellwright pushed it. One row per server, artifact and version:
+/// the copy is immutable, so a version is either there or not. The path is what the push recorded; removing and
+/// checking use it only after it is matched against the layout. No foreign key to the user who pushed it, like the
+/// audit chain.
+model ServerArtifact {
+  id           String              @id @default(uuid(7)) @db.Uuid
+  serverId     String              @map("server_id") @db.Uuid
+  /// The artifact name and version of the catalogue at the time of the push.
+  name         String              @db.VarChar(64)
+  version      String              @db.VarChar(32)
+  /// The SHA-256 (hex) the catalogue declared, which the copy was checked against, and its size in bytes.
+  sha256       String              @db.VarChar(64)
+  size         Int
+  destination  ArtifactDestination @default(user)
+  /// The absolute path of the file on the server.
+  remotePath   String              @map("remote_path") @db.VarChar(1024)
+  pushedAt     DateTime            @map("pushed_at") @db.Timestamptz(3)
+  pushedById   String?             @map("pushed_by_id") @db.Uuid
+  /// The last check after the push: when, what it found and what the copy hashed to (null when it was missing).
+  verifiedAt   DateTime?           @map("verified_at") @db.Timestamptz(3)
+  verifyState  ArtifactCheckState? @map("verify_state")
+  remoteSha256 String?             @map("remote_sha256") @db.VarChar(64)
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, name, version])
+  @@map("server_artifacts")
 }

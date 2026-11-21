@@ -69,7 +69,7 @@ docs/ (en, ru)  deploy/  examples/
 - **Terminal**: PTY through `ssh2`, xterm in the browser, session recording, a separate permission and step-up authentication (`05`).
 - **Files**: SFTP (browsing, upload, download with a checksum), bulk distribution.
 - **Timeouts and alarms**: keepalive, time limits, cancellation through a signal on the node.
-- **Artifacts on the node**: `/var/lib/swellwright/` (artifacts, snapshots, step logs, `node-engine.py`), mode 700; after a run, secret files are deleted (`shred`).
+- **Artifacts on the node**: `/var/lib/swellwright/` (artifacts, snapshots, step logs, `node-engine.py`), mode 700; after a run, secret files are deleted (`shred`). Built (ADR 0039): copies pushed by Swellwright live in `~/.swellwright/artifacts/<name>/<version>/` of the login (mode 700) or, as root, in `/var/lib/swellwright/artifacts/<name>/<version>/` (0755).
 
 ## 6. Node engine (on the node itself)
 The node-side part is implemented as a Python engine (commands `snap`, `undo-plan`, `undo`, `safety-arm`, `safety-restore`), uploaded as an artifact and invoked over SSH. It requires `python3` (present on Ubuntu 22.04/24.04; otherwise the scenario installs `python3-minimal`). It is versioned together with `install.sh`; Swellwright verifies the hash before running it.

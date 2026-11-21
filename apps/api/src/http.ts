@@ -11,6 +11,7 @@ import {
   Injectable,
   Logger,
   type NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiErrorSchema, type ErrorCode, type RouteDef } from '@swellwright/contracts';
 import type { NextFunction, Request, Response } from 'express';
@@ -177,6 +178,14 @@ export class ContractResponseInterceptor implements NestInterceptor {
             `${route.operationId} answered ${String(res.statusCode)}, which its contract does not list`,
           );
           throw new Error('contract violation');
+        }
+        if (def.binary) {
+          // A file is streamed as it is; there is no JSON to check.
+          if (!(body instanceof StreamableFile)) {
+            this.logger.error(`${route.operationId} is a download but did not answer with a file`);
+            throw new Error('contract violation');
+          }
+          return;
         }
         const result = def.schema.safeParse(body);
         if (!result.success) {

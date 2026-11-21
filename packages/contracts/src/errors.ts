@@ -24,6 +24,12 @@ export const ERROR_CODES = [
   'ssh_timeout',
   'ssh_failed',
   'facts_unreadable',
+  // Artifacts and their distribution (ADR 0039). `artifact_hash_mismatch` carries `details`.
+  'artifact_broken',
+  'artifact_busy',
+  'artifact_destination_conflict',
+  'artifact_hash_mismatch',
+  'sudo_unavailable',
   'internal_error',
 ] as const;
 

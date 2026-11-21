@@ -211,7 +211,7 @@ describe('the server routes', () => {
   const mine = (routes as readonly RouteDef[]).filter((route) => route.tags.includes('servers'));
 
   it('declares a permission on every one, and none needs a step-up', () => {
-    assert.equal(mine.length, 15);
+    assert.equal(mine.length, 19);
     for (const route of mine) {
       assert.ok(
         route.permission === 'servers:read' || route.permission === 'servers:write',

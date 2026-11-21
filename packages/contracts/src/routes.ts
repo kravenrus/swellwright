@@ -1,6 +1,20 @@
 import { z } from 'zod';
 
 import {
+  ArtifactListSchema,
+  ArtifactNameParamsSchema,
+  ArtifactPushResultSchema,
+  ArtifactVerificationSchema,
+  ArtifactVersionParamsSchema,
+  ArtifactVersionViewSchema,
+  ArtifactViewSchema,
+  PushArtifactRequestSchema,
+  ServerArtifactListSchema,
+  ServerArtifactParamsSchema,
+  ServerArtifactVersionParamsSchema,
+  VerifyArtifactQuerySchema,
+} from './artifacts.js';
+import {
   AuditCheckpointSchema,
   AuditCheckpointVerificationSchema,
   AuditExportQuerySchema,
@@ -119,6 +133,11 @@ export interface ResponseDef {
   readonly schema: z.ZodType;
   /** The response has no body (for example 204). */
   readonly empty?: boolean;
+  /**
+   * The body is a file, streamed as it is: not JSON, not checked against `schema`. The headers say what else the
+   * answer carries (name and description).
+   */
+  readonly binary?: { readonly headers: Readonly<Record<string, string>> };
 }
 
 export interface RouteDef {
@@ -1199,6 +1218,139 @@ export const getFactsRoute = defineRoute({
   responses: { 200: { description: 'The facts.', schema: ServerFactsRecordSchema } },
 });
 
+export const listArtifactsRoute = defineRoute({
+  operationId: 'listArtifacts',
+  method: 'get',
+  path: '/artifacts',
+  tags: ['artifacts'],
+  summary: 'The catalogue of artifacts',
+  description:
+    'The files Swellwright ships to servers (the node installer, later the node engine): each with its versions, the SHA-256 and size its manifest declares, its steps and parameters, and whether the file on disk still is what the manifest says (`ok`) or not (`broken`, with the reason). A broken artifact is listed so that it can be seen, and is neither downloaded nor pushed. The files are checked when the server starts and again whenever one is used.',
+  auth: 'any',
+  permission: 'servers:read',
+  responses: { 200: { description: 'The artifacts.', schema: ArtifactListSchema } },
+});
+
+export const getArtifactRoute = defineRoute({
+  operationId: 'getArtifact',
+  method: 'get',
+  path: '/artifacts/{name}',
+  tags: ['artifacts'],
+  summary: 'One artifact with all its versions',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ArtifactNameParamsSchema },
+  responses: { 200: { description: 'The artifact.', schema: ArtifactViewSchema } },
+});
+
+export const getArtifactVersionRoute = defineRoute({
+  operationId: 'getArtifactVersion',
+  method: 'get',
+  path: '/artifacts/{name}/versions/{version}',
+  tags: ['artifacts'],
+  summary: 'One version of an artifact',
+  description:
+    'With its manifest. A version that is broken answers 200 with `state: broken` and the reason.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ArtifactVersionParamsSchema },
+  responses: { 200: { description: 'The version.', schema: ArtifactVersionViewSchema } },
+});
+
+const DOWNLOAD_HEADERS = {
+  'Content-Disposition': 'An attachment with the file name from the manifest.',
+  'X-Content-SHA256': 'The SHA-256 of the bytes that follow, as the manifest declares it.',
+} as const;
+
+export const downloadArtifactRoute = defineRoute({
+  operationId: 'downloadArtifact',
+  method: 'get',
+  path: '/artifacts/{name}/content',
+  tags: ['artifacts'],
+  summary: 'Download the latest intact version of an artifact',
+  description:
+    'The file, streamed. `X-Content-SHA256` carries the hash the manifest declares, so that the receiver can check what it got. A broken artifact, and one with no intact version, answers 409 `artifact_broken`: it is never served.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ArtifactNameParamsSchema },
+  responses: {
+    200: { description: 'The file.', schema: z.unknown(), binary: { headers: DOWNLOAD_HEADERS } },
+  },
+});
+
+export const downloadArtifactVersionRoute = defineRoute({
+  operationId: 'downloadArtifactVersion',
+  method: 'get',
+  path: '/artifacts/{name}/versions/{version}/content',
+  tags: ['artifacts'],
+  summary: 'Download one version of an artifact',
+  description: 'As the latest version, for a version that is named.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ArtifactVersionParamsSchema },
+  responses: {
+    200: { description: 'The file.', schema: z.unknown(), binary: { headers: DOWNLOAD_HEADERS } },
+  },
+});
+
+export const listServerArtifactsRoute = defineRoute({
+  operationId: 'listServerArtifacts',
+  method: 'get',
+  path: '/servers/{id}/artifacts',
+  tags: ['servers'],
+  summary: 'The artifacts pushed to a server',
+  description:
+    'What Swellwright put on the server, with the result of the last check of each copy. Reading never connects to the server.',
+  auth: 'any',
+  permission: 'servers:read',
+  request: { params: ServerIdParamsSchema },
+  responses: { 200: { description: 'The copies.', schema: ServerArtifactListSchema } },
+});
+
+export const pushArtifactRoute = defineRoute({
+  operationId: 'pushServerArtifact',
+  method: 'post',
+  path: '/servers/{id}/artifacts',
+  tags: ['servers'],
+  summary: 'Push an artifact to a server',
+  description: `Reads the file of the catalogue and hashes it (a file that is not what its manifest says is never sent), uploads it over SFTP to \`<dir>/<name>/<version>/<file>\` under a temporary name, hashes what arrived on the server and renames it into place only when it matches, sets the mode (a script 0755, a data file 0644, never writable by others) and hashes it once more in its place. A failure leaves no partial file. \`destination: user\` (the default) is \`~/.swellwright/artifacts\` of the login, private to it; \`destination: system\` is \`/var/lib/swellwright/artifacts\`, root-owned, written through sudo. When the same file is already there nothing is uploaded and the answer is 200 \`unchanged\`; a new or replaced copy answers 201 \`pushed\`. One push per server runs at a time. Access entries are tried by priority until one logs in. ${SSH_ERRORS} Also 409 \`artifact_broken\`, \`artifact_busy\` (another push or removal is running on this server), \`artifact_destination_conflict\` (this version is on the server at the other destination: remove it first), \`sudo_unavailable\` (destination \`system\` needs root or a working sudo), \`no_access_entry\`, 502 \`artifact_hash_mismatch\` (the copy on the server does not hash to the catalogue's value: nothing is left there; \`details\` has \`expected\`, \`actual\`, \`stage\`), \`ssh_connect_failed\`, \`ssh_auth_failed\`, \`ssh_key_invalid\`, \`ssh_failed\`, 504 \`ssh_timeout\`.`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerIdParamsSchema, body: PushArtifactRequestSchema },
+  responses: {
+    200: { description: 'The same file was already there.', schema: ArtifactPushResultSchema },
+    201: { description: 'The file was uploaded and checked.', schema: ArtifactPushResultSchema },
+  },
+});
+
+export const verifyServerArtifactRoute = defineRoute({
+  operationId: 'verifyServerArtifact',
+  method: 'post',
+  path: '/servers/{id}/artifacts/{name}/verify',
+  tags: ['servers'],
+  summary: 'Check the copies of an artifact on a server',
+  description: `Hashes each copy on the server (\`sha256sum\`) and compares it with the catalogue: \`ok\`, \`differs\` (somebody or something changed the file) or \`missing\`. A copy of a version the catalogue no longer has is compared with what was pushed. The time and the result are kept and shown. A copy that differs or is missing is a result (200 with \`ok: false\`), not an error. Nothing is repaired: push again to replace it. ${SSH_ERRORS} 404 when no copy of that artifact is on the server.`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerArtifactParamsSchema, query: VerifyArtifactQuerySchema },
+  responses: {
+    200: { description: 'The result of the check.', schema: ArtifactVerificationSchema },
+  },
+});
+
+export const removeServerArtifactRoute = defineRoute({
+  operationId: 'removeServerArtifact',
+  method: 'delete',
+  path: '/servers/{id}/artifacts/{name}/{version}',
+  tags: ['servers'],
+  summary: 'Remove an artifact from a server',
+  description: `Deletes the copy on the server (and the directories left empty) and forgets it. Nothing is removed that Swellwright did not put there: the path comes from the record of the push and is checked against the layout before anything is deleted. A copy that is already gone is not an error. ${SSH_ERRORS} Also 409 \`artifact_busy\`, \`sudo_unavailable\`.`,
+  auth: 'any',
+  permission: 'servers:write',
+  request: { params: ServerArtifactVersionParamsSchema },
+  responses: { 204: { description: 'The copy is gone.', schema: z.undefined(), empty: true } },
+});
+
 /** Routes any signed-in user may call without a permission. Everything else under `session` names one. */
 export const ROUTES_OPEN_TO_ANY_SESSION: readonly string[] = [
   'getMe',
@@ -1290,6 +1442,15 @@ export const routes = [
   verifyAccessRoute,
   refreshFactsRoute,
   getFactsRoute,
+  listArtifactsRoute,
+  getArtifactRoute,
+  getArtifactVersionRoute,
+  downloadArtifactRoute,
+  downloadArtifactVersionRoute,
+  listServerArtifactsRoute,
+  pushArtifactRoute,
+  verifyServerArtifactRoute,
+  removeServerArtifactRoute,
 ] as const;
 
 /** Errors every route may return, documented once. */
