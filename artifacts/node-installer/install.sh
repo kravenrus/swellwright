@@ -59,7 +59,7 @@ DEFAULT_HAPROXY_VERSION=3.2
 #@param {"name":"NODE_DOMAIN","group":"node","description":"Public domain name of the node: SNI, host name and SelfSNI site. Upper case is converted to lower case.","secret":false,"pattern":"@RE_DOMAIN","example":"node1.example.com"}
 #@param {"name":"NODE_IP","group":"node","description":"Public IPv4 address of this server; HAProxy binds it on port 443.","secret":false,"pattern":"@RE_IPV4","example":"192.0.2.10"}
 #@param {"name":"NODE_PORT","group":"node","description":"TCP port of the node API (panel to node).","secret":false,"pattern":"@RE_PORT","default":"@DEFAULT_NODE_PORT","example":"62050"}
-#@param {"name":"SECRET_KEY","group":"node","description":"Node secret key from the panel (the SECRET_KEY of the compose file the panel shows for the node). Kept only in the compose file, mode 600.","secret":true,"pattern":"@RE_SECRET"}
+#@param {"name":"SECRET_KEY","group":"node","description":"Node secret key from the panel (the SECRET_KEY of the compose file the panel shows for the node). 16 to 8192 characters of letters, digits and + / = _ . : -. Kept only in the compose file, mode 600.","secret":true,"pattern":"@RE_SECRET"}
 #@param {"name":"PANEL_ALLOW_IP","group":"node","description":"IPv4 addresses (space separated) that may reach the node API port: the panel. Nobody else can.","secret":false,"pattern":"@RE_IPV4_LIST","example":"192.0.2.20 198.51.100.7"}
 #@param {"name":"SSH_PORT","group":"node","description":"SSH port that the firewall keeps open. Default: the port sshd reports, else 22.","secret":false,"pattern":"@RE_PORT","default":"22","example":"22"}
 #@param {"name":"CERTSYNC_PUBKEY","group":"node","description":"Public key of whatever delivers certificates to /opt/certs. Installed for the user certsync, limited to rrsync in that directory (command=, restrict). Empty: the receiver is not set up and full skips it.","secret":false,"pattern":"@RE_PUBKEY","example":"ssh-ed25519 AAAA... sender@example"}
@@ -98,7 +98,8 @@ RE_IPV4='^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-
 RE_IPV4_LIST='^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])( ((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))*$'
 RE_IPV4_CIDR_LIST='^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(/(8|9|[12][0-9]|3[0-2]))?( ((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(/(8|9|[12][0-9]|3[0-2]))?)*$'
 RE_PORT='^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$'
-RE_SECRET='^[A-Za-z0-9+/=_.:-]{16,8192}$'
+# No large upper bound in a pattern: grep -E expands {16,8192} into thousands of states and needs half a minute to compile it. The upper limit is checked by v_secret.
+RE_SECRET='^[A-Za-z0-9+/=_.:-]{16,}$'
 RE_PUBKEY='^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]{16,}={0,3}( [A-Za-z0-9@._:+=/ -]{1,128})?$'
 RE_TAG='^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'
 RE_VERSION2='^[0-9]{1,2}\.[0-9]{1,2}$'
@@ -305,6 +306,7 @@ v_domain_list() {
     return 0
 }
 v_port() { re_match "$1" "$RE_PORT"; }
+v_secret() { re_match "$1" "$RE_SECRET" && [ "${#1}" -le 8192 ]; }
 v_user() { re_match "$1" "$RE_USER" && [ "$1" != root ] && [ "$1" != "$CERT_USER" ]; }
 # A unicast address that can be the address of a server: not 0.x, not loopback, not multicast or above.
 ip_usable() {
@@ -326,7 +328,7 @@ param_valid() {
         RENAME_ALIAS) v_domain_list "$_pv" ;;
         NODE_IP) v_ipv4 "$_pv" ;;
         NODE_PORT|SSH_PORT) v_port "$_pv" ;;
-        SECRET_KEY) re_match "$_pv" "$RE_SECRET" ;;
+        SECRET_KEY) v_secret "$_pv" ;;
         PANEL_ALLOW_IP) v_ips "$_pv" ;;
         CERTSYNC_PUBKEY|NEW_USER_PUBKEY|NEW_USER_PUBKEY2) re_match "$_pv" "$RE_PUBKEY" ;;
         NODE_IMAGE_TAG) re_match "$_pv" "$RE_TAG" ;;

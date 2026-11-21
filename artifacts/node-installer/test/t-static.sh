@@ -122,6 +122,34 @@ evil.example.com"
     [ "$RC" -eq 0 ] || fail "a value with a line break was accepted: $(cat "$T/out" "$T/err" | head -n 5 | tr '\n' ';')"
 }
 
+t_secret_length_limits() {
+    # The pattern has no upper bound (grep would need half a minute to compile {16,8192}); the validator has.
+    in_inst '
+        _ok=$(printf "%8192s" "" | tr " " a)
+        _long=$(printf "%8193s" "" | tr " " a)
+        param_valid SECRET_KEY "$_ok" || { echo "8192 characters refused"; exit 1; }
+        param_valid SECRET_KEY "$_long" && { echo "8193 characters accepted"; exit 1; }
+        param_valid SECRET_KEY "aaaaaaaaaaaaaaa" && { echo "15 characters accepted"; exit 1; }
+        param_valid SECRET_KEY "aaaaaaaaaaaaaaaa" || { echo "16 characters refused"; exit 1; }
+        exit 0
+    '
+    [ "$RC" -eq 0 ] || fail "$(cat "$T/out" "$T/err" | head -n 3 | tr '\n' ';')"
+}
+
+t_every_validator_is_fast() {
+    # A validator that takes seconds is a bug (a large repetition bound in a pattern did once): every row of the table in a few seconds.
+    in_inst '
+        _t0=$(date +%s)
+        for _n in NODE_DOMAIN RENAME_ALIAS NODE_IP PANEL_ALLOW_IP FAIL2BAN_IGNORE_EXTRA CERTSYNC_PUBKEY SECRET_KEY NEW_USER_PASSWORD NODE_IMAGE_TAG; do
+            param_valid "$_n" "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" || true
+        done
+        _t1=$(date +%s)
+        [ $((_t1 - _t0)) -le 10 ] || { echo "validators took $((_t1 - _t0)) s"; exit 1; }
+        exit 0
+    '
+    [ "$RC" -eq 0 ] || fail "$(cat "$T/out" "$T/err" | head -n 3 | tr '\n' ';')"
+}
+
 t_every_param_has_a_validator_and_a_hint() {
     in_inst '
         _bad=0

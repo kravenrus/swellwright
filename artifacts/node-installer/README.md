@@ -88,7 +88,7 @@ Read from the environment, an env file or the saved configuration:
 | `NODE_DOMAIN` | yes | - | `node1.example.com` | no | Public domain name of the node: SNI, host name and SelfSNI site. Upper case is converted to lower case. |
 | `NODE_IP` | yes | - | `192.0.2.10` | no | Public IPv4 address of this server; HAProxy binds it on port 443. |
 | `NODE_PORT` | no | `62050` | `62050` | no | TCP port of the node API (panel to node). |
-| `SECRET_KEY` | yes | - | - | yes | Node secret key from the panel (the SECRET_KEY of the compose file the panel shows for the node). Kept only in the compose file, mode 600. |
+| `SECRET_KEY` | yes | - | - | yes | Node secret key from the panel (the SECRET_KEY of the compose file the panel shows for the node). 16 to 8192 characters of letters, digits and + / = _ . : -. Kept only in the compose file, mode 600. |
 | `PANEL_ALLOW_IP` | yes | - | `192.0.2.20 198.51.100.7` | no | IPv4 addresses (space separated) that may reach the node API port: the panel. Nobody else can. |
 | `SSH_PORT` | no | `22` | `22` | no | SSH port that the firewall keeps open. Default: the port sshd reports, else 22. |
 | `CERTSYNC_PUBKEY` | yes | - | `ssh-ed25519 AAAA... sender@example` | no | Public key of whatever delivers certificates to /opt/certs. Installed for the user certsync, limited to rrsync in that directory (command=, restrict). Empty: the receiver is not set up and full skips it. |
