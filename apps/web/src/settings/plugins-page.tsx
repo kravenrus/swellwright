@@ -31,9 +31,11 @@ import {
   IconShieldCheck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { PiCheck, PiCopy } from 'react-icons/pi';
+import { TbTag } from 'react-icons/tb';
 
 import type {
   Permission,
@@ -58,11 +60,11 @@ import {
   OverlayHeader,
   PageHeader,
   SectionCard,
-  SingleRowOverflowList,
   StatusBadge,
   type StatusKind,
   TagFilterBar,
   filterByTag,
+  tagColor,
 } from '@swellwright/ui';
 
 import { ApiRequestError, checkPlugin, disablePlugin, enablePlugin, listPlugins } from '../api.js';
@@ -151,6 +153,11 @@ interface Notice {
 
 const displayName = (plugin: PluginView): string => plugin.name ?? plugin.id;
 
+/** The extension kinds a plugin provides, once each: the tags of its card, as the panel's cards show their tags. */
+const kindsOf = (plugin: PluginView): string[] => [
+  ...new Set(plugin.provides.map((item) => item.kind)),
+];
+
 /** The chips must not be squeezed or cut inside the card's single row. */
 const CHIP_STYLES = {
   root: { flexShrink: 0, width: 'max-content' },
@@ -208,42 +215,6 @@ function TrustBadge({ trust }: { trust: PluginTrust }) {
   );
 }
 
-/** The extension kinds a plugin provides, a declarative one marked as such, in one row with a "+N" for the rest. */
-function KindBadges({ provides }: { provides: PluginView['provides'] }) {
-  const { t } = useTranslation('plugins');
-  const label = (item: PluginView['provides'][number]): string =>
-    item.mode === 'declarative' ? t('provides.declarative', { kind: item.kind }) : item.kind;
-  if (provides.length === 0) {
-    return null;
-  }
-  return (
-    <SingleRowOverflowList
-      data={provides}
-      gap={6}
-      renderItem={(item, index) => (
-        <Tooltip
-          key={`${item.kind}:${item.mode}:${String(index)}`}
-          label={
-            item.mode === 'declarative' ? t('provides.declarativeHint') : t('provides.codeHint')
-          }
-        >
-          <Badge color="gray" size="md" tt="none" variant="light">
-            {label(item)}
-          </Badge>
-        </Tooltip>
-      )}
-      renderOverflow={(hidden) => (
-        <Tooltip label={hidden.map(label).join(', ')}>
-          <Badge color="gray" size="md" variant="transparent">
-            +{hidden.length}
-          </Badge>
-        </Tooltip>
-      )}
-      rowHeight={22}
-    />
-  );
-}
-
 /** One plugin of the list: a card of the panel's kind, the whole card opens the review, its menu holds the actions. */
 function PluginCard({
   plugin,
@@ -284,13 +255,9 @@ function PluginCard({
               <PluginStatusChip plugin={plugin} />
               {enabled ? <RuntimeChip runtime={plugin.runtime} /> : null}
               {plugin.trust === null ? null : <TrustBadge trust={plugin.trust} />}
-              {plugin.provides.length > 0 ? (
-                <Box maw={220} miw={0}>
-                  <KindBadges provides={plugin.provides} />
-                </Box>
-              ) : null}
             </>
           }
+          tags={kindsOf(plugin)}
           title={name}
         />
       </EntityCard.Header>
@@ -345,18 +312,15 @@ function PluginCard({
           )}
 
           {canManage && enabled ? (
-            <>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconPlayerPause size={18} />}
-                onClick={() => {
-                  onDisable(plugin);
-                }}
-              >
-                {t('actions.disable')}
-              </Menu.Item>
-            </>
+            <Menu.Item
+              color="red"
+              leftSection={<IconPlayerPause size={18} />}
+              onClick={() => {
+                onDisable(plugin);
+              }}
+            >
+              {t('actions.disable')}
+            </Menu.Item>
           ) : null}
         </EntityCard.Menu>
       </EntityCard.Actions>
@@ -703,7 +667,14 @@ function DetailsSection({ plugin }: { plugin: PluginView }) {
                           : t('provides.codeHint')
                       }
                     >
-                      <Badge color="gray" size="md" tt="none" variant="light">
+                      <Badge
+                        autoContrast
+                        color={tagColor(item.kind)}
+                        leftSection={<TbTag aria-hidden size={12} />}
+                        px={6}
+                        size="md"
+                        variant="transparent"
+                      >
                         {item.mode === 'declarative'
                           ? t('provides.declarative', { kind: item.kind })
                           : item.kind}
@@ -1223,7 +1194,12 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
           title={t('loadFailedTitle')}
         />
       ) : (
-        <>
+        // The panel fades its list in over half a second (`node-plugins-base-page.component.tsx`).
+        <motion.div
+          animate={{ opacity: 1 }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           {!configured && rows.length > 0 ? (
             <Callout color="blue" icon={<IconInfoCircle size={20} />} mb="md">
               <NoDirectoriesText />
@@ -1255,7 +1231,7 @@ export function PluginsPage({ permissions }: { permissions: readonly Permission[
               </Box>
             </>
           ) : null}
-        </>
+        </motion.div>
       )}
 
       <ReviewDialog

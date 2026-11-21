@@ -1,4 +1,9 @@
+// The settings card of `SettingsForm` is adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only): src/shared/_modals/
+// external-squads/external-squads-drawer/tabs/external-squads-response-headers.widget.tsx (a `SectionCard` whose header row
+// carries the Save button). Changes: the fields are made from the plugin's schema, the Save button waits for a change, and
+// the header row wraps on a phone.
 import {
+  Anchor,
   Button,
   Group,
   List,
@@ -22,6 +27,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import {
   type PluginConfigField,
@@ -31,13 +37,21 @@ import {
   type SecretView,
   type UpdatePluginConfigRequest,
 } from '@swellwright/contracts';
-import { Callout, ErrorMessageBlock, LoaderModal, SettingsCard } from '@swellwright/ui';
+import {
+  Callout,
+  ErrorMessageBlock,
+  LoaderModal,
+  OverlayHeader,
+  SectionCard,
+} from '@swellwright/ui';
 
 import { ApiRequestError, getPluginConfig, listSecrets, updatePluginConfig } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
 import { useDateTime, useNumber } from '../format.js';
+import { ROUTES } from '../routes.js';
 import { notifySuccess } from '../shell/feedback.js';
+import { useIsMobile } from '../shell/use-is-mobile.js';
 import { FailureCard, useCopyLabels, usePluginFailure } from './plugin-shared.js';
 
 /** How many characters of a secret's id are shown when the secrets cannot be listed. */
@@ -138,6 +152,7 @@ function SecretPicker({
   value,
   disabled,
   choices,
+  canReadVault,
   onChange,
 }: {
   field: PluginConfigField;
@@ -147,6 +162,7 @@ function SecretPicker({
   value: Draft;
   disabled: boolean;
   choices: SecretChoices;
+  canReadVault: boolean;
   onChange: (value: Draft) => void;
 }) {
   const { t } = useTranslation(['plugins', 'vault', 'common']);
@@ -204,9 +220,11 @@ function SecretPicker({
       />
       <Text c="dimmed" fz="xs">
         {t('settings.secretHint')}{' '}
-        <Text c="var(--mantine-color-text)" component="span" fw={500} fz="xs">
-          {t('settings.secretCreate')}
-        </Text>
+        {canReadVault ? (
+          <Anchor component={Link} fz="xs" to={ROUTES.DASHBOARD.SECURITY.VAULT}>
+            {t('settings.secretCreate')}
+          </Anchor>
+        ) : null}
       </Text>
     </Stack>
   );
@@ -218,12 +236,14 @@ function SettingInput({
   value,
   disabled,
   secrets,
+  canReadVault,
   onChange,
 }: {
   field: PluginConfigField;
   value: Draft;
   disabled: boolean;
   secrets: SecretChoices;
+  canReadVault: boolean;
   onChange: (value: Draft) => void;
 }) {
   const { t } = useTranslation('plugins');
@@ -241,6 +261,7 @@ function SettingInput({
   if (secretKind !== null) {
     return (
       <SecretPicker
+        canReadVault={canReadVault}
         choices={secrets}
         description={description}
         disabled={disabled}
@@ -368,6 +389,7 @@ function SettingsForm({
   const fail = usePluginFailure();
   const labels = useCopyLabels();
   const formatDate = useDateTime('short');
+  const isMobile = useIsMobile();
   const [edits, setEdits] = useState<ReadonlyMap<string, Draft>>(() => new Map());
   // A 400 names each field the server refused, in its own words (English): shown next to the fields, not as a toast.
   const [rejected, setRejected] = useState<string | undefined>(undefined);
@@ -434,20 +456,43 @@ function SettingsForm({
     );
   };
 
+  // The panel puts a settings-like form inside an overlay into a `SectionCard` whose header row carries the Save button
+  // (`external-squads-response-headers.widget.tsx`), not into the page-level `SettingsCard`, so the dialog keeps one
+  // look for all its cards.
   return (
     <form onSubmit={submit} style={{ display: 'contents' }}>
-      <SettingsCard.Container>
-        <SettingsCard.Header
-          description={t('settings.description')}
-          icon={<IconSettings size={24} />}
-          iconColor="violet"
-          title={t('settings.title')}
-        />
-        <SettingsCard.Content>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <Group gap="md" justify="space-between" wrap={isMobile ? 'wrap' : 'nowrap'}>
+            <OverlayHeader
+              icon={IconSettings}
+              iconColor="violet"
+              subtitle={t('settings.description')}
+              title={t('settings.title')}
+              titleOrder={5}
+            />
+            {canManage ? (
+              <Button
+                color="teal"
+                disabled={!dirty}
+                leftSection={<IconDeviceFloppy size="1.2rem" />}
+                loading={save.isPending}
+                size="md"
+                style={{ flexShrink: 0 }}
+                type="submit"
+                variant="soft"
+              >
+                {t('common:save')}
+              </Button>
+            ) : null}
+          </Group>
+        </SectionCard.Section>
+        <SectionCard.Section>
           <Stack gap="md">
             <ProblemsCallout problems={view.problems} />
             {view.fields.map((field) => (
               <SettingInput
+                canReadVault={canReadVault}
                 disabled={!canManage || save.isPending}
                 field={field}
                 key={field.name}
@@ -472,33 +517,18 @@ function SettingsForm({
               </Stack>
             )}
           </Stack>
-        </SettingsCard.Content>
-        <SettingsCard.Bottom>
-          <Group gap="md" justify="space-between" wrap="wrap">
-            <Text c="dimmed" fz="xs">
-              {view.updatedAt !== null && view.updatedBy !== null
-                ? t('settings.lastChanged', {
-                    who: view.updatedBy,
-                    when: formatDate(view.updatedAt),
-                  })
-                : t('settings.neverSaved')}
-            </Text>
-            {canManage ? (
-              <Button
-                color="teal"
-                disabled={!dirty}
-                leftSection={<IconDeviceFloppy size={16} />}
-                loading={save.isPending}
-                size="md"
-                type="submit"
-                variant="soft"
-              >
-                {t('settings.save')}
-              </Button>
-            ) : null}
-          </Group>
-        </SettingsCard.Bottom>
-      </SettingsCard.Container>
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Text c="dimmed" fz="xs">
+            {view.updatedAt !== null && view.updatedBy !== null
+              ? t('settings.lastChanged', {
+                  who: view.updatedBy,
+                  when: formatDate(view.updatedAt),
+                })
+              : t('settings.neverSaved')}
+          </Text>
+        </SectionCard.Section>
+      </SectionCard.Root>
     </form>
   );
 }
@@ -535,6 +565,7 @@ export function PluginSettings({
   if (config.isError) {
     return (
       <FailureCard
+        height={160}
         message={describeError(t, config.error, t('signInAgain'), t('settings.loadFailed'))}
         onRetry={() => void config.refetch()}
         retrying={config.isRefetching}

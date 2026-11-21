@@ -140,7 +140,7 @@ function EntityCardActions({ children }: { children: ReactNode }) {
 }
 
 export interface EntityCardMenuProps {
-  /** `Menu.Item`s: the positive action teal, the destructive one red and last, after a `Menu.Divider`. */
+  /** `Menu.Item`s: the positive action teal, the destructive one red and last (the panel puts no divider before it). */
   children: ReactNode;
   /** Accessible name of the dots button, already translated. */
   label?: string;
