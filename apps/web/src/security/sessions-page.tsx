@@ -371,6 +371,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         accessorKey: 'username',
         header: t('columns.user'),
         size: 140,
+        mantineTableBodyCellProps: { align: 'left' },
         Cell: ({ row }) => (
           <Text fw={500} size="sm" truncate="end">
             {row.original.username}
@@ -382,6 +383,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         header: t('columns.started'),
         size: 220,
         enableColumnFilter: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => (
           <Text ff="monospace" size="sm" title={row.original.createdAt}>
             {formatTime(row.original.createdAt)}
@@ -393,6 +395,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         header: t('columns.lastActive'),
         size: 220,
         enableColumnFilter: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => (
           <Text ff="monospace" size="sm" title={row.original.lastSeenAt}>
             {formatTime(row.original.lastSeenAt)}
@@ -425,6 +428,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         size: 200,
         enableColumnFilter: false,
         enableSorting: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => <SessionBadges nowrap session={row.original} />,
       },
     ],

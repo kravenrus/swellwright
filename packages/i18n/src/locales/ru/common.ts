@@ -21,6 +21,7 @@ export const common = {
   refresh: 'Обновить',
   clearFilters: 'Сбросить фильтры',
   resetTable: 'Сбросить таблицу',
+  filterBy: 'Фильтр…',
   retry: 'Повторить',
   search: 'Найти',
   copy: 'Копировать',
