@@ -20,23 +20,21 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {
-  IconApiApp,
   IconBan,
   IconCheck,
   IconClearAll,
-  IconClock,
   IconCopy,
   IconDots,
   IconEye,
   IconPlus,
   IconRefresh,
-  IconTag,
   IconWorld,
 } from '@tabler/icons-react';
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type SyntheticEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PiEmpty } from 'react-icons/pi';
+import { TbCheck, TbClipboard, TbCookie, TbCopy } from 'react-icons/tb';
 
 import {
   type CreatedToken,
@@ -54,6 +52,7 @@ import {
 } from '@swellwright/contracts';
 import {
   Callout,
+  CalloutEmphasis,
   CopyableCodeBlock,
   ErrorMessageBlock,
   HeaderAction,
@@ -70,9 +69,9 @@ import {
 import { createToken, listMyTokens, listTokens, revokeMyToken, revokeToken } from '../api.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime } from '../format.js';
-import { confirmAction, notifySuccess } from '../shell/feedback.js';
+import { confirmAction, notifyError, notifySuccess } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
+import { FilterPopover } from './filter-popover.js';
 import { notifyFailure } from './notify-failure.js';
 import {
   groupByResource,
@@ -82,6 +81,7 @@ import {
   PermissionRows,
 } from './token-permissions.js';
 import './tokens-page.css';
+import { useTimeFirst } from './time-first.js';
 import { useLastDefined } from './use-last-defined.js';
 
 /** Matches the limit in `CreateTokenRequestSchema`; the whole request is checked against that schema as well. */
@@ -114,7 +114,7 @@ function MetaCell({ label, children }: { label: string; children: ReactNode }) {
 /** What a token is and what it may do, read-only. Opened from the menu of a row. */
 function TokenDetails({ token, onClose }: { token: TokenView; onClose: () => void }) {
   const { t } = useTranslation(['tokens', 'common']);
-  const formatDate = useDateTime('short');
+  const formatDate = useTimeFirst();
   const groups = useMemo(() => groupByResource(token.permissions), [token.permissions]);
 
   return (
@@ -252,7 +252,7 @@ function TokenViewDialog({
       size="min(800px, 90vw)"
       title={
         <OverlayHeader
-          icon={IconApiApp}
+          icon={TbCookie}
           iconColor="teal"
           subtitle={
             shown ? (
@@ -276,7 +276,7 @@ function TokenViewDialog({
  */
 function CreatedNotice({ created, onClose }: { created: CreatedToken; onClose: () => void }) {
   const { t } = useTranslation(['tokens', 'common']);
-  const formatDate = useDateTime('short');
+  const formatDate = useTimeFirst();
   const [saved, setSaved] = useState(false);
   const example = `curl -H "Authorization: Bearer ${created.token}" ${window.location.origin}/api/v1/auth/me`;
   return (
@@ -287,7 +287,11 @@ function CreatedNotice({ created, onClose }: { created: CreatedToken; onClose: (
           when: formatDate(created.view.expiresAt),
         })}
       </Text>
-      <Callout title={t('created.warningTitle')}>{t('created.warning')}</Callout>
+      <Callout>
+        {t('created.warningBefore')}{' '}
+        <CalloutEmphasis>{t('created.warningEmphasis')}</CalloutEmphasis>
+        {t('created.warningAfter')}
+      </Callout>
       <CopyableCodeBlock
         copiedLabel={t('common:copied')}
         copyLabel={t('created.copy')}
@@ -414,6 +418,21 @@ function CreateDialog({
         : [...picked, permission],
     );
   };
+  /** Takes the permissions from a JSON list on the clipboard, as the panel's paste button does for its scopes. */
+  const paste = async () => {
+    try {
+      const parsed: unknown = JSON.parse(await navigator.clipboard.readText());
+      if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
+        throw new Error('not a list of strings');
+      }
+      const wanted: readonly unknown[] = parsed;
+      const next = available.filter((permission) => wanted.includes(permission));
+      choose(next);
+      notifySuccess(t('create.pasted'), t('create.pastedCount', { count: next.length }));
+    } catch {
+      notifyError(t('create.pasteInvalid'), t('create.pasteInvalidHint'));
+    }
+  };
   const toggleKind = (group: PermissionGroup, kind: PermissionKind) => {
     const keys = group.permissions.filter((permission) => kindOf(permission) === kind);
     const allOn = keys.every((permission) => picked.includes(permission));
@@ -431,7 +450,7 @@ function CreateDialog({
       size="min(800px, 90vw)"
       title={
         <OverlayHeader
-          icon={IconApiApp}
+          icon={TbCookie}
           iconColor="teal"
           title={created ? t('created.title') : t('create.title')}
         />
@@ -443,7 +462,10 @@ function CreateDialog({
       ) : (
         <form onSubmit={submit}>
           <Stack gap="md">
-            <Callout title={t('create.onceTitle')}>{t('create.once')}</Callout>
+            <Callout>
+              {t('create.onceBefore')} <CalloutEmphasis>{t('create.onceEmphasis')}</CalloutEmphasis>
+              {t('create.onceAfter')}
+            </Callout>
 
             <Flex
               align={isMobile ? 'stretch' : 'flex-start'}
@@ -457,10 +479,10 @@ function CreateDialog({
                 error={touched && !nameOk ? t('create.nameError', { max: NAME_MAX }) : undefined}
                 flex={isMobile ? undefined : 1}
                 label={t('create.nameLabel')}
-                leftSection={<IconTag size={16} />}
                 onChange={(e) => {
                   setName(e.currentTarget.value);
                 }}
+                placeholder={t('create.namePlaceholder')}
                 required
                 value={name}
               />
@@ -472,7 +494,6 @@ function CreateDialog({
                   touched && !daysOk ? t('create.expiresError', { max: TOKEN_MAX_DAYS }) : undefined
                 }
                 label={t('create.expiresLabel')}
-                leftSection={<IconClock size={16} />}
                 max={TOKEN_MAX_DAYS}
                 min={1}
                 onChange={setDays}
@@ -488,7 +509,6 @@ function CreateDialog({
               description={t('create.addressesDescription')}
               error={touched ? addressError : undefined}
               label={t('create.addressesLabel')}
-              leftSection={<IconWorld size={16} />}
               maxRows={6}
               minRows={2}
               onChange={(e) => {
@@ -556,16 +576,42 @@ function CreateDialog({
                     <IconClearAll size={24} />
                   </ActionIcon>
                 </Tooltip>
+                <CopyButton timeout={1600} value={JSON.stringify(picked, null, 2)}>
+                  {({ copied, copy }) => (
+                    <Tooltip label={copied ? t('common:copied') : t('create.copyPermissions')}>
+                      <ActionIcon
+                        aria-label={copied ? t('common:copied') : t('create.copyPermissions')}
+                        color={copied ? 'teal' : 'gray'}
+                        onClick={copy}
+                        size="input-md"
+                        variant="soft"
+                      >
+                        {copied ? <TbCheck size={24} /> : <TbCopy size={24} />}
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+                <Tooltip label={t('create.pastePermissions')}>
+                  <ActionIcon
+                    aria-label={t('create.pastePermissions')}
+                    color="gray"
+                    onClick={() => void paste()}
+                    size="input-md"
+                    variant="soft"
+                  >
+                    <TbClipboard size={24} />
+                  </ActionIcon>
+                </Tooltip>
               </ActionIcon.Group>
               <Button
                 color="teal"
-                leftSection={<IconApiApp size={20} />}
+                leftSection={<TbCookie size="24px" />}
                 loading={mutation.isPending}
                 size="md"
                 type="submit"
                 variant="soft"
               >
-                {t('create.submit')}
+                {t('common:create')}
               </Button>
             </ModalFooter>
           </Stack>
@@ -591,7 +637,7 @@ function TokenRow({
   onRevoke: ((token: TokenView) => void) | undefined;
 }) {
   const { t } = useTranslation('tokens');
-  const formatDate = useDateTime('short');
+  const formatDate = useTimeFirst();
   const active = token.state === 'active';
 
   return (
@@ -771,7 +817,7 @@ function MyTokens({ role, canCreate }: { role: UserRole; canCreate: boolean }) {
     <SettingsCard.Container>
       <SettingsCard.Header
         description={t('mine.description', { max: TOKEN_MAX_ACTIVE })}
-        icon={<IconApiApp size={24} />}
+        icon={<TbCookie size={24} />}
         title={t('mine.title')}
       />
 
@@ -903,22 +949,11 @@ function AllTokens({ canRevoke }: { canRevoke: boolean }) {
     <SettingsCard.Container>
       <SettingsCard.Header
         description={t('all.description')}
-        icon={<IconApiApp size={24} />}
+        icon={<TbCookie size={24} />}
         title={t('all.title')}
       />
 
       <SettingsCard.Content>
-        <Select
-          aria-label={t('all.userFilterLabel')}
-          clearable
-          data={users}
-          onChange={setUserId}
-          placeholder={t('all.userFilterPlaceholder')}
-          searchable
-          value={selected?.value ?? null}
-          w={{ base: '100%', sm: 240 }}
-        />
-
         {list.isPending ? (
           <LoaderModal label={t('common:loading')} mih="300px" />
         ) : list.isError ? (
@@ -952,6 +987,18 @@ function AllTokens({ canRevoke }: { canRevoke: boolean }) {
             loading={list.isRefetching}
             onClick={() => void list.refetch()}
           />
+          <FilterPopover active={selected !== undefined} label={t('all.userFilterLabel')}>
+            <Select
+              aria-label={t('all.userFilterLabel')}
+              clearable
+              comboboxProps={{ withinPortal: false }}
+              data={users}
+              onChange={setUserId}
+              placeholder={t('all.userFilterPlaceholder')}
+              searchable
+              value={selected?.value ?? null}
+            />
+          </FilterPopover>
         </Group>
       </SettingsCard.Bottom>
 
@@ -994,7 +1041,7 @@ export function TokensPage({
           </HeaderActions>
         }
         description={t('header.description')}
-        icon={<IconApiApp size={24} />}
+        icon={<TbCookie size={24} />}
         title={t('header.title')}
       />
 

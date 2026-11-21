@@ -1,42 +1,51 @@
+// The invite and change dialogs are adapted from the Remnawave panel frontend 3.4.11 (AGPL-3.0-only):
+// src/shared/_modals/users/create-user-modal/create-user.modal.tsx, .../view-user-modal/view-user.modal.content.tsx and
+// src/shared/ui/forms/users/forms-components/{user-indentity-creation-card,user-identification-card,
+// contact-information-card,access-settings-card}.tsx. Changes: the fields are the ones a console user has (login name,
+// role, status, display name, e-mail address), the cards enter with the panel's stagger, and the danger zone of the
+// footer menu holds the credential reset and the deletion.
 import {
-  ActionIcon,
   Badge,
   Box,
   Button,
   Group,
   Menu,
   Modal,
+  Paper,
   Select,
   SimpleGrid,
   Stack,
   Text,
   TextInput,
+  Tooltip,
+  px,
 } from '@mantine/core';
 import {
-  IconDots,
   IconFilterOff,
-  IconId,
   IconKeyOff,
   IconLink,
-  IconMail,
-  IconPencil,
+  IconPlus,
   IconRefresh,
   IconRestore,
   IconTrash,
   IconUser,
-  IconUserPlus,
-  IconUserShield,
 } from '@tabler/icons-react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { type MouseEvent, type SyntheticEvent, useCallback, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
+import { type ReactNode, type SyntheticEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { HiIdentification } from 'react-icons/hi';
 import {
+  PiEnvelopeDuotone,
   PiEnvelopeSimpleDuotone,
   PiFloppyDiskDuotone,
+  PiIdentificationCardDuotone,
   PiProhibitDuotone,
   PiPulseDuotone,
+  PiUserDuotone,
   PiUsersDuotone,
 } from 'react-icons/pi';
+import { TbCalendar, TbDots, TbMail, TbShield, TbUser, TbWifi } from 'react-icons/tb';
 
 import {
   CreateUserRequestSchema,
@@ -52,8 +61,8 @@ import {
   Callout,
   CopyableCodeBlock,
   DataTableCard,
-  ErrorMessageBlock,
   HeaderAction,
+  HeaderActionGroup,
   HeaderActions,
   MantineReactTable,
   type MRT_ColumnDef,
@@ -61,6 +70,7 @@ import {
   ModalFooter,
   OverlayHeader,
   panelTableOptions,
+  SectionCard,
   type StatusKind,
   StatusText,
   useMantineReactTable,
@@ -71,11 +81,12 @@ import { createUser, deleteUser, listUsers, resetCredentials, updateUser } from 
 import { invitationLink } from '../auth/invitation.js';
 import { describeError } from '../auth/messages.js';
 import { useStepUp } from '../auth/step-up.js';
-import { useDateTime, useNumber } from '../format.js';
+import { useNumber } from '../format.js';
 import { confirmAction, notifySuccess } from '../shell/feedback.js';
 import { useIsMobile } from '../shell/use-is-mobile.js';
 import { useTableLocalization } from '../tables.js';
 import { notifyFailure } from './notify-failure.js';
+import { useTimeFirst } from './time-first.js';
 import { useLastDefined } from './use-last-defined.js';
 
 const PAGE_SIZE = 100;
@@ -84,6 +95,13 @@ const STATE_KIND: Record<UserView['state'], StatusKind> = {
   active: 'ok',
   invited: 'info',
   disabled: 'wait',
+};
+
+/** The colour of the icon of the identification card (the panel colours it by status). */
+const STATE_COLOR: Record<UserView['state'], string> = {
+  active: 'teal',
+  invited: 'blue',
+  disabled: 'gray',
 };
 
 /** The roles for a select, named in the language of the console. */
@@ -116,7 +134,7 @@ function InvitationNotice({
   onClose: () => void;
 }) {
   const { t } = useTranslation(['users', 'common']);
-  const formatDate = useDateTime('short');
+  const formatDate = useTimeFirst();
   const link = invitationLink(invitation.token);
   const values = { user, expires: formatDate(invitation.expiresAt) };
   return (
@@ -138,6 +156,167 @@ function InvitationNotice({
         </Button>
       </ModalFooter>
     </Stack>
+  );
+}
+
+const MotionStack = motion.create(Stack);
+
+/** The panel's user dialogs bring their cards in one after the other (`create-user.modal.tsx`). */
+const CARD_COLUMN = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
+const CARD = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+function Card({ children }: { children: ReactNode }) {
+  return <motion.div variants={CARD}>{children}</motion.div>;
+}
+
+/**
+ * The cards of a user dialog: two columns on a wide screen, one stack on a narrow one, as the panel lays out its
+ * create and edit forms (`create-user.modal.tsx`, `view-user.modal.content.tsx`).
+ */
+function CardColumns({
+  left,
+  right,
+  isMobile,
+}: {
+  left: ReactNode;
+  right: ReactNode;
+  isMobile: boolean;
+}) {
+  if (isMobile) {
+    return (
+      <MotionStack animate="visible" gap="md" initial="hidden" variants={CARD_COLUMN}>
+        {left}
+        {right}
+      </MotionStack>
+    );
+  }
+  return (
+    <Group align="flex-start" gap="md" grow={false} wrap="wrap">
+      <MotionStack
+        animate="visible"
+        gap="md"
+        initial="hidden"
+        style={{ flex: '1 1 450px' }}
+        variants={CARD_COLUMN}
+      >
+        {left}
+      </MotionStack>
+      <MotionStack
+        animate="visible"
+        gap="md"
+        initial="hidden"
+        style={{ flex: '1 1 450px' }}
+        variants={CARD_COLUMN}
+      >
+        {right}
+      </MotionStack>
+    </Group>
+  );
+}
+
+/** The card with the login name of a new user (the panel's `UserIdentityCreationCard`). */
+function IdentityCard({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('users');
+  return (
+    <Card>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={HiIdentification}
+            iconColor="blue"
+            iconSize={20}
+            title={t('cards.identity')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>{children}</SectionCard.Section>
+      </SectionCard.Root>
+    </Card>
+  );
+}
+
+/** The display name and the e-mail address (the panel's `ContactInformationCard`). */
+function ContactCard({
+  displayName,
+  email,
+  emailError,
+  onDisplayName,
+  onEmail,
+}: {
+  displayName: string;
+  email: string;
+  emailError?: string | undefined;
+  onDisplayName: (value: string) => void;
+  onEmail: (value: string) => void;
+}) {
+  const { t } = useTranslation('users');
+  return (
+    <Card>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={TbMail}
+            iconColor="teal"
+            iconSize={20}
+            title={t('cards.contact')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap="md">
+            <TextInput
+              autoComplete="off"
+              label={t('fields.displayName')}
+              leftSection={<PiIdentificationCardDuotone size="16px" />}
+              onChange={(e) => {
+                onDisplayName(e.currentTarget.value);
+              }}
+              placeholder={t('fields.optional')}
+              styles={{ label: { fontWeight: 500 } }}
+              value={displayName}
+            />
+            <TextInput
+              autoComplete="off"
+              error={emailError}
+              label={t('fields.email')}
+              leftSection={<PiEnvelopeDuotone size="16px" />}
+              onChange={(e) => {
+                onEmail(e.currentTarget.value);
+              }}
+              placeholder={t('fields.optional')}
+              styles={{ label: { fontWeight: 500 } }}
+              value={email}
+            />
+          </Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
+    </Card>
+  );
+}
+
+/** The role, and for an existing user the status (the panel's `AccessSettingsCard`). */
+function AccessCard({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('users');
+  return (
+    <Card>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <OverlayHeader
+            icon={TbShield}
+            iconColor="indigo"
+            iconSize={20}
+            title={t('cards.access')}
+            titleOrder={5}
+          />
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <Stack gap="md">{children}</Stack>
+        </SectionCard.Section>
+      </SectionCard.Root>
+    </Card>
   );
 }
 
@@ -205,11 +384,12 @@ function InviteDialog({
       onClose={close}
       onExitTransitionEnd={reset}
       opened={opened}
+      size={mutation.data ? 'md' : '1000px'}
       title={
         mutation.data ? (
           <OverlayHeader icon={IconLink} iconColor="teal" title={t('invitation.title')} />
         ) : (
-          <OverlayHeader icon={IconUserPlus} iconColor="teal" title={t('invite.title')} />
+          <OverlayHeader icon={IconUser} iconColor="teal" title={t('invite.title')} />
         )
       }
     >
@@ -221,72 +401,164 @@ function InviteDialog({
         />
       ) : (
         <form onSubmit={submit}>
-          <Stack gap="md">
-            <TextInput
-              autoComplete="off"
-              data-autofocus
-              description={t('invite.loginNameDescription')}
-              error={
-                touched &&
-                username.length > 0 &&
-                !CreateUserRequestSchema.shape.username.safeParse(username).success
-                  ? t('invite.loginNameError')
-                  : undefined
-              }
-              label={t('fields.loginName')}
-              leftSection={<IconUser size={16} />}
-              onChange={(e) => {
-                setUsername(e.currentTarget.value);
-              }}
-              required
-              value={username}
-            />
-            <Select
-              allowDeselect={false}
-              data={roleOptions}
-              description={t('invite.roleDescription')}
-              label={t('fields.role')}
-              leftSection={<IconUserShield size={16} />}
-              onChange={(value) => {
-                setRole(asRole(value) ?? 'observer');
-              }}
-              value={role}
-            />
-            <TextInput
-              autoComplete="off"
-              label={t('fields.displayName')}
-              leftSection={<IconId size={16} />}
-              onChange={(e) => {
-                setDisplayName(e.currentTarget.value);
-              }}
-              value={displayName}
-            />
-            <TextInput
-              autoComplete="off"
-              error={touched && email.trim() && !check.success ? t('invite.emailError') : undefined}
-              label={t('fields.email')}
-              leftSection={<IconMail size={16} />}
-              onChange={(e) => {
-                setEmail(e.currentTarget.value);
-              }}
-              value={email}
-            />
-            <ModalFooter>
-              <Button
-                color="teal"
-                leftSection={<IconUserPlus size={16} />}
-                loading={mutation.isPending}
-                size="md"
-                type="submit"
-                variant="soft"
-              >
-                {t('invite.submit')}
-              </Button>
-            </ModalFooter>
-          </Stack>
+          <CardColumns
+            isMobile={isMobile}
+            left={
+              <>
+                <IdentityCard>
+                  <TextInput
+                    autoComplete="off"
+                    data-autofocus
+                    description={t('invite.loginNameDescription')}
+                    error={
+                      touched &&
+                      username.length > 0 &&
+                      !CreateUserRequestSchema.shape.username.safeParse(username).success
+                        ? t('invite.loginNameError')
+                        : undefined
+                    }
+                    label={t('fields.loginName')}
+                    leftSection={<PiUserDuotone size="16px" />}
+                    onChange={(e) => {
+                      setUsername(e.currentTarget.value);
+                    }}
+                    required
+                    value={username}
+                  />
+                </IdentityCard>
+                <ContactCard
+                  displayName={displayName}
+                  email={email}
+                  emailError={
+                    touched && email.trim() && !check.success ? t('invite.emailError') : undefined
+                  }
+                  onDisplayName={setDisplayName}
+                  onEmail={setEmail}
+                />
+              </>
+            }
+            right={
+              <AccessCard>
+                <Select
+                  allowDeselect={false}
+                  data={roleOptions}
+                  description={t('invite.roleDescription')}
+                  label={t('fields.role')}
+                  leftSection={<TbShield size="16px" />}
+                  onChange={(value) => {
+                    setRole(asRole(value) ?? 'observer');
+                  }}
+                  value={role}
+                />
+              </AccessCard>
+            }
+          />
+          <ModalFooter>
+            <Button
+              color="teal"
+              leftSection={<PiFloppyDiskDuotone size="16px" />}
+              loading={mutation.isPending}
+              size="md"
+              type="submit"
+              variant="light"
+            >
+              {t('invite.submit')}
+            </Button>
+          </ModalFooter>
         </form>
       )}
     </Modal>
+  );
+}
+
+/** A small tinted tile of the identification card: the panel's coloured `Paper` with an icon and a value. */
+function FactTile({
+  border,
+  background,
+  tooltip,
+  children,
+}: {
+  border: string;
+  background: string;
+  tooltip: string;
+  children: ReactNode;
+}) {
+  return (
+    <Paper bd={`1px solid ${border}`} bg={background} p="xs" radius="md">
+      <Tooltip label={tooltip}>
+        <Group gap="xs" justify="center" wrap="nowrap">
+          {children}
+        </Group>
+      </Tooltip>
+    </Paper>
+  );
+}
+
+/**
+ * Who the user is and when they were last seen, read-only: the panel's `UserIdentificationCard` (the id with the name
+ * under it, the status, tinted tiles with the dates).
+ */
+function IdentificationCard({ user }: { user: UserView }) {
+  const { t } = useTranslation(['users', 'common']);
+  const formatTime = useTimeFirst();
+  return (
+    <Card>
+      <SectionCard.Root>
+        <SectionCard.Section>
+          <Group align="center" justify="space-between" wrap="nowrap">
+            <OverlayHeader
+              icon={TbUser}
+              iconColor={STATE_COLOR[user.state]}
+              iconSize={20}
+              subtitle={user.username}
+              title={user.id}
+              titleOrder={5}
+              truncateTitle
+              withCopy
+            />
+            <Box style={{ flexShrink: 0 }}>
+              <StatusText kind={STATE_KIND[user.state]}>{t(`states.${user.state}`)}</StatusText>
+            </Box>
+          </Group>
+        </SectionCard.Section>
+        <SectionCard.Section>
+          <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
+            <FactTile
+              background="rgba(99, 102, 241, 0.08)"
+              border="rgba(99, 102, 241, 0.2)"
+              tooltip={t('identification.created')}
+            >
+              <TbCalendar color="var(--mantine-color-indigo-5)" size={18} />
+              <Text c="indigo.5" fw={600} size="sm">
+                {formatTime(user.createdAt)}
+              </Text>
+            </FactTile>
+            <FactTile
+              background="rgba(139, 92, 246, 0.08)"
+              border="rgba(139, 92, 246, 0.2)"
+              tooltip={t('identification.lastSignIn')}
+            >
+              <TbWifi color="var(--mantine-color-violet-4)" size={18} />
+              <Text c="violet.4" fw={600} size="sm">
+                {user.lastLoginAt ? formatTime(user.lastLoginAt) : t('common:never')}
+              </Text>
+            </FactTile>
+            {user.invitationExpiresAt ? (
+              <FactTile
+                background="rgba(251, 191, 36, 0.10)"
+                border="rgba(251, 191, 36, 0.2)"
+                tooltip={t('identification.invitation')}
+              >
+                <IconLink color="var(--mantine-color-yellow-4)" size={18} />
+                <Text c="yellow.4" fw={600} size="sm">
+                  {formatTime(user.invitationExpiresAt)}
+                </Text>
+              </FactTile>
+            ) : null}
+          </SimpleGrid>
+        </SectionCard.Section>
+      </SectionCard.Root>
+    </Card>
   );
 }
 
@@ -295,13 +567,16 @@ function EditDialog({
   currentUserId,
   onClose,
   onDone,
+  onReset,
+  onDelete,
 }: {
   user: UserView | undefined;
   currentUserId: string;
   onClose: () => void;
   onDone: () => void;
+  onReset: (user: UserView) => void;
+  onDelete: (user: UserView) => void;
 }) {
-  const { t } = useTranslation('users');
   const isMobile = useIsMobile();
   const shown = useLastDefined(user);
   return (
@@ -309,19 +584,16 @@ function EditDialog({
       fullScreen={isMobile}
       onClose={onClose}
       opened={user !== undefined}
-      title={
-        <OverlayHeader
-          icon={IconPencil}
-          iconColor="teal"
-          title={t('edit.title', { username: shown?.username ?? '' })}
-        />
-      }
+      size="1000px"
+      title={<OverlayHeader icon={IconUser} iconColor="cyan" title={shown?.username ?? ''} />}
     >
       {shown ? (
         <EditForm
           key={shown.id}
           onClose={onClose}
+          onDelete={onDelete}
           onDone={onDone}
+          onReset={onReset}
           self={shown.id === currentUserId}
           user={shown}
         />
@@ -335,11 +607,15 @@ function EditForm({
   self,
   onClose,
   onDone,
+  onReset,
+  onDelete,
 }: {
   user: UserView;
   self: boolean;
   onClose: () => void;
   onDone: () => void;
+  onReset: (user: UserView) => void;
+  onDelete: (user: UserView) => void;
 }) {
   const [role, setRole] = useState<UserRole>(user.role);
   const [status, setStatus] = useState<UserStatus>(
@@ -349,6 +625,7 @@ function EditForm({
   const [email, setEmail] = useState(user.email ?? '');
 
   const { t } = useTranslation(['users', 'common']);
+  const isMobile = useIsMobile();
   const roleOptions = useRoleOptions();
   const statusOptions = useStatusOptions();
   const step = useStepUp();
@@ -384,60 +661,91 @@ function EditForm({
 
   return (
     <form onSubmit={submit}>
-      <Stack gap="md">
-        <Select
-          allowDeselect={false}
-          data={roleOptions}
-          description={self ? t('edit.roleSelf') : undefined}
-          disabled={self}
-          label={t('fields.role')}
-          leftSection={<IconUserShield size={16} />}
-          onChange={(value) => {
-            setRole(asRole(value) ?? user.role);
-          }}
-          value={role}
-        />
-        <Select
-          allowDeselect={false}
-          data={statusOptions}
-          description={self ? t('edit.statusSelf') : t('edit.statusHint')}
-          disabled={self}
-          label={t('fields.status')}
-          leftSection={<PiPulseDuotone size={16} />}
-          onChange={(value) => {
-            setStatus(asStatus(value) ?? 'active');
-          }}
-          value={status}
-        />
-        <TextInput
-          label={t('fields.displayName')}
-          leftSection={<IconId size={16} />}
-          onChange={(e) => {
-            setDisplayName(e.currentTarget.value);
-          }}
-          value={displayName}
-        />
-        <TextInput
-          label={t('fields.email')}
-          leftSection={<IconMail size={16} />}
-          onChange={(e) => {
-            setEmail(e.currentTarget.value);
-          }}
-          value={email}
-        />
-        <ModalFooter>
-          <Button
-            color="teal"
-            leftSection={<PiFloppyDiskDuotone size={16} />}
-            loading={mutation.isPending}
-            size="md"
-            type="submit"
-            variant="soft"
-          >
-            {t('common:save')}
-          </Button>
-        </ModalFooter>
-      </Stack>
+      <CardColumns
+        isMobile={isMobile}
+        left={
+          <>
+            <IdentificationCard user={user} />
+            <ContactCard
+              displayName={displayName}
+              email={email}
+              onDisplayName={setDisplayName}
+              onEmail={setEmail}
+            />
+          </>
+        }
+        right={
+          <AccessCard>
+            <Select
+              allowDeselect={false}
+              data={roleOptions}
+              description={self ? t('edit.roleSelf') : undefined}
+              disabled={self}
+              label={t('fields.role')}
+              leftSection={<TbShield size="16px" />}
+              onChange={(value) => {
+                setRole(asRole(value) ?? user.role);
+              }}
+              value={role}
+            />
+            <Select
+              allowDeselect={false}
+              data={statusOptions}
+              description={self ? t('edit.statusSelf') : t('edit.statusHint')}
+              disabled={self}
+              label={t('fields.status')}
+              leftSection={<PiPulseDuotone size="16px" />}
+              onChange={(value) => {
+                setStatus(asStatus(value) ?? 'active');
+              }}
+              value={status}
+            />
+          </AccessCard>
+        }
+      />
+      <ModalFooter>
+        <Menu keepMounted position="top-end" shadow="md">
+          <Menu.Target>
+            <Button color="gray" leftSection={<TbDots size={px('1.2rem')} />} size="md">
+              {t('edit.moreActions')}
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>{t('menu.dangerZone')}</Menu.Label>
+            <Menu.Item
+              color="red"
+              disabled={self}
+              leftSection={<IconKeyOff size={16} />}
+              onClick={() => {
+                onReset(user);
+              }}
+            >
+              {t('menu.resetCredentials')}
+            </Menu.Item>
+            {user.state === 'disabled' && !self ? (
+              <Menu.Item
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                onClick={() => {
+                  onDelete(user);
+                }}
+              >
+                {t('menu.deleteUser')}
+              </Menu.Item>
+            ) : null}
+          </Menu.Dropdown>
+        </Menu>
+        <Button
+          color="teal"
+          leftSection={<PiFloppyDiskDuotone size="16px" />}
+          loading={mutation.isPending}
+          size="md"
+          type="submit"
+          variant="soft"
+        >
+          {t('common:save')}
+        </Button>
+      </ModalFooter>
     </form>
   );
 }
@@ -520,11 +828,6 @@ function ResetDialog({
   );
 }
 
-/** Keeps a click on the kebab or its menu from also opening the row. */
-const stopRowClick = (event: MouseEvent) => {
-  event.stopPropagation();
-};
-
 /**
  * The users of the instance. Reading needs `users:read`; inviting, changing, resetting and deleting need
  * `users:write`.
@@ -537,7 +840,7 @@ export function UsersPage({
   currentUserId: string;
 }) {
   const { t } = useTranslation(['users', 'common', 'roles']);
-  const formatDate = useDateTime('short');
+  const formatDate = useTimeFirst();
   const formatNumber = useNumber();
   const queryClient = useQueryClient();
   const step = useStepUp();
@@ -643,6 +946,9 @@ export function UsersPage({
         header: t('fields.loginName'),
         size: 220,
         minSize: 150,
+        mantineTableBodyCellProps: { align: 'left' },
+        columnFilterModeOptions: ['contains', 'equals', 'startsWith', 'endsWith'],
+        enableColumnFilterModes: true,
         Cell: ({ row }) => (
           <Group gap="xs" wrap="nowrap">
             <Text fw={500} size="sm">
@@ -660,6 +966,7 @@ export function UsersPage({
         accessorKey: 'displayName',
         header: t('fields.displayName'),
         size: 200,
+        enableColumnFilterModes: false,
         Cell: ({ row }) => {
           const name = row.original.displayName;
           return name === null || name === '' ? '–' : name;
@@ -671,6 +978,8 @@ export function UsersPage({
         size: 170,
         filterVariant: 'select',
         mantineFilterSelectProps: { data: roleOptions },
+        mantineTableBodyCellProps: { align: 'center' },
+        enableColumnFilterModes: false,
         Cell: ({ row }) => (
           <Badge color="gray" size="lg" variant="soft">
             {t(`roles:names.${row.original.role}`)}
@@ -680,11 +989,13 @@ export function UsersPage({
       {
         accessorKey: 'state',
         header: t('table.state'),
-        size: 300,
+        size: 260,
         filterVariant: 'select',
         mantineFilterSelectProps: { data: stateOptions },
+        mantineTableBodyCellProps: { align: 'center' },
+        enableColumnFilterModes: false,
         Cell: ({ row }) => (
-          <Group gap="xs" wrap="nowrap">
+          <Stack align="center" gap={2}>
             <StatusText kind={STATE_KIND[row.original.state]}>
               {t(`states.${row.original.state}`)}
             </StatusText>
@@ -693,7 +1004,7 @@ export function UsersPage({
                 {t('table.invitationUntil', { when: formatDate(row.original.invitationExpiresAt) })}
               </Text>
             ) : null}
-          </Group>
+          </Stack>
         ),
       },
       {
@@ -701,6 +1012,8 @@ export function UsersPage({
         header: t('table.lastSignIn'),
         size: 250,
         enableColumnFilter: false,
+        enableColumnFilterModes: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) =>
           row.original.lastLoginAt ? (
             <Text ff="monospace" size="sm">
@@ -718,10 +1031,11 @@ export function UsersPage({
     [t, currentUserId, formatDate],
   );
 
-  const tableState = useMrtTableState('users-v1');
+  const tableState = useMrtTableState('users-v2');
   const localization = useTableLocalization(t('table.empty'));
   const table = useMantineReactTable<UserView>({
     ...panelTableOptions<UserView>(),
+    enableColumnFilterModes: true,
     columns,
     data: users,
     localization,
@@ -729,67 +1043,19 @@ export function UsersPage({
     state: {
       ...tableState.state,
       isLoading: list.isPending,
-      showAlertBanner: false,
+      showAlertBanner: list.isError,
       showProgressBars: list.isFetching,
     },
+    // The panel's failure state of a table: a red banner above the (empty) table.
+    ...(list.isError
+      ? {
+          mantineToolbarAlertBannerProps: {
+            color: 'red',
+            children: describeError(t, list.error, t('signInAgain'), t('table.loadFailed')),
+          },
+        }
+      : {}),
     getRowId: (user) => user.id,
-    enableRowActions: canWrite,
-    positionActionsColumn: 'last',
-    displayColumnDefOptions: { 'mrt-row-actions': { size: 64 } },
-    renderRowActions: ({ row }) => {
-      const user = row.original;
-      return (
-        <Group gap={4} justify="flex-end" wrap="nowrap">
-          <Menu position="bottom-end" trigger="click-hover" width={220}>
-            <Menu.Target>
-              <ActionIcon
-                aria-label={t('table.actionsFor', { username: user.username })}
-                color="gray"
-                onClick={stopRowClick}
-                size="md"
-                variant="subtle"
-              >
-                <IconDots size={18} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown onClick={stopRowClick}>
-              <Menu.Item
-                leftSection={<IconPencil size={16} />}
-                onClick={() => {
-                  setEditing(user);
-                }}
-              >
-                {t('menu.change')}
-              </Menu.Item>
-
-              <Menu.Divider />
-              <Menu.Label>{t('menu.dangerZone')}</Menu.Label>
-              <Menu.Item
-                color="red"
-                disabled={user.id === currentUserId}
-                leftSection={<IconKeyOff size={16} />}
-                onClick={() => {
-                  setResetting(user);
-                }}
-              >
-                {t('menu.resetCredentials')}
-              </Menu.Item>
-              {user.state === 'disabled' && user.id !== currentUserId ? (
-                <Menu.Item
-                  color="red"
-                  leftSection={<IconTrash size={16} />}
-                  onClick={() => {
-                    askDelete(user);
-                  }}
-                >
-                  {t('menu.deleteUser')}
-                </Menu.Item>
-              ) : null}
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
-      );
-    },
     mantineTableBodyRowProps: ({ row }) =>
       canWrite
         ? {
@@ -818,16 +1084,22 @@ export function UsersPage({
   return (
     <Stack>
       <SimpleGrid cols={{ base: 1, xs: 2, xl: 4 }} spacing="xs">
-        {metrics.map(({ id, icon, color, title, value }) => (
-          <MetricCard
-            icon={icon}
-            iconColor={color}
-            isLoading={list.isPending}
+        {metrics.map(({ id, icon, color, title, value }, index) => (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 0 }}
             key={id}
-            title={title}
-            value={value}
-            {...(more && id === 'total' ? { subtitle: t('metrics.loadedSoFar') } : {})}
-          />
+            transition={{ duration: 0.2, delay: index * 0.07, ease: 'easeIn' }}
+          >
+            <MetricCard
+              icon={icon}
+              iconColor={color}
+              isLoading={list.isPending}
+              title={title}
+              value={value}
+              {...(more && id === 'total' ? { subtitle: t('metrics.loadedSoFar') } : {})}
+            />
+          </motion.div>
         ))}
       </SimpleGrid>
 
@@ -835,52 +1107,51 @@ export function UsersPage({
         <DataTableCard.Title
           actions={
             <HeaderActions>
-              <HeaderAction
-                icon={IconRefresh}
-                label={t('common:refresh')}
-                loading={list.isRefetching && !list.isFetchingNextPage}
-                onClick={() => void list.refetch()}
-              />
-              <HeaderAction
-                color="gray"
-                icon={IconFilterOff}
-                label={t('common:clearFilters')}
-                onClick={clearFilters}
-              />
-              <HeaderAction
-                color="gray"
-                icon={IconRestore}
-                label={t('common:resetTable')}
-                onClick={resetTable}
-              />
-              {canWrite ? (
+              <HeaderActionGroup>
                 <HeaderAction
-                  color="teal"
-                  icon={IconUserPlus}
-                  label={t('header.invite')}
-                  onClick={() => {
-                    setInviting(true);
-                  }}
+                  color="gray"
+                  grouped
+                  icon={IconFilterOff}
+                  label={t('common:clearFilters')}
+                  loading={list.isPending}
+                  onClick={clearFilters}
                 />
-              ) : null}
+                <HeaderAction
+                  color="gray"
+                  grouped
+                  icon={IconRestore}
+                  label={t('common:resetTable')}
+                  loading={list.isPending}
+                  onClick={resetTable}
+                />
+              </HeaderActionGroup>
+              <HeaderActionGroup>
+                <HeaderAction
+                  grouped
+                  icon={IconRefresh}
+                  label={t('common:refresh')}
+                  loading={list.isPending || (list.isRefetching && !list.isFetchingNextPage)}
+                  onClick={() => void list.refetch()}
+                />
+                {canWrite ? (
+                  <HeaderAction
+                    color="teal"
+                    grouped
+                    icon={IconPlus}
+                    label={t('header.invite')}
+                    onClick={() => {
+                      setInviting(true);
+                    }}
+                  />
+                ) : null}
+              </HeaderActionGroup>
             </HeaderActions>
           }
-          description={t('header.description')}
           icon={<PiUsersDuotone size={24} />}
           title={t('header.title')}
         />
         <DataTableCard.Content>
-          {list.isError ? (
-            <Box p="md">
-              <ErrorMessageBlock
-                copiedLabel={t('common:copied')}
-                copyLabel={t('common:copy')}
-                message={describeError(t, list.error, t('signInAgain'), t('table.loadFailed'))}
-              />
-            </Box>
-          ) : (
-            <MantineReactTable table={table} />
-          )}
+          <MantineReactTable table={table} />
         </DataTableCard.Content>
       </DataTableCard.Container>
 
@@ -909,7 +1180,15 @@ export function UsersPage({
         onClose={() => {
           setEditing(undefined);
         }}
+        onDelete={(user) => {
+          setEditing(undefined);
+          askDelete(user);
+        }}
         onDone={() => void refresh()}
+        onReset={(user) => {
+          setEditing(undefined);
+          setResetting(user);
+        }}
         user={editing}
       />
       <ResetDialog

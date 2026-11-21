@@ -21,6 +21,7 @@ export const common = {
   refresh: 'Refresh',
   clearFilters: 'Clear filters',
   resetTable: 'Reset table',
+  filterBy: 'Filter by...',
   retry: 'Try again',
   search: 'Search',
   copy: 'Copy',

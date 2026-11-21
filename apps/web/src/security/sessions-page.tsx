@@ -27,6 +27,7 @@ import {
   DataTableCard,
   EmptyPageLayout,
   HeaderAction,
+  HeaderActionGroup,
   HeaderActions,
   LoaderModal,
   MantineReactTable,
@@ -148,7 +149,7 @@ function MySessionCard({
               icon={IconDevices}
               iconColor={session.current ? 'teal' : 'cyan'}
               title={title}
-              titleOrder={5}
+              titleOrder={4}
               truncateTitle
             />
           </Box>
@@ -371,6 +372,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         accessorKey: 'username',
         header: t('columns.user'),
         size: 140,
+        mantineTableBodyCellProps: { align: 'left' },
         Cell: ({ row }) => (
           <Text fw={500} size="sm" truncate="end">
             {row.original.username}
@@ -382,6 +384,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         header: t('columns.started'),
         size: 220,
         enableColumnFilter: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => (
           <Text ff="monospace" size="sm" title={row.original.createdAt}>
             {formatTime(row.original.createdAt)}
@@ -393,6 +396,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         header: t('columns.lastActive'),
         size: 220,
         enableColumnFilter: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => (
           <Text ff="monospace" size="sm" title={row.original.lastSeenAt}>
             {formatTime(row.original.lastSeenAt)}
@@ -425,6 +429,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         size: 200,
         enableColumnFilter: false,
         enableSorting: false,
+        mantineTableBodyCellProps: { align: 'center' },
         Cell: ({ row }) => <SessionBadges nowrap session={row.original} />,
       },
     ],
@@ -442,9 +447,18 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
     state: {
       ...tableState.state,
       isLoading: list.isPending,
-      showAlertBanner: false,
+      showAlertBanner: list.isError,
       showProgressBars: list.isFetching,
     },
+    // The panel's failure state of a table: a red banner above the (empty) table.
+    ...(list.isError
+      ? {
+          mantineToolbarAlertBannerProps: {
+            color: 'red',
+            children: describeError(t, list.error, t('signInAgain'), t('all.loadFailed')),
+          },
+        }
+      : {}),
     getRowId: (session) => session.id,
     enableRowActions: canRevoke,
     positionActionsColumn: 'last',
@@ -476,38 +490,46 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
       <DataTableCard.Title
         actions={
           <HeaderActions>
-            <FilterPopover active={selected !== undefined} label={t('all.userFilterLabel')}>
-              <Select
-                aria-label={t('all.userFilterLabel')}
-                clearable
-                comboboxProps={{ withinPortal: false }}
-                data={users}
-                onChange={setUserId}
-                placeholder={t('all.userFilterPlaceholder')}
-                searchable
-                value={selected?.value ?? null}
+            <HeaderActionGroup>
+              <FilterPopover
+                active={selected !== undefined}
+                grouped
+                label={t('all.userFilterLabel')}
+              >
+                <Select
+                  aria-label={t('all.userFilterLabel')}
+                  clearable
+                  comboboxProps={{ withinPortal: false }}
+                  data={users}
+                  onChange={setUserId}
+                  placeholder={t('all.userFilterPlaceholder')}
+                  searchable
+                  value={selected?.value ?? null}
+                />
+              </FilterPopover>
+              <HeaderAction
+                color="gray"
+                disabled={selected === undefined}
+                grouped
+                icon={IconFilterOff}
+                label={t('all.clearFilter')}
+                onClick={() => {
+                  setUserId(null);
+                  table.resetColumnFilters(true);
+                }}
               />
-            </FilterPopover>
-            <HeaderAction
-              color="gray"
-              disabled={selected === undefined}
-              icon={IconFilterOff}
-              label={t('all.clearFilter')}
-              onClick={() => {
-                setUserId(null);
-                table.resetColumnFilters(true);
-              }}
-            />
-            <HeaderAction
-              color="gray"
-              icon={IconRestore}
-              label={t('common:resetTable')}
-              onClick={() => {
-                setUserId(null);
-                tableState.reset();
-                table.resetColumnFilters(true);
-              }}
-            />
+              <HeaderAction
+                color="gray"
+                grouped
+                icon={IconRestore}
+                label={t('common:resetTable')}
+                onClick={() => {
+                  setUserId(null);
+                  tableState.reset();
+                  table.resetColumnFilters(true);
+                }}
+              />
+            </HeaderActionGroup>
             {canEndUser ? (
               <HeaderAction
                 color="red"
@@ -536,17 +558,7 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
         title={t('all.title')}
       />
       <DataTableCard.Content>
-        {list.isError ? (
-          <Box p="md">
-            <QueryErrorCard
-              message={describeError(t, list.error, t('signInAgain'), t('all.loadFailed'))}
-              onRetry={() => void list.refetch()}
-              title={t('all.title')}
-            />
-          </Box>
-        ) : (
-          <MantineReactTable table={table} />
-        )}
+        <MantineReactTable table={table} />
       </DataTableCard.Content>
     </DataTableCard.Container>
   );
