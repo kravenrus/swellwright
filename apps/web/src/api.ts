@@ -31,8 +31,22 @@ import {
   PluginSidecarFragmentSchema,
   type PluginView,
   PluginViewSchema,
+  type AddAccessRequest,
+  type CreateServerRequest,
+  type PinHostKeyRequest,
   type ReadyResponse,
   ReadyResponseSchema,
+  type ServerAccess,
+  ServerAccessSchema,
+  type ServerHostKey,
+  ServerHostKeySchema,
+  type ServerList,
+  type ServerListQuery,
+  ServerListSchema,
+  type ServerView,
+  ServerViewSchema,
+  type UpdateAccessRequest,
+  type UpdateServerRequest,
   type UpdatesResponse,
   UpdatesResponseSchema,
   type RoleCatalog,
@@ -437,6 +451,44 @@ export const updatePluginConfig = (
  */
 export const getPluginSidecar = (id: string): Promise<PluginSidecarFragment> =>
   send('GET', `/plugins/${id}/sidecar`, undefined, PluginSidecarFragmentSchema);
+
+/** The inventory (`servers:read`): every server with its counts and a summary of its facts. */
+export const listServers = (query: ServerListQuery = {}): Promise<ServerList> =>
+  send('GET', `/servers${queryString(query)}`, undefined, ServerListSchema);
+
+/** One server in full: pinned host keys, access entries (secret names only) and facts. */
+export const getServer = (id: string): Promise<ServerView> =>
+  send('GET', `/servers/${id}`, undefined, ServerViewSchema);
+
+export const createServer = (request: CreateServerRequest): Promise<ServerView> =>
+  send('POST', '/servers', request, ServerViewSchema);
+
+export const updateServer = (id: string, request: UpdateServerRequest): Promise<ServerView> =>
+  send('PATCH', `/servers/${id}`, request, ServerViewSchema);
+
+/** Only a draft or a retired server; any other state answers 409. */
+export const deleteServer = (id: string): Promise<void> =>
+  send('DELETE', `/servers/${id}`, undefined, undefined);
+
+/** Pins a fingerprint a person checked. Pinning the same one again changes nothing. */
+export const pinHostKey = (id: string, request: PinHostKeyRequest): Promise<ServerHostKey> =>
+  send('POST', `/servers/${id}/host-keys`, request, ServerHostKeySchema);
+
+export const revokeHostKey = (id: string, keyId: string): Promise<void> =>
+  send('DELETE', `/servers/${id}/host-keys/${keyId}`, undefined, undefined);
+
+export const addServerAccess = (id: string, request: AddAccessRequest): Promise<ServerAccess> =>
+  send('POST', `/servers/${id}/access`, request, ServerAccessSchema);
+
+export const updateServerAccess = (
+  id: string,
+  accessId: string,
+  request: UpdateAccessRequest,
+): Promise<ServerAccess> =>
+  send('PATCH', `/servers/${id}/access/${accessId}`, request, ServerAccessSchema);
+
+export const removeServerAccess = (id: string, accessId: string): Promise<void> =>
+  send('DELETE', `/servers/${id}/access/${accessId}`, undefined, undefined);
 
 /** The current session, or null when nobody is signed in. */
 export async function getMe(): Promise<SessionInfo | null> {

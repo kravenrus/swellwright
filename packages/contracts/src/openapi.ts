@@ -56,6 +56,23 @@ import {
   RoleSummarySchema,
   UserRoleSchema,
 } from './roles.js';
+import {
+  AccessMethodSchema,
+  AddAccessRequestSchema,
+  CreateServerRequestSchema,
+  PinHostKeyRequestSchema,
+  SecretRefSchema,
+  ServerAccessSchema,
+  ServerFactsSchema,
+  ServerFactsSummarySchema,
+  ServerHostKeySchema,
+  ServerListSchema,
+  ServerStateSchema,
+  ServerSummarySchema,
+  ServerViewSchema,
+  UpdateAccessRequestSchema,
+  UpdateServerRequestSchema,
+} from './servers.js';
 import { type RouteDef, routes } from './routes.js';
 import {
   CreateUserRequestSchema,
@@ -99,7 +116,7 @@ import {
 } from './system.js';
 
 /** Version of the API description. Bump it with every contract change (oasdiff checks the rules). */
-export const OPENAPI_INFO_VERSION = '0.18.0';
+export const OPENAPI_INFO_VERSION = '0.19.0';
 
 /** Named schemas that appear under `components.schemas`. Every response schema must be listed here. */
 const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
@@ -186,6 +203,21 @@ const COMPONENT_SCHEMAS: readonly z.ZodType[] = [
   CreateSecretRequestSchema,
   UpdateSecretRequestSchema,
   RevealedSecretSchema,
+  ServerStateSchema,
+  AccessMethodSchema,
+  ServerFactsSummarySchema,
+  ServerFactsSchema,
+  ServerSummarySchema,
+  ServerListSchema,
+  ServerHostKeySchema,
+  SecretRefSchema,
+  ServerAccessSchema,
+  ServerViewSchema,
+  CreateServerRequestSchema,
+  UpdateServerRequestSchema,
+  PinHostKeyRequestSchema,
+  AddAccessRequestSchema,
+  UpdateAccessRequestSchema,
 ];
 
 type Json = Record<string, unknown>;
@@ -332,6 +364,11 @@ export function buildOpenApi(): Json {
       { name: 'audit', description: 'The append-only audit log and its integrity check.' },
       { name: 'sessions', description: 'Signed-in browser sessions and how to end them.' },
       { name: 'tokens', description: 'API tokens for the CLI and integrations.' },
+      {
+        name: 'servers',
+        description:
+          'The inventory of servers: addresses, pinned SSH host keys, access entries that name vault secrets, and facts.',
+      },
     ],
     paths,
     components: {

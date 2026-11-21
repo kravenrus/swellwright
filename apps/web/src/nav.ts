@@ -75,7 +75,6 @@ const navigation = (t: TFunction<Namespace[]>): readonly GatedSection[] => [
         name: t('nav:servers'),
         href: ROUTES.DASHBOARD.FLEET.SERVERS,
         icon: HiServer,
-        planned: true,
         permission: 'servers:read',
       },
       {
