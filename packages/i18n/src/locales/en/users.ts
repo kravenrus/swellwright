@@ -2,7 +2,6 @@
 export const users = {
   header: {
     title: 'Users',
-    description: 'Who can sign in to this instance, and what they may do',
     invite: 'Invite a user',
   },
 
@@ -13,6 +12,21 @@ export const users = {
     status: 'Status',
     displayName: 'Display name',
     email: 'E-mail address',
+    optional: 'Optional',
+  },
+
+  /** The cards of the invite and change dialogs. */
+  cards: {
+    identity: 'User identity',
+    contact: 'Contact information',
+    access: 'Access',
+  },
+
+  /** The tiles of the identification card of a user. */
+  identification: {
+    created: 'Created',
+    lastSignIn: 'Last sign-in',
+    invitation: 'The invitation works until',
   },
 
   states: {
@@ -37,15 +51,12 @@ export const users = {
     lastSignIn: 'Last sign-in',
     you: 'you',
     invitationUntil: 'invitation until {{when}}',
-    actions: 'Actions',
-    actionsFor: 'Actions for {{username}}',
     empty: 'No users.',
     loadMore: 'Load more',
     loadFailed: 'Your role may not see the users.',
   },
 
   menu: {
-    change: 'Change',
     dangerZone: 'Danger zone',
     resetCredentials: 'Reset credentials',
     deleteUser: 'Delete user',
@@ -54,7 +65,7 @@ export const users = {
   invite: {
     title: 'Invite a user',
     loginNameDescription:
-      'Lower-case letters, digits, dot, dash or underscore. 2 to 32 characters.',
+      'Lower-case letters, digits, dot, dash or underscore. 2 to 32 characters. It cannot be changed later.',
     loginNameError: 'This login name is not allowed.',
     roleDescription: 'What they may do. See the Roles page.',
     emailError: 'This is not an e-mail address.',
@@ -69,6 +80,7 @@ export const users = {
     statusHint: 'A disabled user is signed out at once and cannot sign in.',
     done: '{{username}} was updated.',
     forbidden: 'Your role may not change users.',
+    moreActions: 'More actions',
   },
 
   reset: {

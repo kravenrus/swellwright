@@ -22,7 +22,7 @@ export interface CopyableDataListItemProps {
 
 /**
  * One row of a `DataList` whose value copies on a click: a tint on hover, a copy glyph that appears, teal for two
- * seconds after the copy. Use it inside `<DataList withDivider orientation="vertical">`.
+ * seconds after the copy. Use it inside `<DataList withDivider orientation="vertical">` (the passkeys drawer adds `size="xs"`).
  */
 export function CopyableDataListItem({
   label,
