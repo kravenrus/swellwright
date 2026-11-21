@@ -85,6 +85,20 @@ jobs:
       - name: API description is up to date
         run: pnpm run openapi:check
 
+  # The dependencies a pull request adds or changes: fails on a known vulnerability of high severity. What is already
+  # in the lockfile is covered by the Dependabot alerts.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
   # What a pull request does to the API description, compared with main (ADR 0012). A report, not a gate: until the first
   # release the API may change, and the report says what a client would notice. oasdiff is the release binary, pinned by
   # version and SHA-256 (no third-party action, nothing is uploaded).

@@ -174,6 +174,8 @@ describe('the core door for a plugin', () => {
           return;
         }
         response.setHeader('X-Test', 'yes');
+        // JSON, not HTML: the request path is echoed back.
+        response.setHeader('Content-Type', 'application/json');
         response.statusCode = request.url === '/missing' ? 404 : 200;
         response.end(JSON.stringify({ method: request.method, url: request.url }));
       });

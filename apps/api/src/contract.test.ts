@@ -60,6 +60,8 @@ describe('contract binding', () => {
     }
     const app = await NestFactory.create<NestExpressApplication>(
       { module: class BrokenModule {}, controllers: [BrokenController] },
+      // Nest declares its options as classes and documents a plain object as the way to pass them.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment
       { logger: false },
     );
     app.use(requestContext);
