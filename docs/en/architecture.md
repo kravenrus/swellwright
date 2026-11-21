@@ -70,7 +70,7 @@ stateDiagram-v2
 
 ## Node-side artifacts
 
-A POSIX `sh` installer (versioned) and a small Python engine for snapshot, undo plan, undo and a safety timer for SSH and firewall changes. They are uploaded as versioned artifacts with hash verification; nothing is installed permanently on the node except what the workflow installs.
+A POSIX `sh` installer (versioned, in `artifacts/node-installer/`, ADR 0036) and a small Python engine for snapshot, undo plan, undo and a safety timer for SSH and firewall changes. They are uploaded as versioned artifacts with hash verification; nothing is installed permanently on the node except what the workflow installs.
 
 ## Deployment topologies
 

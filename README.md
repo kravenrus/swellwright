@@ -152,7 +152,8 @@ plugins/official/  DNS, login, notification, hosting, node-flavor and client-pac
 examples/          conventions, policies, templates, hop-chain presets, declarative drivers
 registry/          community plugin registry index
 deploy/            compose and reverse-proxy examples
-scripts/           repository hygiene checks
+artifacts/         files shipped to servers and verified by hash: the node installer (script, manifest, tests)
+scripts/           repository hygiene checks, the artifact manifest tool
 assets/            logo, favicon and banners
 docs/              en (canonical), ru, adr
 ```

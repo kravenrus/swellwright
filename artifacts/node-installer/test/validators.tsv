@@ -1,0 +1,169 @@
+# expect|PARAMETER|value|pattern-match (optional y or n, when the published pattern differs from the validator)
+accept|NODE_DOMAIN|node1.example.com
+accept|NODE_DOMAIN|a.b.example.co.uk
+accept|NODE_DOMAIN|n1.example.xn--p1ai
+accept|NODE_DOMAIN|n-1.example.com
+accept|NODE_DOMAIN|1.example.com
+reject|NODE_DOMAIN|
+reject|NODE_DOMAIN|example
+reject|NODE_DOMAIN|.example.com
+reject|NODE_DOMAIN|-bad.example.com
+reject|NODE_DOMAIN|bad-.example.com
+reject|NODE_DOMAIN|bad_name.example.com
+reject|NODE_DOMAIN|bad name.example.com
+reject|NODE_DOMAIN|node1.example.com;touch /x
+reject|NODE_DOMAIN|node1.example.com$(id)
+reject|NODE_DOMAIN|node1.example.com`id`
+reject|NODE_DOMAIN|node1.example.c
+reject|NODE_DOMAIN|Node1.Example.com
+reject|NODE_DOMAIN|node1..example.com
+reject|NODE_DOMAIN|192.0.2.10
+reject|NODE_DOMAIN|node1.example.com.
+reject|NODE_DOMAIN|node1.example.com/path
+reject|NODE_DOMAIN|-n
+accept|RENAME_FROM|node1.example.com
+reject|RENAME_FROM|node1
+accept|RENAME_ALIAS|node1.example.com
+accept|RENAME_ALIAS|node1.example.com node3.example.com
+reject|RENAME_ALIAS|node1.example.com,node3.example.com
+reject|RENAME_ALIAS|node1.example.com  node3.example.com
+reject|RENAME_ALIAS|node1.example.com bad_name.example.com
+accept|NODE_IP|192.0.2.10
+accept|NODE_IP|203.0.113.255
+accept|NODE_IP|198.51.100.99
+reject|NODE_IP|0.0.0.0|y
+reject|NODE_IP|127.0.0.1|y
+reject|NODE_IP|224.0.0.1|y
+reject|NODE_IP|255.255.255.255|y
+reject|NODE_IP|256.1.1.1
+reject|NODE_IP|192.0.2
+reject|NODE_IP|192.0.2.10.5
+reject|NODE_IP|192.0.2.010
+reject|NODE_IP|192.0.2.10 192.0.2.11
+reject|NODE_IP|192.0.2.10;id
+reject|NODE_IP|::1
+reject|NODE_IP|node1.example.com
+accept|NODE_PORT|62050
+accept|NODE_PORT|1
+accept|NODE_PORT|65535
+accept|NODE_PORT|443
+reject|NODE_PORT|0
+reject|NODE_PORT|65536
+reject|NODE_PORT|99999
+reject|NODE_PORT|100000
+reject|NODE_PORT|-1
+reject|NODE_PORT|0443
+reject|NODE_PORT|44 3
+reject|NODE_PORT|http
+reject|NODE_PORT|443;id
+accept|SSH_PORT|22
+accept|SSH_PORT|2222
+reject|SSH_PORT|70000
+accept|PANEL_ALLOW_IP|192.0.2.20
+accept|PANEL_ALLOW_IP|192.0.2.20 198.51.100.7
+accept|PANEL_ALLOW_IP|192.0.2.20 198.51.100.7 203.0.113.1
+reject|PANEL_ALLOW_IP|0.0.0.0|y
+reject|PANEL_ALLOW_IP|192.0.2.20 0.0.0.0|y
+reject|PANEL_ALLOW_IP|127.0.0.1|y
+reject|PANEL_ALLOW_IP|192.0.2.0/24
+reject|PANEL_ALLOW_IP|192.0.2.20,198.51.100.7
+reject|PANEL_ALLOW_IP|192.0.2.20  198.51.100.7
+reject|PANEL_ALLOW_IP|192.0.2.20 abc
+reject|PANEL_ALLOW_IP|192.0.2.20;iptables -F
+reject|PANEL_ALLOW_IP| 192.0.2.20
+reject|PANEL_ALLOW_IP|192.0.2.20
+accept|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/24
+accept|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/24 198.51.100.7
+accept|FAIL2BAN_IGNORE_EXTRA|10.0.0.0/8
+accept|FAIL2BAN_IGNORE_EXTRA|198.51.100.7/32
+reject|FAIL2BAN_IGNORE_EXTRA|0.0.0.0/0
+reject|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/7
+reject|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/33
+reject|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/
+reject|FAIL2BAN_IGNORE_EXTRA|192.0.2.0/24;id
+reject|FAIL2BAN_IGNORE_EXTRA|::1
+accept|CERTSYNC_PUBKEY|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM
+accept|CERTSYNC_PUBKEY|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM sender@example
+accept|CERTSYNC_PUBKEY|ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQEXAMPLEEXAMPLE+/EXAMPLE== admin@example
+accept|CERTSYNC_PUBKEY|ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYEXAMPLEEXAMPLE a b
+reject|CERTSYNC_PUBKEY|ssh-dss AAAAB3NzaC1kc3MAAACBEXAMPLEEXAMPLEEXAMPLE
+reject|CERTSYNC_PUBKEY|command="id" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM
+reject|CERTSYNC_PUBKEY|ssh-ed25519 AAAA
+reject|CERTSYNC_PUBKEY|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM comment"; echo hi
+reject|CERTSYNC_PUBKEY|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM $(id)
+reject|CERTSYNC_PUBKEY|ssh-ed25519
+reject|CERTSYNC_PUBKEY|AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM
+reject|CERTSYNC_PUBKEY|-----BEGIN OPENSSH KEY-----
+accept|NEW_USER_PUBKEY|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM admin@example
+accept|NEW_USER_PUBKEY2|ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAM
+reject|NEW_USER_PUBKEY2|not a key
+accept|SECRET_KEY|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef0123456789+/==
+accept|SECRET_KEY|eyJub2RlQ2VydFBlbSI6ImV4YW1wbGUifQ==
+accept|SECRET_KEY|abcdefghijklmnop
+reject|SECRET_KEY|short
+reject|SECRET_KEY|abcdefghijklmnop"
+reject|SECRET_KEY|abcdefghijklmnop$HOME
+reject|SECRET_KEY|abcdefghijklmnop abcdefghijklmnop
+reject|SECRET_KEY|abcdefghijklmnop\x
+reject|SECRET_KEY|abcdefghijklmnop`id`
+reject|SECRET_KEY|abcdefghijklmnop'x
+accept|NODE_IMAGE_TAG|3.4.6
+accept|NODE_IMAGE_TAG|3.4.6-alpine
+accept|NODE_IMAGE_TAG|v1_2
+reject|NODE_IMAGE_TAG|.hidden
+reject|NODE_IMAGE_TAG|-x
+reject|NODE_IMAGE_TAG|3.4.6:latest
+reject|NODE_IMAGE_TAG|3.4.6 latest
+reject|NODE_IMAGE_TAG|latest;id
+reject|NODE_IMAGE_TAG|a/b
+accept|HAPROXY_VERSION|3.2
+accept|HAPROXY_VERSION|2.8
+accept|HAPROXY_VERSION|10.1
+reject|HAPROXY_VERSION|3
+reject|HAPROXY_VERSION|3.2.1
+reject|HAPROXY_VERSION|3.x
+reject|HAPROXY_VERSION|3.2;id
+accept|NEW_USER|admin
+accept|NEW_USER|ops_1
+accept|NEW_USER|_svc
+reject|NEW_USER|root|y
+reject|NEW_USER|certsync|y
+reject|NEW_USER|Admin
+reject|NEW_USER|1admin
+reject|NEW_USER|admin user
+reject|NEW_USER|admin;id
+reject|NEW_USER|a-very-long-user-name-that-is-over-32-chars
+reject|NEW_USER|
+accept|NEW_USER_PASSWORD|correct horse battery
+accept|NEW_USER_PASSWORD|Pa$$w0rd:with:colons
+reject|NEW_USER_PASSWORD|short
+accept|BASE_UPGRADE|yes
+accept|BASE_UPGRADE|no
+reject|BASE_UPGRADE|true
+reject|BASE_UPGRADE|YES
+reject|BASE_UPGRADE|
+accept|DOCKER_SOURCE|apt
+accept|DOCKER_SOURCE|script
+reject|DOCKER_SOURCE|snap
+accept|HAPROXY_SOURCE|auto
+accept|HAPROXY_SOURCE|ppa
+accept|HAPROXY_SOURCE|distro
+reject|HAPROXY_SOURCE|source
+accept|SSH_PHASE|user
+accept|SSH_PHASE|root
+accept|SSH_PHASE|all
+reject|SSH_PHASE|both
+accept|SSH_DISABLE_ROOT|yes
+accept|SSH_DISABLE_ROOT|no
+reject|SSH_DISABLE_ROOT|1
+accept|SSH_DISABLE_PASSWORD|yes
+accept|SSH_DISABLE_PASSWORD|no
+reject|SSH_DISABLE_PASSWORD|on
+accept|INSTALL_MODE|new
+accept|INSTALL_MODE|redeploy
+reject|INSTALL_MODE|update
+accept|SW_NONINTERACTIVE|0
+accept|SW_NONINTERACTIVE|1
+reject|SW_NONINTERACTIVE|2
+reject|SW_NONINTERACTIVE|yes
+reject|NOT_A_PARAMETER|x

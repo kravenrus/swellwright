@@ -142,6 +142,38 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+  # The node installer artifact (ADR 0036): the manifest and the README tables are what the script says, the script parses under
+  # sh and dash, shellcheck has no error to report, and every step runs in a temporary root with stubbed commands (a real
+  # HAProxy checks the configuration the haproxy step writes).
+  artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Manifest and README tables are up to date
+        run: node scripts/artifact-manifest.mjs --check
+      - name: Tools (dash, shellcheck, HAProxy)
+        run: |
+          # The packages must not start services on the runner (HAProxy is only needed to check a configuration file).
+          printf '#!/bin/sh\nexit 101\n' | sudo tee /usr/sbin/policy-rc.d >/dev/null
+          sudo chmod +x /usr/sbin/policy-rc.d
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dash shellcheck haproxy
+      - name: Syntax under sh and dash
+        run: |
+          sh -n artifacts/node-installer/install.sh
+          dash -n artifacts/node-installer/install.sh
+      - name: shellcheck
+        run: shellcheck -s sh -S error artifacts/node-installer/install.sh artifacts/node-installer/test/*.sh
+      - name: shellcheck report (warnings and notes, not a gate)
+        run: shellcheck -s sh -S style artifacts/node-installer/install.sh || true
+      - name: Test suite
+        run: sh artifacts/node-installer/test/run-tests.sh
+
   # The container image and the compose stack of deploy/compose, started for real (ADR 0019).
   image:
     runs-on: ubuntu-latest

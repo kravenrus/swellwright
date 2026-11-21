@@ -61,7 +61,7 @@ A single web console and API for the whole lifecycle of a Remnawave fleet: serve
 | `06-api-openapi.md` | REST, events, OpenAPI, SDK, CLI, MCP, webhooks |
 | `07-ui-ux.md` | interface, pages, patterns, parity with the panel |
 | `08-engine.md` | scenario engine, policies, rollout strategies, step catalog |
-| `09-ops-docker.md` | Docker, placement, backups, updates, disaster recovery |
+| `09-ops-docker.md` | Docker, placement, backups, updates, disaster recovery, node artifacts |
 | `10-testing.md` | tests, lab, fault injection, readiness criteria |
 | `11-roadmap.md` | phases, contents, acceptance criteria, order |
 | `12-risks-open.md` | risks, assumptions, what to verify, open decisions |

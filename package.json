@@ -25,7 +25,10 @@
     "db:status": "pnpm --filter @swellwright/db run migrate:status",
     "db:schema:check": "pnpm --filter @swellwright/db run schema:check",
     "openapi": "turbo run build --filter=@swellwright/contracts && node scripts/openapi.mjs",
-    "openapi:check": "turbo run build --filter=@swellwright/contracts && node scripts/openapi.mjs --check"
+    "openapi:check": "turbo run build --filter=@swellwright/contracts && node scripts/openapi.mjs --check",
+    "artifacts:build": "node scripts/artifact-manifest.mjs build",
+    "artifacts:check": "node scripts/artifact-manifest.mjs --check",
+    "artifacts:test": "sh artifacts/node-installer/test/run-tests.sh"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

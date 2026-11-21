@@ -44,7 +44,7 @@ packages/remnawave       обёртка над backend-contract: клиент, �
 packages/ssh             ssh2: пул, отдельные шаги, sudo, терминал, SFTP, сертификаты
 packages/vault           шифрование, запечатывание, ротация
 packages/policy          правила и оценка
-packages/node-assets     install.sh, node-engine (py), эталоны проверок, версии и хеши
+artifacts/               артефакты для узла, не пакет: node-installer (install.sh, manifest.json, тесты; ADR 0036), позже node-engine (py); версии и хеши в манифестах
 packages/ui              общие компоненты и тема (клон по виду панели)
 packages/i18n            тексты консоли на английском и русском, выбор языка (ADR 0020)
 packages/testing         фейковая панель, фейковый SSH, лаборатория

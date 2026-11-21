@@ -35,7 +35,7 @@
 
 ## 2. Assumptions
 1. The project is open (GitHub, AGPL-3.0-only) for Remnawave administrators; there is no public SaaS; all code is public, instance data is not.
-2. Nodes remain Ubuntu 22.04/24.04 with the installer in POSIX sh; Remnawave 3.4.x and later.
+2. Nodes remain Ubuntu 22.04/24.04, and Debian 12 (the installer is written for it, covered by stubbed tests only until it runs on a real host), with the installer in POSIX sh (ADR 0036); Remnawave 3.4.x and later.
 3. SSH access to nodes is possible from where Swellwright is hosted; access to the panel is over HTTPS.
 4. Swellwright can store secrets encrypted and be unsealed manually on restart.
 5. Possible future modules (unique decoy sites, neutral SNI, XHTTP and Hysteria2, monitoring from different networks) are part of the plan as modules and are not required immediately.

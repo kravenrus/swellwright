@@ -1,0 +1,492 @@
+{
+  "manifestVersion": 1,
+  "name": "node-installer",
+  "version": "1.0.0",
+  "description": "Installs and hardens a Remnawave node: firewall, Docker, HAProxy SNI routing, nginx default site, the node container and the checks.",
+  "file": "install.sh",
+  "interpreter": "sh",
+  "sha256": "76041eab48ddd11b1f6850580b38583caee66e237979e952e5e3a9d7c2fb5dcc",
+  "size": 101057,
+  "minOs": "debian 12 / ubuntu 22.04",
+  "steps": [
+    {
+      "id": "preflight",
+      "title": "Preflight checks",
+      "readOnly": true,
+      "needsRoot": true,
+      "inFull": false,
+      "params": [],
+      "requires": []
+    },
+    {
+      "id": "base",
+      "title": "Base packages and system upgrade",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "BASE_UPGRADE"
+      ],
+      "requires": []
+    },
+    {
+      "id": "system",
+      "title": "System tuning: BBR, journald, NTP",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [],
+      "requires": []
+    },
+    {
+      "id": "hostname",
+      "title": "Host name and /etc/hosts",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_DOMAIN",
+        "NODE_IP"
+      ],
+      "requires": [
+        "NODE_DOMAIN",
+        "NODE_IP"
+      ]
+    },
+    {
+      "id": "firewall",
+      "title": "Firewall (UFW)",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "SSH_PORT",
+        "NODE_PORT",
+        "PANEL_ALLOW_IP"
+      ],
+      "requires": [
+        "PANEL_ALLOW_IP"
+      ]
+    },
+    {
+      "id": "fail2ban",
+      "title": "fail2ban for SSH",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "SSH_PORT",
+        "PANEL_ALLOW_IP",
+        "FAIL2BAN_IGNORE_EXTRA"
+      ],
+      "requires": []
+    },
+    {
+      "id": "docker",
+      "title": "Docker",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "DOCKER_SOURCE"
+      ],
+      "requires": []
+    },
+    {
+      "id": "apiacl",
+      "title": "Node API port open to the panel only (DOCKER-USER and UFW)",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_PORT",
+        "PANEL_ALLOW_IP"
+      ],
+      "requires": [
+        "PANEL_ALLOW_IP"
+      ]
+    },
+    {
+      "id": "certsync",
+      "title": "Certificate receiver (restricted rsync key)",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "CERTSYNC_PUBKEY",
+        "NODE_DOMAIN"
+      ],
+      "requires": [
+        "CERTSYNC_PUBKEY",
+        "NODE_DOMAIN"
+      ]
+    },
+    {
+      "id": "nginx",
+      "title": "nginx: SelfSNI site and default site",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_DOMAIN"
+      ],
+      "requires": [
+        "NODE_DOMAIN"
+      ]
+    },
+    {
+      "id": "haproxy",
+      "title": "HAProxy: SNI routing with a default backend",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_DOMAIN",
+        "NODE_IP",
+        "HAPROXY_SOURCE",
+        "HAPROXY_VERSION"
+      ],
+      "requires": [
+        "NODE_DOMAIN",
+        "NODE_IP"
+      ]
+    },
+    {
+      "id": "node",
+      "title": "Remnawave node container",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_PORT",
+        "SECRET_KEY",
+        "NODE_IMAGE_TAG"
+      ],
+      "requires": [
+        "SECRET_KEY"
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Verify the node",
+      "readOnly": true,
+      "needsRoot": true,
+      "inFull": true,
+      "params": [
+        "NODE_DOMAIN",
+        "NODE_IP",
+        "NODE_PORT",
+        "NODE_IMAGE_TAG"
+      ],
+      "requires": []
+    },
+    {
+      "id": "ssh",
+      "title": "SSH: administrator account, keys, root login",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": false,
+      "params": [
+        "SSH_PHASE",
+        "NEW_USER",
+        "NEW_USER_PUBKEY",
+        "NEW_USER_PUBKEY2",
+        "NEW_USER_PASSWORD",
+        "SSH_DISABLE_ROOT",
+        "SSH_DISABLE_PASSWORD"
+      ],
+      "requires": [
+        "NEW_USER",
+        "NEW_USER_PUBKEY"
+      ]
+    },
+    {
+      "id": "rename",
+      "title": "Rename the node on this server",
+      "readOnly": false,
+      "needsRoot": true,
+      "inFull": false,
+      "params": [
+        "NODE_DOMAIN",
+        "RENAME_FROM",
+        "RENAME_ALIAS",
+        "NODE_IP"
+      ],
+      "requires": [
+        "NODE_DOMAIN"
+      ]
+    }
+  ],
+  "params": {
+    "NODE_DOMAIN": {
+      "group": "node",
+      "description": "Public domain name of the node: SNI, host name and SelfSNI site. Upper case is converted to lower case.",
+      "required": true,
+      "secret": false,
+      "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})$",
+      "default": null,
+      "example": "node1.example.com"
+    },
+    "NODE_IP": {
+      "group": "node",
+      "description": "Public IPv4 address of this server; HAProxy binds it on port 443.",
+      "required": true,
+      "secret": false,
+      "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+      "default": null,
+      "example": "192.0.2.10"
+    },
+    "NODE_PORT": {
+      "group": "node",
+      "description": "TCP port of the node API (panel to node).",
+      "required": false,
+      "secret": false,
+      "pattern": "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+      "default": "62050",
+      "example": "62050"
+    },
+    "SECRET_KEY": {
+      "group": "node",
+      "description": "Node secret key from the panel (the SECRET_KEY of the compose file the panel shows for the node). Kept only in the compose file, mode 600.",
+      "required": true,
+      "secret": true,
+      "pattern": "^[A-Za-z0-9+/=_.:-]{16,8192}$",
+      "default": null
+    },
+    "PANEL_ALLOW_IP": {
+      "group": "node",
+      "description": "IPv4 addresses (space separated) that may reach the node API port: the panel. Nobody else can.",
+      "required": true,
+      "secret": false,
+      "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])( ((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))*$",
+      "default": null,
+      "example": "192.0.2.20 198.51.100.7"
+    },
+    "SSH_PORT": {
+      "group": "node",
+      "description": "SSH port that the firewall keeps open. Default: the port sshd reports, else 22.",
+      "required": false,
+      "secret": false,
+      "pattern": "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+      "default": "22",
+      "example": "22"
+    },
+    "CERTSYNC_PUBKEY": {
+      "group": "node",
+      "description": "Public key of whatever delivers certificates to /opt/certs. Installed for the user certsync, limited to rrsync in that directory (command=, restrict). Empty: the receiver is not set up and full skips it.",
+      "required": true,
+      "secret": false,
+      "pattern": "^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]{16,}={0,3}( [A-Za-z0-9@._:+=/ -]{1,128})?$",
+      "default": null,
+      "example": "ssh-ed25519 AAAA... sender@example"
+    },
+    "NODE_IMAGE_TAG": {
+      "group": "node",
+      "description": "Tag of the remnawave/node image, pinned in the compose file.",
+      "required": false,
+      "secret": false,
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$",
+      "default": "3.4.6",
+      "example": "3.4.6"
+    },
+    "FAIL2BAN_IGNORE_EXTRA": {
+      "group": "node",
+      "description": "Extra IPv4 addresses or CIDR ranges (prefix 8 to 32, space separated) that fail2ban never bans, for example the Swellwright server.",
+      "required": false,
+      "secret": false,
+      "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(/(8|9|[12][0-9]|3[0-2]))?( ((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(/(8|9|[12][0-9]|3[0-2]))?)*$",
+      "default": null,
+      "example": "192.0.2.0/24 198.51.100.7"
+    },
+    "BASE_UPGRADE": {
+      "group": "node",
+      "description": "Run apt upgrade in the base step.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "yes",
+        "no"
+      ],
+      "default": "yes"
+    },
+    "DOCKER_SOURCE": {
+      "group": "node",
+      "description": "apt: Docker's apt repository with its signing key checked against a pinned fingerprint. script: the get.docker.com convenience script.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "apt",
+        "script"
+      ],
+      "default": "apt"
+    },
+    "HAPROXY_SOURCE": {
+      "group": "node",
+      "description": "auto: the PPA on Ubuntu, the distribution package on Debian. ppa: the vbernat PPA of HAPROXY_VERSION. distro: the distribution package.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "auto",
+        "ppa",
+        "distro"
+      ],
+      "default": "auto"
+    },
+    "HAPROXY_VERSION": {
+      "group": "node",
+      "description": "HAProxy series for the PPA (major.minor).",
+      "required": false,
+      "secret": false,
+      "pattern": "^[0-9]{1,2}\\.[0-9]{1,2}$",
+      "default": "3.2",
+      "example": "3.2"
+    },
+    "SSH_PHASE": {
+      "group": "node",
+      "description": "user: create the administrator and its keys. root: close root login (needs an administrator). all: both.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "user",
+        "root",
+        "all"
+      ],
+      "default": "all"
+    },
+    "NEW_USER": {
+      "group": "node",
+      "description": "Administrator account with sudo (not required for SSH_PHASE=root). Not root and not certsync.",
+      "required": true,
+      "secret": false,
+      "pattern": "^[a-z_][a-z0-9_-]{0,31}$",
+      "default": null,
+      "example": "admin"
+    },
+    "NEW_USER_PUBKEY": {
+      "group": "node",
+      "description": "Public SSH key of the administrator (not required for SSH_PHASE=root).",
+      "required": true,
+      "secret": false,
+      "pattern": "^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]{16,}={0,3}( [A-Za-z0-9@._:+=/ -]{1,128})?$",
+      "default": null,
+      "example": "ssh-ed25519 AAAA... admin@example"
+    },
+    "NEW_USER_PUBKEY2": {
+      "group": "node",
+      "description": "Optional second (backup) public SSH key of the administrator.",
+      "required": false,
+      "secret": false,
+      "pattern": "^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]{16,}={0,3}( [A-Za-z0-9@._:+=/ -]{1,128})?$",
+      "default": null,
+      "example": "ssh-ed25519 AAAA... backup@example"
+    },
+    "NEW_USER_PASSWORD": {
+      "group": "node",
+      "description": "Password of a newly created administrator (sudo needs it). Required without a terminal. Only through the environment or an env file, never logged.",
+      "required": false,
+      "secret": true,
+      "pattern": "^[ -~]{8,128}$",
+      "default": null
+    },
+    "SSH_DISABLE_ROOT": {
+      "group": "node",
+      "description": "Close root login over SSH (only when an administrator exists).",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "yes",
+        "no"
+      ],
+      "default": "yes"
+    },
+    "SSH_DISABLE_PASSWORD": {
+      "group": "node",
+      "description": "Close password login over SSH (only when an administrator has a key). Check the key login in another window first.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "yes",
+        "no"
+      ],
+      "default": "no"
+    },
+    "RENAME_FROM": {
+      "group": "node",
+      "description": "The former domain in the rename step. Default: the domain from the saved configuration.",
+      "required": false,
+      "secret": false,
+      "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})$",
+      "default": null,
+      "example": "node1.example.com"
+    },
+    "RENAME_ALIAS": {
+      "group": "node",
+      "description": "Domains (space separated) that nginx and HAProxy keep accepting besides the new one, until clients have the new name.",
+      "required": false,
+      "secret": false,
+      "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})( ([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59}))*$",
+      "default": null,
+      "example": "node1.example.com"
+    },
+    "INSTALL_MODE": {
+      "group": "node",
+      "description": "new: a node that is not in the panel yet. redeploy: an existing node on a new or reinstalled server (changes the closing checklist).",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "new",
+        "redeploy"
+      ],
+      "default": "new"
+    },
+    "SW_NONINTERACTIVE": {
+      "group": "installer",
+      "description": "1: never ask; a missing required parameter stops the run.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0"
+    },
+    "SW_ENV_FILE": {
+      "group": "installer",
+      "description": "File with NAME=value lines for the parameters above (the option --env-file does the same). Mode 600, owned by root.",
+      "required": false,
+      "secret": false,
+      "default": null,
+      "example": "/root/node.env"
+    },
+    "SW_VERBOSE": {
+      "group": "installer",
+      "description": "1: show the output of apt and docker on the screen (it always goes to the journal).",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0"
+    },
+    "SW_ASCII": {
+      "group": "installer",
+      "description": "1: plain ASCII symbols instead of Unicode ones.",
+      "required": false,
+      "secret": false,
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0"
+    },
+    "NO_COLOR": {
+      "group": "installer",
+      "description": "Any non-empty value switches colours off (no-color.org).",
+      "required": false,
+      "secret": false,
+      "default": null,
+      "example": "1"
+    }
+  }
+}
