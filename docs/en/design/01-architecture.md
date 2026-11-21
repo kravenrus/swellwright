@@ -64,7 +64,7 @@ docs/ (en, ru)  deploy/  examples/
 ## 5. SSH layer
 - **Host key pinning**: the first login shows the fingerprint for explicit confirmation, later logins verify it; a key change blocks the operation and raises an alarm (the OS reinstall scenario is confirmed explicitly).
 - **Access modes**: password (for a new server, root), key, **SSH certificate** from your own certificate authority (recommended, `05-security.md`), jump host (optional).
-- **Step execution**: started through `setsid` with a log and an exit-code file in `/var/lib/swellwright/runlogs/<run>/`; the log is read by polling over a single multiplexed connection; a dropped connection does not kill the step; reconnecting resumes reading from the previous offset.
+- **Step execution**: started through `setsid` with a log and an exit-code file in `<baseDir>/<id>/` (`/var/lib/swellwright/steps` for root, `~/.swellwright/steps` for other users; ADR 0034); the log is read by polling over a single multiplexed connection; a dropped connection does not kill the step; reconnecting resumes reading from the previous offset.
 - **sudo**: the password is passed only through stdin, never in arguments; for certificate login, passwordless sudo for a restricted list of commands (options in `05`).
 - **Terminal**: PTY through `ssh2`, xterm in the browser, session recording, a separate permission and step-up authentication (`05`).
 - **Files**: SFTP (browsing, upload, download with a checksum), bulk distribution.

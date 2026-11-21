@@ -64,7 +64,7 @@ stateDiagram-v2
 
 - Host keys are pinned (explicit confirmation on first use, alert on change).
 - Access methods are configurable per server or group: password, key or certificate.
-- Node-side steps run with `setsid`, writing a log and an exit-code file under `/var/lib/swellwright/runlogs/<run>/`; the screen follows the log by polling, so a dropped session does not kill `apt` or `docker`.
+- Node-side steps run with `setsid`, writing a log and an exit-code file under `<baseDir>/<id>/` (ADR 0034); the screen follows the log by polling, so a dropped session does not kill `apt` or `docker`.
 - `sudo` passwords go through stdin, never through command lines.
 - Terminal: PTY sessions with credentials typed by the user for that session only.
 
