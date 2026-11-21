@@ -46,7 +46,7 @@ packages/remnawave       wrapper over backend-contract: client, version adapters
 packages/ssh             ssh2: pool, detached steps, sudo, terminal, SFTP, certificates
 packages/vault           encryption, sealing, rotation
 packages/policy          rules and evaluation
-packages/node-assets     install.sh, node-engine (py), baseline checks, versions and hashes
+artifacts/               node-side artifacts, not a package: node-installer (install.sh, manifest.json, tests; ADR 0036), node-engine (py) later; versions and hashes in the manifests
 packages/ui              shared components and theme (visually matching the panel)
 packages/i18n            the texts of the console in English and Russian, the language choice (ADR 0020)
 packages/testing         fake panel, fake SSH, lab
