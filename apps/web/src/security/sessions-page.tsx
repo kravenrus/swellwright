@@ -149,7 +149,7 @@ function MySessionCard({
               icon={IconDevices}
               iconColor={session.current ? 'teal' : 'cyan'}
               title={title}
-              titleOrder={5}
+              titleOrder={4}
               truncateTitle
             />
           </Box>
