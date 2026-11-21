@@ -1076,16 +1076,22 @@ export function UsersPage({
   return (
     <Stack>
       <SimpleGrid cols={{ base: 1, xs: 2, xl: 4 }} spacing="xs">
-        {metrics.map(({ id, icon, color, title, value }) => (
-          <MetricCard
-            icon={icon}
-            iconColor={color}
-            isLoading={list.isPending}
+        {metrics.map(({ id, icon, color, title, value }, index) => (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 0 }}
             key={id}
-            title={title}
-            value={value}
-            {...(more && id === 'total' ? { subtitle: t('metrics.loadedSoFar') } : {})}
-          />
+            transition={{ duration: 0.2, delay: index * 0.07, ease: 'easeIn' }}
+          >
+            <MetricCard
+              icon={icon}
+              iconColor={color}
+              isLoading={list.isPending}
+              title={title}
+              value={value}
+              {...(more && id === 'total' ? { subtitle: t('metrics.loadedSoFar') } : {})}
+            />
+          </motion.div>
         ))}
       </SimpleGrid>
 

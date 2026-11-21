@@ -27,6 +27,7 @@ import {
   DataTableCard,
   EmptyPageLayout,
   HeaderAction,
+  HeaderActionGroup,
   HeaderActions,
   LoaderModal,
   MantineReactTable,
@@ -480,38 +481,46 @@ function AllSessions({ currentUserId, canRevoke }: { currentUserId: string; canR
       <DataTableCard.Title
         actions={
           <HeaderActions>
-            <FilterPopover active={selected !== undefined} label={t('all.userFilterLabel')}>
-              <Select
-                aria-label={t('all.userFilterLabel')}
-                clearable
-                comboboxProps={{ withinPortal: false }}
-                data={users}
-                onChange={setUserId}
-                placeholder={t('all.userFilterPlaceholder')}
-                searchable
-                value={selected?.value ?? null}
+            <HeaderActionGroup>
+              <FilterPopover
+                active={selected !== undefined}
+                grouped
+                label={t('all.userFilterLabel')}
+              >
+                <Select
+                  aria-label={t('all.userFilterLabel')}
+                  clearable
+                  comboboxProps={{ withinPortal: false }}
+                  data={users}
+                  onChange={setUserId}
+                  placeholder={t('all.userFilterPlaceholder')}
+                  searchable
+                  value={selected?.value ?? null}
+                />
+              </FilterPopover>
+              <HeaderAction
+                color="gray"
+                disabled={selected === undefined}
+                grouped
+                icon={IconFilterOff}
+                label={t('all.clearFilter')}
+                onClick={() => {
+                  setUserId(null);
+                  table.resetColumnFilters(true);
+                }}
               />
-            </FilterPopover>
-            <HeaderAction
-              color="gray"
-              disabled={selected === undefined}
-              icon={IconFilterOff}
-              label={t('all.clearFilter')}
-              onClick={() => {
-                setUserId(null);
-                table.resetColumnFilters(true);
-              }}
-            />
-            <HeaderAction
-              color="gray"
-              icon={IconRestore}
-              label={t('common:resetTable')}
-              onClick={() => {
-                setUserId(null);
-                tableState.reset();
-                table.resetColumnFilters(true);
-              }}
-            />
+              <HeaderAction
+                color="gray"
+                grouped
+                icon={IconRestore}
+                label={t('common:resetTable')}
+                onClick={() => {
+                  setUserId(null);
+                  tableState.reset();
+                  table.resetColumnFilters(true);
+                }}
+              />
+            </HeaderActionGroup>
             {canEndUser ? (
               <HeaderAction
                 color="red"
