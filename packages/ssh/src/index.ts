@@ -4,8 +4,9 @@
 //   SshConnection        one authenticated connection: exec, sftp
 //   SshPool              reuse and cap connections
 //   startDetachedStep... work that survives the connection and can be followed again
+//   validateTargetAddress  refuse loopback, link-local and metadata addresses before connecting
 //
-// See README.md and docs/adr/0034-ssh-layer.md.
+// See README.md and docs/adr/0035-ssh-layer.md.
 
 export {
   HostKeyMismatchError,
@@ -24,6 +25,19 @@ export {
   redact,
 } from './errors.js';
 export type { SshConnectReason, SshErrorCode, SshTimeoutPhase } from './errors.js';
+
+export {
+  assertTargetAddress,
+  classifyAddress,
+  resolveTargetAddress,
+  validateTargetAddress,
+} from './address.js';
+export type {
+  AddressKind,
+  ResolvedTarget,
+  TargetAddressCheck,
+  TargetAddressPolicy,
+} from './address.js';
 
 export { SshConnection } from './connection.js';
 export type { SshConnectionEvents } from './connection.js';

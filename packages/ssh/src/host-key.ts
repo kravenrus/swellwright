@@ -5,13 +5,13 @@ import { Socket } from 'node:net';
 import { Client } from './ssh2.js';
 
 import { SshConnectError, SshInputError, SshTimeoutError, messageOf } from './errors.js';
-import { checkedHost, checkedPort, normalizeFingerprint } from './shell.js';
+import { checkedHost, checkedPort, normalizeFingerprint, trimTrailing } from './shell.js';
 import { mapHandshakeError, type Ssh2ErrorLike } from './ssh2-errors.js';
 import type { HostKeyPolicy, ServerHostKey, SshAlgorithms } from './types.js';
 
 /** `SHA256:` plus the unpadded base64 SHA-256 of a host key blob, the format `ssh-keygen -l` prints. */
 export function fingerprintOf(blob: Buffer): string {
-  return `SHA256:${createHash('sha256').update(blob).digest('base64').replace(/=+$/u, '')}`;
+  return `SHA256:${trimTrailing(createHash('sha256').update(blob).digest('base64'), '=')}`;
 }
 
 /** The key type: the first SSH string of the key blob. */

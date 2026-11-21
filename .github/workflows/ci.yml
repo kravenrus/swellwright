@@ -85,7 +85,7 @@ jobs:
       - name: API description is up to date
         run: pnpm run openapi:check
 
-  # The SSH layer against a real sshd (ADR 0034): a small Ubuntu image with key logins only, a throwaway key and a
+  # The SSH layer against a real sshd (ADR 0035): a small Ubuntu image with key logins only, a throwaway key and a
   # throwaway sudo password made in this job. The same suites run in the build job against the in-process server;
   # these add the real thing (exec, sudo over stdin, SFTP, detached steps that survive a cut connection).
   sshd:

@@ -8,7 +8,7 @@ onlyBuiltDependencies: []
 minimumReleaseAge: 4320
 
 # ssh2 lists two optional native add-ons (cpu-features and nan, built by install scripts). They are never installed:
-# the SSH layer runs in the pure-JavaScript mode of ssh2 (ADR 0034).
+# the SSH layer runs in the pure-JavaScript mode of ssh2 (ADR 0035).
 ignoredOptionalDependencies:
   - cpu-features
   - nan

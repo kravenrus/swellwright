@@ -272,13 +272,14 @@ describe('SshPool', () => {
     let leased: SshConnection | undefined;
     const first = pool.withConnection(targetFor(server), async (connection) => {
       leased = connection;
-      await sleep(300);
+      await sleep(400);
       return connection.exec('x');
     });
-    await sleep(50);
+    first.catch(() => undefined);
+    await until(() => leased !== undefined, 5000, 'the first caller to get its connection');
     const waiting = pool.withConnection(targetFor(server), () => Promise.resolve('x'));
     waiting.catch(() => undefined);
-    await sleep(20);
+    await until(() => pool.stats().waiting === 1, 5000, 'the second caller to queue');
     pool.closeAll();
     await assert.rejects(waiting, SshPoolClosedError);
     await assert.rejects(first, SshConnectionLostError);
@@ -290,6 +291,31 @@ describe('SshPool', () => {
       'ok',
     );
     pool.closeAll();
+  });
+
+  it('closeAll also rejects a caller whose connection is still being opened, at once', async () => {
+    const silent = await startSilentServer();
+    const pool = new SshPool({ maxPerHost: 1, acquireTimeoutMs: 60_000 });
+    try {
+      const target = {
+        host: '127.0.0.1',
+        port: silent.port,
+        username: 'tester',
+        auth: { kind: 'password', password: TEST_PASSWORD } as const,
+        hostKey: { mode: 'discover' } as const,
+        connectTimeoutMs: 5000,
+      };
+      const opening = pool.withConnection(target, () => Promise.resolve('x'));
+      opening.catch(() => undefined);
+      await until(() => pool.stats().connecting === 1, 3000, 'the connection to start opening');
+      const started = Date.now();
+      pool.closeAll();
+      await assert.rejects(opening, SshPoolClosedError);
+      assert.ok(Date.now() - started < 1000, 'closeAll left the caller waiting');
+    } finally {
+      pool.closeAll();
+      await silent.close();
+    }
   });
 
   it('closes the SFTP sessions a caller left open when the lease ends', async () => {

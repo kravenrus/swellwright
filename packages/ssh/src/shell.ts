@@ -17,6 +17,13 @@ export function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
+/** Removes trailing copies of one character, in a loop: no regular expression runs on caller input. */
+export function trimTrailing(text: string, character: string): string {
+  let end = text.length;
+  while (end > 0 && text[end - 1] === character) end -= 1;
+  return text.slice(0, end);
+}
+
 /** A host name or address: no whitespace or control characters, at most 255 characters. Returns it trimmed. */
 export function checkedHost(host: string): string {
   const trimmed = host.trim();
@@ -87,7 +94,7 @@ export function remoteDirWord(path: string): string {
   const rest = relativeToHome ? path.slice(1) : path;
   if (rest.split('/').includes('..'))
     throw new SshInputError('A remote directory must not contain ".." segments.');
-  const cleaned = rest.replace(/\/+$/u, '');
+  const cleaned = trimTrailing(rest, '/');
   if (relativeToHome) {
     if (cleaned.length === 0)
       throw new SshInputError('A remote directory below "~/" needs a name.');
@@ -113,7 +120,7 @@ const FINGERPRINT = /^SHA256:[A-Za-z0-9+/]{43}$/u;
 
 /** Normalises an OpenSSH style fingerprint (`SHA256:` plus unpadded base64) and refuses anything else. */
 export function normalizeFingerprint(value: string): string {
-  const trimmed = value.trim().replace(/=+$/u, '');
+  const trimmed = trimTrailing(value.trim(), '=');
   if (!FINGERPRINT.test(trimmed)) {
     throw new SshInputError('A fingerprint looks like "SHA256:" followed by 43 base64 characters.');
   }

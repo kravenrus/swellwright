@@ -1,4 +1,4 @@
-# ADR 0034: The SSH layer: ssh2 in pure JavaScript, pinned host keys, sudo over stdin, detached steps
+# ADR 0035: The SSH layer: ssh2 in pure JavaScript, pinned host keys, sudo over stdin, detached steps
 
 Status: accepted
 
@@ -34,11 +34,14 @@ The default `baseDir` is per user: `/var/lib/swellwright/steps` for root, `~/.sw
 
 The server needs `sh` (dash is enough), `setsid`, `base64`, `sha256sum`, `tail`, `head`, `wc`, `tr`, `date`, and `sudo` for the sudo variant: nothing is installed. Known limits: Linux servers only (BSD and macOS lack some of these tools and `/proc`); with `hidepid` mounted on `/proc` a root job cannot be seen by another user and is reported `lost`; `systemd-logind` with `KillUserProcesses=yes` ends the processes of a non-root user's last session (root is exempt by default), and the layer does not leave the session scope; step directories are kept until `removeStep`; scripts and input are limited to 2 MiB each.
 
+### Which addresses may be contacted
+`validateTargetAddress`, `assertTargetAddress` and `resolveTargetAddress` implement the address part of the outbound policy (`05-security.md`, section 7) for server entries. They are pure functions of the text (the last one also resolves names): loopback, link-local and cloud metadata addresses are refused unless the policy allows them, unspecified, multicast and reserved addresses and ambiguous numeric forms (`127.1`, `2130706433`, `0x7f.1`, which the system resolver reads as loopback) never pass, IPv6 forms that embed an IPv4 address are judged by it, and private ranges are allowed by default because fleets live there. The connection itself does not apply the policy, so that tests can use loopback; the API calls the helper first and connects to the checked address (`resolveTargetAddress` refuses a name if any of its answers is forbidden), and the pinned host key proves who answers.
+
 ### Deadlines
 Everything that can wait has a deadline: connect, key exchange and authentication together (`connectTimeoutMs`, with a backstop timer), each command (`timeoutMs`, default 120 s, then a `TERM` signal request and `SshTimeoutError`), SFTP requests and transfers (idle timeout), keepalive (a silent link is declared dead after interval times count), the pool (`acquireTimeoutMs`), and the step controls. Output is capped per stream (`maxOutputBytes`, default 4 MiB) and flagged `truncated`; streaming callbacks still see everything.
 
 ### Not in this layer
-The outbound allowlist of `05-security.md` (section 7: which hosts may be contacted; the caller applies it before it asks this layer to connect), port and agent forwarding, keyboard-interactive and other second factors, SSH certificates (planned with the access policies, ADR 0004), a pseudo-terminal and the web terminal (phase 9), jump hosts, and anything that is not a plain SSH exec or SFTP session. The default algorithms of `ssh2` are used (modern first); a caller may narrow them with exact lists (`algorithms`), and `strictVendor` stays at its default.
+The outbound allowlist of `05-security.md` (section 7) beyond the address check above: the API decides which hosts may be contacted and applies it before it asks this layer to connect; port and agent forwarding, keyboard-interactive and other second factors, SSH certificates (planned with the access policies, ADR 0004), a pseudo-terminal and the web terminal (phase 9), jump hosts, and anything that is not a plain SSH exec or SFTP session. The default algorithms of `ssh2` are used (modern first); a caller may narrow them with exact lists (`algorithms`), and `strictVendor` stays at its default.
 
 ### Tests
 The package ships an in-process SSH server built on the server half of `ssh2` (`@swellwright/ssh/test-support`): it records every authentication request, presents any host key, stalls, freezes, drops connections, runs commands in a real POSIX shell, serves SFTP from a directory, and comes with a stand-in `sudo` and a TCP forwarder that can be cut. The failure paths (wrong keys, wrong passwords, timeouts, drops) are tested only there. A second set of tests (`*.integration.test.ts`) runs the same step scenarios and more against a real sshd when `SW_TEST_SSH_*` is set; CI runs them against a small Ubuntu 24.04 image with key logins only, a throwaway key and a throwaway sudo password made in the job. They never send a wrong credential.

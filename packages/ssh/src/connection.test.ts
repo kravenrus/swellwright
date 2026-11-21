@@ -466,6 +466,71 @@ describe('deadlines while connecting', () => {
   });
 });
 
+describe('algorithms', () => {
+  it('does not downgrade to a legacy key exchange that only the server offers', async () => {
+    const legacy = await TestSshServer.start({
+      users: USERS,
+      algorithms: { kex: ['diffie-hellman-group1-sha1'] },
+    });
+    try {
+      await assert.rejects(SshConnection.connect(targetFor(legacy)), (error: unknown) => {
+        assert.ok(error instanceof SshConnectError);
+        assert.equal(error.reason, 'handshake');
+        return true;
+      });
+      assert.deepEqual(legacy.authAttempts, []);
+      // Nothing is forbidden for good: a caller that names the algorithm itself gets it.
+      const connection = await SshConnection.connect(
+        targetFor(legacy, { algorithms: { kex: ['diffie-hellman-group1-sha1'] } }),
+      );
+      connection.close();
+    } finally {
+      await legacy.close();
+    }
+  });
+
+  it('offers only what an allow-list names', async () => {
+    const server = await TestSshServer.start({
+      users: USERS,
+      algorithms: { kex: ['curve25519-sha256'] },
+    });
+    try {
+      await assert.rejects(
+        SshConnection.connect(targetFor(server, { algorithms: { kex: ['ecdh-sha2-nistp256'] } })),
+        SshConnectError,
+      );
+      const connection = await SshConnection.connect(
+        targetFor(server, {
+          algorithms: {
+            kex: ['curve25519-sha256'],
+            cipher: ['aes256-ctr'],
+            hmac: ['hmac-sha2-256'],
+          },
+        }),
+      );
+      connection.close();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('refuses an empty list and a name ssh2 does not know', async () => {
+    const server = await TestSshServer.start({ users: USERS });
+    try {
+      await assert.rejects(
+        SshConnection.connect(targetFor(server, { algorithms: { kex: [] } })),
+        SshInputError,
+      );
+      await assert.rejects(
+        SshConnection.connect(targetFor(server, { algorithms: { cipher: ['not-a-cipher'] } })),
+        SshInputError,
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});
+
 describe('exec', () => {
   let server: TestSshServer;
   let connection: SshConnection;
@@ -594,9 +659,18 @@ describe('exec', () => {
   });
 });
 
+// Reads all of its standard input before it answers, so that what the client sent can be inspected afterwards.
+const drain: ExecHandler = (channel) => {
+  channel.on('data', () => undefined);
+  channel.on('end', () => {
+    channel.exit(0);
+    channel.end();
+  });
+};
+
 describe('sudo password handling', () => {
   it('puts the password only on standard input: not in the command line, not in the environment', async () => {
-    const server = await TestSshServer.start({ users: USERS, exec: scripted, acceptEnv: [] });
+    const server = await TestSshServer.start({ users: USERS, exec: drain, acceptEnv: [] });
     const connection = await SshConnection.connect(targetFor(server));
     try {
       const password = 'sudo-secret-pw-42';
@@ -615,7 +689,7 @@ describe('sudo password handling', () => {
   });
 
   it('without a password it runs sudo non-interactively and sends no extra input', async () => {
-    const server = await TestSshServer.start({ users: USERS, exec: scripted });
+    const server = await TestSshServer.start({ users: USERS, exec: drain });
     const connection = await SshConnection.connect(targetFor(server));
     try {
       await connection.exec('hello', { sudo: {} });

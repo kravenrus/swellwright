@@ -76,6 +76,13 @@ export interface TestServerOptions {
   acceptEnv?: readonly string[];
   /** SFTP writes are never answered: a transfer that stops moving. */
   sftpStallWrites?: boolean;
+  /** Exact algorithm lists the server offers (to test what a client accepts, e.g. a legacy key exchange). */
+  algorithms?: {
+    kex?: readonly string[];
+    cipher?: readonly string[];
+    hmac?: readonly string[];
+    serverHostKey?: readonly string[];
+  };
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -141,7 +148,11 @@ export class TestSshServer {
     const hostKey = options.hostKey ?? generateTestKeyPair();
     const users = options.users ?? {};
     const acceptEnv = new Set(options.acceptEnv ?? []);
-    const ssh = new Server({ hostKeys: [hostKey.privateKey] });
+    const ssh = new Server({
+      hostKeys: [hostKey.privateKey],
+      // The ssh2 types name every algorithm; the lists here are plain strings chosen by the test.
+      ...(options.algorithms === undefined ? {} : { algorithms: options.algorithms as never }),
+    });
     const sockets = new Set<Socket>();
     // Filled in as soon as the net server listens; the handlers below only run for connections made after that.
     const created: { server?: TestSshServer } = {};

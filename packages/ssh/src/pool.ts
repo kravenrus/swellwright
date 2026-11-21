@@ -1,7 +1,7 @@
 // A small connection pool: reuse connections per (host, port, user, credentials, host key policy), cap them per
 // host, close idle ones, replace dead ones, and never hang a caller.
 
-import { createHmac, randomBytes } from 'node:crypto';
+import { randomBytes, scryptSync } from 'node:crypto';
 
 import { SshConnection } from './connection.js';
 import { SshInputError, SshPoolClosedError, SshTimeoutError } from './errors.js';
@@ -35,6 +35,8 @@ interface Slot {
   idle: IdleConnection[];
   leased: Set<SshConnection>;
   creating: number;
+  /** Waiters that are being served by a connection that is still opening. */
+  connecting: Set<Waiter>;
   waiters: Waiter[];
 }
 
@@ -50,8 +52,11 @@ export class SshPool {
   readonly #maxPerHost: number;
   readonly #idleMs: number;
   readonly #acquireTimeoutMs: number;
-  // The pool key contains a keyed hash of the credentials, not the credentials, and the key is per process.
-  readonly #keySecret = randomBytes(32);
+  // The pool key contains a salted, slow hash of the credentials (scrypt, a random salt per process), not the
+  // credentials. It only tells credentials apart inside this process. The result is remembered per `auth` object, so
+  // a caller that reuses its target pays for the hash once.
+  readonly #salt = randomBytes(16);
+  readonly #credentialIds = new WeakMap<object, string>();
   readonly #slots = new Map<string, Slot>();
   readonly #watched = new WeakSet<SshConnection>();
 
@@ -92,11 +97,14 @@ export class SshPool {
     const slots = [...this.#slots.values()];
     this.#slots.clear();
     for (const slot of slots) {
-      for (const waiter of slot.waiters.splice(0)) {
+      // Those who wait for a free connection, and those whose connection is still being opened.
+      for (const waiter of [...slot.waiters.splice(0), ...slot.connecting]) {
+        if (waiter.done) continue;
         waiter.done = true;
         clearTimeout(waiter.timer);
         waiter.reject(new SshPoolClosedError());
       }
+      slot.connecting.clear();
       for (const idle of slot.idle.splice(0)) {
         clearTimeout(idle.timer);
         idle.connection.close();
@@ -124,29 +132,37 @@ export class SshPool {
 
   #keyOf(target: SshTarget): string {
     const policy = normalizePolicy(target.hostKey);
-    const credentials =
-      target.auth.kind === 'password'
-        ? ['password', target.auth.password]
-        : ['key', target.auth.privateKey, target.auth.passphrase ?? ''];
-    const mac = createHmac('sha256', this.#keySecret)
-      .update(JSON.stringify(credentials))
-      .digest('hex');
+    const credentialId = this.#credentialId(target.auth);
     const hostKey =
       policy.mode === 'pinned' ? `pinned:${[...policy.fingerprints].sort().join(',')}` : 'discover';
     return [
       target.host.trim().toLowerCase(),
       String(target.port ?? 22),
       target.username,
-      mac,
+      credentialId,
       hostKey,
       JSON.stringify(target.algorithms ?? null),
     ].join('|');
   }
 
+  #credentialId(auth: SshTarget['auth']): string {
+    const known = this.#credentialIds.get(auth);
+    if (known !== undefined) return known;
+    const material = JSON.stringify(
+      auth.kind === 'password'
+        ? ['password', auth.password]
+        : ['key', auth.privateKey, auth.passphrase ?? ''],
+    );
+    // Cheap for a hash of a password (N=1024) because it is not stored or compared across processes.
+    const id = scryptSync(material, this.#salt, 16, { N: 1024, r: 8, p: 1 }).toString('hex');
+    this.#credentialIds.set(auth, id);
+    return id;
+  }
+
   #slot(key: string): Slot {
     let slot = this.#slots.get(key);
     if (slot === undefined) {
-      slot = { key, idle: [], leased: new Set(), creating: 0, waiters: [] };
+      slot = { key, idle: [], leased: new Set(), creating: 0, connecting: new Set(), waiters: [] };
       this.#slots.set(key, slot);
     }
     return slot;
@@ -188,11 +204,13 @@ export class SshPool {
       const waiter = slot.waiters.shift();
       if (waiter === undefined) break;
       slot.creating += 1;
+      slot.connecting.add(waiter);
       SshConnection.connect(waiter.target).then(
         (connection) => {
           slot.creating -= 1;
+          slot.connecting.delete(waiter);
           if (this.#slots.get(slot.key) !== slot) {
-            // closeAll() ran while this connection was being opened.
+            // closeAll() ran while this connection was being opened (it has already rejected the waiter).
             connection.close();
             return;
           }
@@ -202,6 +220,7 @@ export class SshPool {
         },
         (error: unknown) => {
           slot.creating -= 1;
+          slot.connecting.delete(waiter);
           if (!waiter.done) {
             waiter.done = true;
             clearTimeout(waiter.timer);
